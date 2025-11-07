@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de Clientes{% endblock %}
+{% block title %}Gestión de Editoriales{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -14,28 +14,17 @@
                 Volver
             </a>
             <div>
-                <h1>Gestión de Clientes</h1>
-                <p class="subtitle">Administra los usuarios del sistema</p>
+                <h1>Gestión de Editoriales</h1>
+                <p class="subtitle">Administra las casas editoriales del sistema</p>
             </div>
         </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <a href="{{ url_for('clientes_documento.listar') }}" class="btn btn-secondary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                </svg>
-                Documentos
-            </a>
-            <a href="{{ url_for('clientes.crear') }}" class="btn btn-primary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Nuevo Cliente
-            </a>
-        </div>
+        <a href="{{ url_for('editoriales.crear') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nueva Editorial
+        </a>
     </div>
 
     <!-- Advanced Filters -->
@@ -45,7 +34,7 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
             </svg>
-            <input type="text" id="searchInput" placeholder="Buscar por nombre, email o teléfono..." class="search-input">
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, email, teléfono o país..." class="search-input">
             <button class="clear-btn" id="clearBtn" onclick="clearFilters()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -54,15 +43,14 @@
             </button>
         </div>
         <div class="filter-group">
-            <select id="statusFilter" class="filter-select">
-                <option value="">Todos los estados</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-            </select>
-            <select id="typeFilter" class="filter-select">
-                <option value="">Todos los tipos</option>
-                <option value="cliente">Cliente</option>
-                <option value="admin">Administrador</option>
+            <select id="paisFilter" class="filter-select">
+                <option value="">Todos los países</option>
+                {% set paises_unicos = editoriales | map(attribute='Pais_.nombre_pais') | unique | sort %}
+                {% for pais in paises_unicos %}
+                    {% if pais %}
+                        <option value="{{ pais }}">{{ pais }}</option>
+                    {% endif %}
+                {% endfor %}
             </select>
             <select id="rowsPerPage" class="filter-select rows-select">
                 <option value="10">10 por página</option>
@@ -73,7 +61,7 @@
             </select>
         </div>
         <div class="filter-stats">
-            <span id="statsText">{{ clientes|length }} clientes</span>
+            <span id="statsText">{{ editoriales|length }} editoriales</span>
         </div>
     </div>
 
@@ -82,58 +70,51 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Cliente</th>
+                    <th>Editorial</th>
+                    <th>País</th>
                     <th>Email</th>
                     <th>Teléfono</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
-                {% for cliente in clientes %}
-                <tr data-search="{{ (cliente.nombres + ' ' + cliente.apellidos + ' ' + cliente.email + ' ' + cliente.telefono)|lower }}"
-                    data-status="{{ 'active' if cliente.id_estado == 1 else 'inactive' }}"
-                    data-type="{{ cliente.tipo_usuario }}">
+                {% for editorial in editoriales %}
+                <tr data-search="{{ (editorial.nombre + ' ' + editorial.email + ' ' + editorial.telefono + ' ' + (editorial.Pais_.nombre_pais if editorial.Pais_ else ''))|lower }}"
+                    data-pais="{{ editorial.Pais_.nombre_pais if editorial.Pais_ else '' }}">
                     <td>
-                        <div class="client-info">
-                            <div class="avatar">{{ cliente.nombres[0] }}{{ cliente.apellidos[0] }}</div>
+                        <div class="editorial-info">
+                            <div class="avatar">{{ editorial.nombre[0] }}{{ editorial.nombre[1] if editorial.nombre|length > 1 else '' }}</div>
                             <div>
-                                <div class="client-name">{{ cliente.nombres }} {{ cliente.apellidos }}</div>
-                                <div class="client-id">#{{ cliente.id_cliente }}</div>
+                                <div class="editorial-name">{{ editorial.nombre }}</div>
+                                <div class="editorial-id">#{{ editorial.id_editorial }}</div>
                             </div>
                         </div>
                     </td>
-                    <td>{{ cliente.email }}</td>
-                    <td>{{ cliente.telefono }}</td>
-                    <td><span class="badge badge-type">{{ cliente.tipo_usuario }}</span></td>
                     <td>
-                        {% set estado_obj = cliente.Estado_Usuarios or estados_dict.get(cliente.id_estado) %}
-                        {% if cliente.id_estado == 1 %}
-                            <span class="badge badge-active">{{ estado_obj.nombre if estado_obj else 'Activo' }}</span>
-                        {% elif cliente.id_estado == 4 %}
-                            <span class="badge badge-warning">{{ estado_obj.nombre if estado_obj else 'Pendiente' }}</span>
+                        {% if editorial.Pais_ %}
+                            <span class="badge badge-country">{{ editorial.Pais_.nombre_pais }}</span>
                         {% else %}
-                            <span class="badge badge-inactive">{{ estado_obj.nombre if estado_obj else 'Inactivo' }}</span>
+                            <span class="badge badge-inactive">Sin país</span>
                         {% endif %}
                     </td>
+                    <td>{{ editorial.email }}</td>
+                    <td>{{ editorial.telefono }}</td>
                     <td>
                         <div class="actions">
-                            {% set estado_obj = cliente.Estado_Usuarios or estados_dict.get(cliente.id_estado) %}
                             <button class="action-btn view" title="Ver detalles"
-                                onclick='showDetails({{ cliente.id_cliente }}, "{{ cliente.nombres }}", "{{ cliente.apellidos }}", "{{ cliente.email }}", "{{ cliente.telefono }}", "{{ cliente.tipo_usuario }}", "{{ cliente.fecha_registro }}", "{{ cliente.direccion }}", "{{ cliente.observaciones or '' }}", {{ cliente.id_estado }}, "{{ estado_obj.nombre if estado_obj else 'Sin estado' }}")'>
+                                onclick='showDetails({{ editorial.id_editorial }}, "{{ editorial.nombre }}", "{{ editorial.Pais_.nombre_pais if editorial.Pais_ else 'Sin país' }}", "{{ editorial.email }}", "{{ editorial.telefono }}", "{{ editorial.direccion or 'No especificada' }}")'>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
                                 </svg>
                             </button>
-                            <a href="{{ url_for('clientes.editar', id=cliente.id_cliente) }}" class="action-btn edit" title="Editar">
+                            <a href="{{ url_for('editoriales.editar', id=editorial.id_editorial) }}" class="action-btn edit" title="Editar">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                             </a>
-                            <button class="action-btn delete" onclick='showDelete({{ cliente.id_cliente }}, "{{ cliente.nombres }} {{ cliente.apellidos }}")' title="Eliminar">
+                            <button class="action-btn delete" onclick='showDelete({{ editorial.id_editorial }}, "{{ editorial.nombre }}")' title="Eliminar">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -189,39 +170,19 @@
 
 <!-- Details Modal -->
 <div id="detailsModal" class="modal">
-    <div class="modal-content modal-large">
+    <div class="modal-content">
         <div class="modal-header">
-            <h3>Detalles del Cliente</h3>
+            <h3>Detalles de la Editorial</h3>
             <button class="close-btn" onclick="closeModal('detailsModal')">×</button>
         </div>
         <div class="modal-body">
             <div class="detail-grid">
                 <div class="detail-row"><label>ID:</label><span id="dId"></span></div>
-                <div class="detail-row"><label>Nombres:</label><span id="dNombres"></span></div>
-                <div class="detail-row"><label>Apellidos:</label><span id="dApellidos"></span></div>
+                <div class="detail-row"><label>Nombre:</label><span id="dNombre"></span></div>
+                <div class="detail-row"><label>País:</label><span id="dPais"></span></div>
                 <div class="detail-row"><label>Email:</label><span id="dEmail"></span></div>
                 <div class="detail-row"><label>Teléfono:</label><span id="dTelefono"></span></div>
-                <div class="detail-row"><label>Tipo:</label><span id="dTipo"></span></div>
-                <div class="detail-row"><label>Estado:</label><span id="dEstado"></span></div>
-                <div class="detail-row"><label>Fecha Registro:</label><span id="dFecha"></span></div>
                 <div class="detail-row full"><label>Dirección:</label><span id="dDireccion"></span></div>
-                <div class="detail-row full"><label>Observaciones:</label><span id="dObs"></span></div>
-            </div>
-            
-            <!-- Documents Section -->
-            <div class="documents-section">
-                <div class="documents-header">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                    </svg>
-                    <h4>Documentos del Cliente</h4>
-                </div>
-                <div id="dDocuments" class="documents-list">
-                    <!-- Documents will be loaded here -->
-                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -239,7 +200,7 @@
             <button class="close-btn" onclick="closeModal('deleteModal')">×</button>
         </div>
         <div class="modal-body">
-            <p>¿Eliminar a <strong id="deleteName"></strong>?</p>
+            <p>¿Eliminar la editorial <strong id="deleteName"></strong>?</p>
             <p class="text-muted">Esta acción no se puede deshacer</p>
         </div>
         <div class="modal-footer">
@@ -269,7 +230,7 @@
 .clear-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.2s; }
 .clear-btn.show { display: flex; }
 .clear-btn:hover { background: #cbd5e0; }
-.filter-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.filter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
 .filter-select { padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; cursor: pointer; background: white; transition: border 0.2s; }
 .filter-select:focus { outline: none; border-color: #667eea; }
 .rows-select { font-weight: 500; }
@@ -284,16 +245,14 @@
 .data-table tbody tr { transition: background 0.2s; }
 .data-table tbody tr:hover { background: #f7fafc; }
 
-.client-info { display: flex; align-items: center; gap: 0.75rem; }
+.editorial-info { display: flex; align-items: center; gap: 0.75rem; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; }
-.client-name { font-weight: 600; color: #1a202c; }
-.client-id { font-size: 0.85rem; color: #a0aec0; }
+.editorial-name { font-weight: 600; color: #1a202c; }
+.editorial-id { font-size: 0.85rem; color: #a0aec0; }
 
 .badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; }
-.badge-type { background: #e6f3ff; color: #0066cc; }
-.badge-active { background: #d4f4dd; color: #1e7e34; }
+.badge-country { background: #e6f3ff; color: #0066cc; }
 .badge-inactive { background: #ffe0e0; color: #c41e3a; }
-.badge-warning { background: #fff3cd; color: #856404; }
 
 .actions { display: flex; gap: 0.5rem; }
 .action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
@@ -317,7 +276,6 @@
 .no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
 .no-results p { color: #718096; margin: 0; }
 
-/* Pagination Styles */
 .pagination-container { background: white; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
 .pagination-container.hidden { display: none; }
 .pagination-info { color: #718096; font-size: 0.9rem; }
@@ -336,35 +294,18 @@
 .modal.show { display: flex; }
 .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
 .modal-small { max-width: 400px; }
-.modal-large { max-width: 800px; }
 .modal-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h3 { margin: 0; font-size: 1.25rem; }
 .modal-danger { background: #dc3545; color: white; border-bottom: none; }
 .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 .close-btn:hover { background: rgba(0,0,0,0.1); }
 .modal-body { padding: 1.5rem; }
-.detail-grid { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
+.detail-grid { display: grid; gap: 1rem; }
 .detail-row { display: grid; grid-template-columns: 120px 1fr; gap: 1rem; padding: 0.75rem; background: #f7fafc; border-radius: 6px; }
 .detail-row.full { grid-column: 1/-1; grid-template-columns: 120px 1fr; }
 .detail-row label { font-weight: 600; color: #4a5568; }
 .text-muted { color: #a0aec0; font-size: 0.9rem; margin-top: 0.5rem; }
 .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
-
-/* Documents Section in Modal */
-.documents-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e2e8f0; }
-.documents-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: #667eea; }
-.documents-header h4 { margin: 0; font-size: 1.1rem; font-weight: 600; }
-.documents-list { display: flex; flex-direction: column; gap: 0.75rem; }
-.document-card { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; transition: all 0.2s; }
-.document-card:hover { border-color: #cbd5e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-.document-type-label { font-size: 0.85rem; font-weight: 600; color: #667eea; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
-.document-value { font-size: 1rem; font-weight: 500; color: #2d3748; font-family: 'Courier New', monospace; }
-.no-documents-msg { text-align: center; padding: 2rem; color: #a0aec0; background: #f7fafc; border-radius: 8px; border: 2px dashed #e2e8f0; }
-.no-documents-msg svg { opacity: 0.3; margin-bottom: 0.5rem; }
-.no-documents-msg p { margin: 0; }
-.documents-loading { text-align: center; padding: 2rem; color: #667eea; }
-.documents-loading svg { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {
     .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
@@ -380,8 +321,7 @@
 
 <script>
 const searchInput = document.getElementById('searchInput');
-const statusFilter = document.getElementById('statusFilter');
-const typeFilter = document.getElementById('typeFilter');
+const paisFilter = document.getElementById('paisFilter');
 const rowsPerPageSelect = document.getElementById('rowsPerPage');
 const clearBtn = document.getElementById('clearBtn');
 const tableBody = document.getElementById('tableBody');
@@ -400,37 +340,28 @@ let rowsPerPage = 25;
 
 function applyFilters() {
     const search = searchInput.value.toLowerCase();
-    const status = statusFilter.value;
-    const type = typeFilter.value;
+    const pais = paisFilter.value;
     
     filteredRows = allRows.filter(row => {
         const matchSearch = !search || row.dataset.search.includes(search);
-        const matchStatus = !status || row.dataset.status === status;
-        const matchType = !type || row.dataset.type === type;
-        return matchSearch && matchStatus && matchType;
+        const matchPais = !pais || row.dataset.pais === pais;
+        return matchSearch && matchPais;
     });
     
     currentPage = 1;
     updatePagination();
-    clearBtn.classList.toggle('show', search || status || type);
+    clearBtn.classList.toggle('show', search || pais);
 }
 
 function updatePagination() {
     const visibleCount = filteredRows.length;
     
-    // Hide all rows first
     allRows.forEach(row => row.style.display = 'none');
-    
-    // Show no results if needed
     noResults.classList.toggle('show', visibleCount === 0);
-    
-    // Update stats
-    statsText.textContent = `${visibleCount} de ${allRows.length} clientes`;
+    statsText.textContent = `${visibleCount} de ${allRows.length} editoriales`;
     totalVisible.textContent = visibleCount;
     
-    // Calculate pagination
     if (rowsPerPageSelect.value === 'all') {
-        // Show all filtered rows
         filteredRows.forEach(row => row.style.display = '');
         paginationContainer.classList.add('hidden');
         return;
@@ -438,25 +369,16 @@ function updatePagination() {
     
     rowsPerPage = parseInt(rowsPerPageSelect.value);
     totalPages = Math.ceil(visibleCount / rowsPerPage);
-    
-    // Show/hide pagination
     paginationContainer.classList.toggle('hidden', totalPages <= 1);
     
     if (totalPages > 0) {
-        // Calculate range
         const start = (currentPage - 1) * rowsPerPage;
         const end = Math.min(start + rowsPerPage, visibleCount);
         
-        // Show rows for current page
         filteredRows.slice(start, end).forEach(row => row.style.display = '');
-        
-        // Update page info
         pageRange.textContent = `${start + 1}-${end}`;
-        
-        // Update page numbers
         renderPageNumbers();
         
-        // Update button states
         document.getElementById('firstBtn').disabled = currentPage === 1;
         document.getElementById('prevBtn').disabled = currentPage === 1;
         document.getElementById('nextBtn').disabled = currentPage === totalPages;
@@ -466,7 +388,6 @@ function updatePagination() {
 
 function renderPageNumbers() {
     pageNumbers.innerHTML = '';
-    
     const maxVisible = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     let endPage = Math.min(totalPages, startPage + maxVisible - 1);
@@ -475,24 +396,17 @@ function renderPageNumbers() {
         startPage = Math.max(1, endPage - maxVisible + 1);
     }
     
-    // First page
     if (startPage > 1) {
         pageNumbers.appendChild(createPageButton(1));
-        if (startPage > 2) {
-            pageNumbers.appendChild(createEllipsis());
-        }
+        if (startPage > 2) pageNumbers.appendChild(createEllipsis());
     }
     
-    // Page numbers
     for (let i = startPage; i <= endPage; i++) {
         pageNumbers.appendChild(createPageButton(i));
     }
     
-    // Last page
     if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            pageNumbers.appendChild(createEllipsis());
-        }
+        if (endPage < totalPages - 1) pageNumbers.appendChild(createEllipsis());
         pageNumbers.appendChild(createPageButton(totalPages));
     }
 }
@@ -502,9 +416,7 @@ function createPageButton(page) {
     btn.className = 'page-number';
     btn.textContent = page;
     btn.onclick = () => goToPage(page);
-    if (page === currentPage) {
-        btn.classList.add('active');
-    }
+    if (page === currentPage) btn.classList.add('active');
     return btn;
 }
 
@@ -524,100 +436,33 @@ function goToPage(page) {
 
 function clearFilters() {
     searchInput.value = '';
-    statusFilter.value = '';
-    typeFilter.value = '';
+    paisFilter.value = '';
     applyFilters();
 }
 
-// Event listeners
 searchInput.addEventListener('input', applyFilters);
-statusFilter.addEventListener('change', applyFilters);
-typeFilter.addEventListener('change', applyFilters);
+paisFilter.addEventListener('change', applyFilters);
 rowsPerPageSelect.addEventListener('change', () => {
     currentPage = 1;
     updatePagination();
 });
 
-// Initialize
 updatePagination();
 
-async function loadClientDocuments(clientId) {
-    const documentsContainer = document.getElementById('dDocuments');
-    
-    // Show loading
-    documentsContainer.innerHTML = `
-        <div class="documents-loading">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="2" x2="12" y2="6"></line>
-                <line x1="12" y1="18" x2="12" y2="22"></line>
-                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
-                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
-                <line x1="2" y1="12" x2="6" y2="12"></line>
-                <line x1="18" y1="12" x2="22" y2="12"></line>
-                <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
-                <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
-            </svg>
-            <p>Cargando documentos...</p>
-        </div>
-    `;
-    
-    try {
-        const response = await fetch(`/clientes/documentos/${clientId}`);
-        const data = await response.json();
-        
-        if (data.success && data.documentos && data.documentos.length > 0) {
-            documentsContainer.innerHTML = data.documentos.map(doc => `
-                <div class="document-card">
-                    <div>
-                        <div class="document-type-label">${doc.tipo_documento}</div>
-                        <div class="document-value">${doc.valor_documento}</div>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            documentsContainer.innerHTML = `
-                <div class="no-documents-msg">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </svg>
-                    <p>No hay documentos registrados para este cliente</p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error loading documents:', error);
-        documentsContainer.innerHTML = `
-            <div class="no-documents-msg">
-                <p style="color: #dc3545;">Error al cargar los documentos</p>
-            </div>
-        `;
-    }
-}
-
-function showDetails(id, nombres, apellidos, email, telefono, tipo, fecha, direccion, observaciones, idEstado, estadoNombre) {
+function showDetails(id, nombre, pais, email, telefono, direccion) {
     document.getElementById('dId').textContent = '#' + id;
-    document.getElementById('dNombres').textContent = nombres;
-    document.getElementById('dApellidos').textContent = apellidos;
+    document.getElementById('dNombre').textContent = nombre;
+    document.getElementById('dPais').textContent = pais;
     document.getElementById('dEmail').textContent = email;
     document.getElementById('dTelefono').textContent = telefono;
-    document.getElementById('dTipo').textContent = tipo;
-    document.getElementById('dEstado').innerHTML = 
-        `<span class="badge ${idEstado == 1 ? 'badge-active' : idEstado == 4 ? 'badge-warning' : 'badge-inactive'}">${estadoNombre}</span>`;
-    document.getElementById('dFecha').textContent = new Date(fecha).toLocaleDateString('es-HN');
-    document.getElementById('dDireccion').textContent = direccion || 'No especificada';
-    document.getElementById('dObs').textContent = observaciones || 'Sin observaciones';
-    document.getElementById('editBtn').href = `/clientes/editar/${id}`;
-    
-    // Load documents
-    loadClientDocuments(id);
-    
+    document.getElementById('dDireccion').textContent = direccion;
+    document.getElementById('editBtn').href = `/editoriales/editar/${id}`;
     document.getElementById('detailsModal').classList.add('show');
 }
 
 function showDelete(id, name) {
     document.getElementById('deleteName').textContent = name;
-    document.getElementById('deleteForm').action = `/clientes/eliminar/${id}`;
+    document.getElementById('deleteForm').action = `/editoriales/eliminar/${id}`;
     document.getElementById('deleteModal').classList.add('show');
 }
 

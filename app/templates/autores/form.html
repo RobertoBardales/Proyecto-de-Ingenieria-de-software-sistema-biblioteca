@@ -31,7 +31,10 @@
                            maxlength="50"
                            pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+"
                            placeholder="Ej: Gabriel José">
-                    <small class="form-hint">Solo letras y espacios (2-50 caracteres)</small>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <small class="form-hint">Solo letras y espacios (2-50 caracteres)</small>
+                        <small class="char-count" id="nombresCount">0/50</small>
+                    </div>
                 </div>
 
                 <!-- Apellidos -->
@@ -47,7 +50,10 @@
                            maxlength="50"
                            pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+"
                            placeholder="Ej: García Márquez">
-                    <small class="form-hint">Solo letras y espacios (2-50 caracteres)</small>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <small class="form-hint">Solo letras y espacios (2-50 caracteres)</small>
+                        <small class="char-count" id="apellidosCount">0/50</small>
+                    </div>
                 </div>
 
                 <!-- Nacionalidad -->
@@ -62,8 +68,11 @@
                            minlength="3"
                            maxlength="50"
                            pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+"
-                           placeholder="Ej: Colombiano">
-                    <small class="form-hint">País de origen del autor</small>
+                           placeholder="Ej: Colombiano, Hondureño">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <small class="form-hint">País de origen del autor (3-50 caracteres)</small>
+                        <small class="char-count" id="nacionalidadCount">0/50</small>
+                    </div>
                 </div>
 
                 <!-- Fecha de Nacimiento -->
@@ -75,7 +84,7 @@
                            class="form-input"
                            value="{{ autor.fecha_nacimiento if autor else '' }}" 
                            required>
-                    <small class="form-hint">Fecha en formato MM/DD/AAAA</small>
+                    <small class="form-hint">Máximo 150 años de edad</small>
                 </div>
 
                 <!-- Descripción -->
@@ -85,8 +94,13 @@
                               name="descripcion" 
                               class="form-input" 
                               rows="4"
-                              placeholder="Breve biografía, premios, obras destacadas...">{{ autor.descripcion if autor else '' }}</textarea>
-                    <small class="form-hint">Información relevante sobre el autor</small>
+                              minlength="10"
+                              maxlength="1000"
+                              placeholder="Breve biografía, premios, obras destacadas, estilo literario... (mínimo 10 caracteres si se proporciona)">{{ autor.descripcion if autor else '' }}</textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <small class="form-hint">Información relevante sobre el autor (10-1000 caracteres)</small>
+                        <small class="char-count" id="descripcionCount">0/1000</small>
+                    </div>
                 </div>
 
                 <!-- Observaciones -->
@@ -96,8 +110,12 @@
                               name="observaciones" 
                               class="form-input" 
                               rows="3"
-                              placeholder="Notas adicionales...">{{ autor.observaciones if autor else '' }}</textarea>
-                    <small class="form-hint">Notas internas (opcional)</small>
+                              maxlength="500"
+                              placeholder="Notas adicionales internas... (opcional)">{{ autor.observaciones if autor else '' }}</textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <small class="form-hint">Notas internas opcionales (máximo 500 caracteres)</small>
+                        <small class="char-count" id="observacionesCount">0/500</small>
+                    </div>
                 </div>
             </div>
 
@@ -224,6 +242,22 @@
     color: #718096;
 }
 
+.char-count {
+    font-size: 0.85rem;
+    color: #a0aec0;
+    text-align: right;
+}
+
+.char-count.warning {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.char-count.danger {
+    color: #dc3545;
+    font-weight: 700;
+}
+
 textarea.form-input {
     resize: vertical;
     min-height: 100px;
@@ -302,9 +336,11 @@ textarea.form-input {
 document.addEventListener('DOMContentLoaded', function() {
     const fechaInput = document.getElementById('fecha_nacimiento');
     const today = new Date();
+    
+    // Maximum date: today
     const maxDate = today.toISOString().split('T')[0];
     
-    // 150 years ago
+    // Minimum date: 150 years ago
     const minYear = today.getFullYear() - 150;
     const minDate = `${minYear}-01-01`;
     
@@ -312,27 +348,199 @@ document.addEventListener('DOMContentLoaded', function() {
     fechaInput.min = minDate;
 });
 
-// Real-time validation for nombres
+// Real-time validation for nombres - only letters and spaces
 document.getElementById('nombres').addEventListener('input', function(e) {
-    const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
-    if (!regex.test(e.target.value)) {
-        e.target.value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    }
+    let value = e.target.value;
+    
+    // Remove invalid characters (only allow letters and spaces)
+    value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    
+    // Prevent more than 1 consecutive space
+    value = value.replace(/\s{2,}/g, ' ');
+    
+    // Remove more than 2 consecutive same letters (not spaces)
+    value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
 });
 
 // Real-time validation for apellidos
 document.getElementById('apellidos').addEventListener('input', function(e) {
-    const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
-    if (!regex.test(e.target.value)) {
-        e.target.value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    }
+    let value = e.target.value;
+    
+    // Remove invalid characters
+    value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    
+    // Prevent more than 1 consecutive space
+    value = value.replace(/\s{2,}/g, ' ');
+    
+    // Remove more than 2 consecutive same letters
+    value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
 });
 
 // Real-time validation for nacionalidad
 document.getElementById('nacionalidad').addEventListener('input', function(e) {
-    const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
-    if (!regex.test(e.target.value)) {
-        e.target.value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    let value = e.target.value;
+    
+    // Remove invalid characters
+    value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    
+    // Prevent more than 1 consecutive space
+    value = value.replace(/\s{2,}/g, ' ');
+    
+    // Remove more than 2 consecutive same letters
+    value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Real-time validation for descripcion
+document.getElementById('descripcion').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Prevent more than 1 consecutive space
+    value = value.replace(/\s{2,}/g, ' ');
+    
+    // Remove more than 2 consecutive same characters (except spaces)
+    value = value.replace(/([^\s])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Real-time validation for observaciones
+document.getElementById('observaciones').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Prevent more than 1 consecutive space
+    value = value.replace(/\s{2,}/g, ' ');
+    
+    // Remove more than 2 consecutive same characters (except spaces)
+    value = value.replace(/([^\s])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Character counters with color coding
+function updateCharCount(inputId, countId, max) {
+    const input = document.getElementById(inputId);
+    const counter = document.getElementById(countId);
+    
+    function update() {
+        const length = input.value.length;
+        counter.textContent = `${length}/${max}`;
+        
+        // Color coding based on usage
+        counter.classList.remove('warning', 'danger');
+        if (length > max * 0.9) {
+            counter.classList.add('danger');
+        } else if (length > max * 0.7) {
+            counter.classList.add('warning');
+        }
+    }
+    
+    input.addEventListener('input', update);
+    update(); // Initial count
+}
+
+updateCharCount('nombres', 'nombresCount', 50);
+updateCharCount('apellidos', 'apellidosCount', 50);
+updateCharCount('nacionalidad', 'nacionalidadCount', 50);
+updateCharCount('descripcion', 'descripcionCount', 1000);
+updateCharCount('observaciones', 'observacionesCount', 500);
+
+// Form validation before submit
+document.getElementById('autorForm').addEventListener('submit', function(e) {
+    const nombres = document.getElementById('nombres').value.trim();
+    const apellidos = document.getElementById('apellidos').value.trim();
+    const nacionalidad = document.getElementById('nacionalidad').value.trim();
+    const fechaNacimiento = document.getElementById('fecha_nacimiento').value;
+    const descripcion = document.getElementById('descripcion').value.trim();
+    
+    // Validate nombres
+    if (nombres.length < 2 || nombres.length > 50) {
+        e.preventDefault();
+        alert('Los nombres deben tener entre 2 y 50 caracteres');
+        document.getElementById('nombres').focus();
+        return false;
+    }
+    
+    // Validate apellidos
+    if (apellidos.length < 2 || apellidos.length > 50) {
+        e.preventDefault();
+        alert('Los apellidos deben tener entre 2 y 50 caracteres');
+        document.getElementById('apellidos').focus();
+        return false;
+    }
+    
+    // Validate nacionalidad
+    if (nacionalidad.length < 3 || nacionalidad.length > 50) {
+        e.preventDefault();
+        alert('La nacionalidad debe tener entre 3 y 50 caracteres');
+        document.getElementById('nacionalidad').focus();
+        return false;
+    }
+    
+    // Validate fecha de nacimiento
+    if (!fechaNacimiento) {
+        e.preventDefault();
+        alert('La fecha de nacimiento es obligatoria');
+        document.getElementById('fecha_nacimiento').focus();
+        return false;
+    }
+    
+    const fecha = new Date(fechaNacimiento);
+    const today = new Date();
+    const age = today.getFullYear() - fecha.getFullYear();
+    
+    if (age > 150) {
+        e.preventDefault();
+        alert('La fecha de nacimiento es inválida (más de 150 años)');
+        document.getElementById('fecha_nacimiento').focus();
+        return false;
+    }
+    
+    // Validate descripcion if provided
+    if (descripcion && descripcion.length > 0) {
+        if (descripcion.length < 10) {
+            e.preventDefault();
+            alert('La descripción debe tener al menos 10 caracteres si se proporciona');
+            document.getElementById('descripcion').focus();
+            return false;
+        }
+        if (descripcion.length > 1000) {
+            e.preventDefault();
+            alert('La descripción no puede exceder 1000 caracteres');
+            document.getElementById('descripcion').focus();
+            return false;
+        }
+    }
+    
+    // Check for invalid patterns (more than 1 consecutive space)
+    if (/\s{2,}/.test(nombres) || /\s{2,}/.test(apellidos) || /\s{2,}/.test(nacionalidad)) {
+        e.preventDefault();
+        alert('Los campos no pueden tener más de 1 espacio consecutivo');
+        return false;
+    }
+    
+    // Check for more than 2 consecutive same letters
+    if (/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/.test(nombres) || 
+        /([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/.test(apellidos) || 
+        /([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/.test(nacionalidad)) {
+        e.preventDefault();
+        alert('Los campos no pueden tener la misma letra repetida más de 2 veces seguidas');
+        return false;
     }
 });
 </script>

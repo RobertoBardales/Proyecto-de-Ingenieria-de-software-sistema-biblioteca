@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if tema else 'Nuevo' }} Tema{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>{{ '✏️ Editar' if tema else '➕ Crear' }} Tema del Foro</h1>
+        <a href="{{ url_for('temas_foros.listar') }}" class="btn btn-secondary">← Volver</a>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" id="formTema">
+            <!-- Título -->
+            <div class="form-group">
+                <label for="titulo" class="required">Título del Tema</label>
+                <input type="text" 
+                       id="titulo" 
+                       name="titulo" 
+                       class="form-input" 
+                       value="{{ tema.titulo if tema else '' }}"
+                       placeholder="Ej: ¿Cuál es tu libro favorito de ciencia ficción?"
+                       maxlength="255"
+                       required>
+                <small class="help-text">Mínimo 5 caracteres, máximo 255</small>
+                <div id="errorTitulo" class="error-message"></div>
+            </div>
+
+            <!-- Categoría -->
+            <div class="form-group">
+                <label for="categoria_foro" class="required">Categoría</label>
+                <select id="categoria_foro" name="categoria_foro" class="form-input" required>
+                    <option value="">Seleccionar categoría...</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat }}" {{ 'selected' if tema and tema.categoria_foro == cat else '' }}>
+                        {{ cat }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group">
+                <label for="descripcion" class="required">Descripción</label>
+                <textarea id="descripcion" 
+                          name="descripcion" 
+                          class="form-textarea" 
+                          rows="10"
+                          placeholder="Escribe tu pregunta o tema de discusión aquí..."
+                          required>{{ tema.descripcion if tema else '' }}</textarea>
+                <small class="help-text" id="contadorCaracteres">0 / 5000 caracteres</small>
+                <div id="errorDescripcion" class="error-message"></div>
+            </div>
+
+            <!-- Destacado (solo para admins) -->
+            {% if current_user.tipo_usuario == 'admin' %}
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" 
+                           name="destacado" 
+                           {{ 'checked' if tema and tema.destacado else '' }}>
+                    <span>⭐ Marcar como destacado</span>
+                </label>
+                <small class="help-text">Los temas destacados aparecen primero en la lista</small>
+            </div>
+            {% endif %}
+
+            <!-- Botones -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="btnGuardar">
+                    💾 {{ 'Actualizar' if tema else 'Crear' }} Tema
+                </button>
+                <a href="{{ url_for('temas_foros.listar') }}" class="btn btn-secondary">
+                    ❌ Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #1a202c;
+}
+
+.form-container {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.required::after {
+    content: ' *';
+    color: #dc3545;
+}
+
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 150px;
+}
+
+.help-text {
+    display: block;
+    color: #718096;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.error-message {
+    display: none;
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #f8d7da;
+    border-radius: 4px;
+    border-left: 3px solid #dc3545;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e0;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('formTema');
+    const titulo = document.getElementById('titulo');
+    const descripcion = document.getElementById('descripcion');
+    const errorTitulo = document.getElementById('errorTitulo');
+    const errorDescripcion = document.getElementById('errorDescripcion');
+    const contadorCaracteres = document.getElementById('contadorCaracteres');
+
+    // Contador de caracteres
+    function actualizarContador() {
+        const count = descripcion.value.length;
+        contadorCaracteres.textContent = `${count} / 5000 caracteres`;
+        
+        if (count > 5000) {
+            contadorCaracteres.style.color = '#dc3545';
+        } else if (count > 4500) {
+            contadorCaracteres.style.color = '#ffc107';
+        } else {
+            contadorCaracteres.style.color = '#718096';
+        }
+    }
+
+    descripcion.addEventListener('input', actualizarContador);
+    actualizarContador(); // Inicial
+
+    // Validación del título
+    titulo.addEventListener('blur', function() {
+        const valor = this.value.trim();
+        
+        if (!valor) {
+            mostrarError(errorTitulo, 'El título es obligatorio');
+            return;
+        }
+        
+        if (valor.length < 5) {
+            mostrarError(errorTitulo, 'El título debe tener al menos 5 caracteres');
+            return;
+        }
+        
+        if (valor.length > 255) {
+            mostrarError(errorTitulo, 'El título no puede exceder 255 caracteres');
+            return;
+        }
+        
+        if (/(.)\1{3,}/.test(valor)) {
+            mostrarError(errorTitulo, 'El título no puede tener más de 3 caracteres iguales seguidos');
+            return;
+        }
+        
+        ocultarError(errorTitulo);
+    });
+
+    // Validación de descripción
+    descripcion.addEventListener('blur', function() {
+        const valor = this.value.trim();
+        
+        if (!valor) {
+            mostrarError(errorDescripcion, 'La descripción es obligatoria');
+            return;
+        }
+        
+        if (valor.length < 10) {
+            mostrarError(errorDescripcion, 'La descripción debe tener al menos 10 caracteres');
+            return;
+        }
+        
+        if (valor.length > 5000) {
+            mostrarError(errorDescripcion, 'La descripción no puede exceder 5000 caracteres');
+            return;
+        }
+        
+        ocultarError(errorDescripcion);
+    });
+
+    // Validación antes de enviar
+    form.addEventListener('submit', function(e) {
+        let valido = true;
+        
+        // Validar título
+        if (titulo.value.trim().length < 5) {
+            mostrarError(errorTitulo, 'El título debe tener al menos 5 caracteres');
+            valido = false;
+        }
+        
+        // Validar descripción
+        if (descripcion.value.trim().length < 10) {
+            mostrarError(errorDescripcion, 'La descripción debe tener al menos 10 caracteres');
+            valido = false;
+        }
+        
+        if (descripcion.value.length > 5000) {
+            mostrarError(errorDescripcion, 'La descripción no puede exceder 5000 caracteres');
+            valido = false;
+        }
+        
+        if (!valido) {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+
+    function mostrarError(elemento, mensaje) {
+        elemento.textContent = '❌ ' + mensaje;
+        elemento.classList.add('show');
+    }
+
+    function ocultarError(elemento) {
+        elemento.classList.remove('show');
+    }
+});
+</script>
+{% endblock %}

@@ -76,7 +76,7 @@ class Libros(Base):
         PrimaryKeyConstraint('id_libro', name='PK_Libros'),
     )
 
-    id_libro: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_libro: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     isbn: Mapped[str] = mapped_column(String(13, 'Modern_Spanish_CI_AS'), nullable=False)
     titulo: Mapped[str] = mapped_column(String(255, 'Modern_Spanish_CI_AS'), nullable=False)
     formato: Mapped[str] = mapped_column(String(50, 'Modern_Spanish_CI_AS'), nullable=False)
@@ -120,7 +120,7 @@ class Pais(Base):
         PrimaryKeyConstraint('id_pais', name='PK_Pais'),
     )
 
-    id_pais: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_pais: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     nombre_pais: Mapped[str] = mapped_column(String(100, 'Modern_Spanish_CI_AS'), nullable=False)
     codigo_iso: Mapped[str] = mapped_column(String(5, 'Modern_Spanish_CI_AS'), nullable=False)
 
@@ -134,7 +134,7 @@ class Sucursales(Base):
         PrimaryKeyConstraint('id_sucursal', name='PK_Sucursales'),
     )
 
-    id_sucursal: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_sucursal: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     nombre: Mapped[str] = mapped_column(String(100, 'Modern_Spanish_CI_AS'), nullable=False)
     direccion: Mapped[str] = mapped_column(TEXT(2147483647, 'Modern_Spanish_CI_AS'), nullable=False)
     telefono: Mapped[str] = mapped_column(String(20, 'Modern_Spanish_CI_AS'), nullable=False)
@@ -230,7 +230,7 @@ class Editoriales(Base):
         Index('IXFK_Editoriales_Pais', 'id_pais')
     )
 
-    id_editorial: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_editorial: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     nombre: Mapped[str] = mapped_column(String(150, 'Modern_Spanish_CI_AS'), nullable=False)
     id_pais: Mapped[int] = mapped_column(Integer, nullable=False)
     telefono: Mapped[str] = mapped_column(String(20, 'Modern_Spanish_CI_AS'), nullable=False)
@@ -350,7 +350,7 @@ class ClientesDocumento(Base):
         Index('IXFK_Clientes_Documento_Tipos_Documentos', 'id_tipo_documento')
     )
 
-    id_cliente_documento: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_cliente_documento: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement= False)
     id_cliente: Mapped[int] = mapped_column(Integer, nullable=False)
     id_tipo_documento: Mapped[int] = mapped_column(Integer, nullable=False)
     valor_documento: Mapped[str] = mapped_column(Unicode(50, 'Modern_Spanish_CI_AS'), nullable=False)
@@ -471,7 +471,7 @@ class TemasForos(Base):
         Index('IXFK_Temas_Foros_Clientes', 'id_cliente_creador')
     )
 
-    id_tema: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_tema: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement= False)
     id_cliente_creador: Mapped[int] = mapped_column(Integer, nullable=False)
     categoria_foro: Mapped[str] = mapped_column(String(50, 'Modern_Spanish_CI_AS'), nullable=False)
     titulo: Mapped[str] = mapped_column(String(255, 'Modern_Spanish_CI_AS'), nullable=False)
@@ -631,7 +631,7 @@ class MensajesForos(Base):
         Index('IXFK_Mensajes_Foros_Temas', 'id_tema')
     )
 
-    id_mensaje: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id_mensaje: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     id_tema: Mapped[int] = mapped_column(Integer, nullable=False)
     id_cliente: Mapped[int] = mapped_column(Integer, nullable=False)
     contenido: Mapped[str] = mapped_column(TEXT(2147483647, 'Modern_Spanish_CI_AS'), nullable=False)

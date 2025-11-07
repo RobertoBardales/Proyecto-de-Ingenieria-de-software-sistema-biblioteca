@@ -32,7 +32,15 @@ def create_app():
     from app.routes.tipos_documentos import tipos_documentos_bp
     from app.routes.categorias import categorias_bp
     from app.routes.estado_usuarios import estado_usuarios_bp
-    
+    from app.routes.pais import pais_bp
+    from app.routes.editoriales import editoriales_bp
+    from app.routes.sucursales import sucursales_bp
+    from app.routes import clientes_documento
+    from app.routes import temas_foros, mensajes_foros
+
+
+    app.register_blueprint(mensajes_foros.bp)
+    app.register_blueprint(temas_foros.bp)
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(clientes_bp)
@@ -40,7 +48,12 @@ def create_app():
     app.register_blueprint(tipos_documentos_bp)
     app.register_blueprint(categorias_bp)
     app.register_blueprint(estado_usuarios_bp)
+    app.register_blueprint(pais_bp)
+    app.register_blueprint(editoriales_bp)
+    app.register_blueprint(sucursales_bp)
+    app.register_blueprint(clientes_documento.bp)
 
+    
     return app
 
 @login_manager.user_loader

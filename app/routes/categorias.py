@@ -8,15 +8,31 @@ import re
 categorias_bp = Blueprint('categorias', __name__, url_prefix='/categorias')
 
 def validar_nombre(nombre):
-    """Validar nombre de categoría"""
+    """Validar nombre de categoría con reglas estrictas"""
     if not nombre or not nombre.strip():
         return False, 'El nombre es obligatorio'
     
-    if len(nombre.strip()) < 2:
+    # Eliminar espacios múltiples para validación
+    nombre_limpio = ' '.join(nombre.split())
+    
+    # Longitud
+    if len(nombre_limpio) < 2:
         return False, 'El nombre debe tener al menos 2 caracteres'
     
-    if len(nombre.strip()) > 50:
-        return False, 'El nombre no puede exceder 50 caracteres'
+    if len(nombre_limpio) > 100:
+        return False, 'El nombre no puede exceder 100 caracteres'
+    
+    # Solo letras, números y espacios
+    if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+$', nombre_limpio):
+        return False, 'El nombre solo puede contener letras, números y espacios'
+    
+    # No más de 2 espacios consecutivos en el texto original
+    if '   ' in nombre:  # 3 espacios
+        return False, 'El nombre no puede tener más de 2 espacios consecutivos'
+    
+    # No más de 2 caracteres iguales seguidos (excepto espacios)
+    if re.search(r'([^\s])\1{2,}', nombre_limpio):
+        return False, 'El nombre no puede tener el mismo carácter repetido más de 2 veces seguidas'
     
     # Validar que contenga al menos algunas letras
     if not re.search(r'[A-Za-zÁÉÍÓÚáéíóúÑñ]', nombre):
@@ -25,9 +41,47 @@ def validar_nombre(nombre):
     return True, None
 
 def validar_descripcion(descripcion):
-    """Validar descripción de categoría"""
-    if descripcion and len(descripcion.strip()) > 200:
-        return False, 'La descripción no puede exceder 200 caracteres'
+    """Validar descripción de categoría con reglas estrictas"""
+    if not descripcion or not descripcion.strip():
+        return False, 'La descripción es obligatoria'
+    
+    descripcion = descripcion.strip()
+    
+    # Longitud mínima y máxima
+    if len(descripcion) < 10:
+        return False, 'La descripción debe tener al menos 10 caracteres'
+    
+    if len(descripcion) > 500:
+        return False, 'La descripción no puede exceder 500 caracteres'
+    
+    # No más de 2 espacios consecutivos
+    if '   ' in descripcion:
+        return False, 'La descripción no puede tener más de 2 espacios consecutivos'
+    
+    # No más de 2 caracteres iguales seguidos (excepto espacios)
+    if re.search(r'([^\s])\1{2,}', descripcion):
+        return False, 'La descripción no puede tener el mismo carácter repetido más de 2 veces seguidas'
+    
+    return True, None
+
+def validar_observaciones(observaciones):
+    """Validar observaciones con límites"""
+    if not observaciones:
+        return True, None
+    
+    observaciones = observaciones.strip()
+    
+    # No más de 2 espacios consecutivos
+    if '   ' in observaciones:
+        return False, 'Las observaciones no pueden tener más de 2 espacios consecutivos'
+    
+    # No más de 2 caracteres iguales seguidos (excepto espacios)
+    if re.search(r'([^\s])\1{2,}', observaciones):
+        return False, 'Las observaciones no pueden tener el mismo carácter repetido más de 2 veces seguidas'
+    
+    # Longitud máxima
+    if len(observaciones) > 500:
+        return False, 'Las observaciones no pueden exceder 500 caracteres'
     
     return True, None
 
@@ -57,13 +111,20 @@ def crear():
             valido, error = validar_nombre(nombre)
             if not valido:
                 flash(error, 'error')
-                return render_template('categorias/form.html')
+                return render_template('categorias/form.html', categoria=None)
             
             # Validar descripción
             valido, error = validar_descripcion(descripcion)
             if not valido:
                 flash(error, 'error')
-                return render_template('categorias/form.html')
+                return render_template('categorias/form.html', categoria=None)
+            
+            # Validar observaciones
+            if observaciones:
+                valido, error = validar_observaciones(observaciones)
+                if not valido:
+                    flash(error, 'error')
+                    return render_template('categorias/form.html', categoria=None)
             
             # Verificar nombre único (case-insensitive)
             categoria_existe = db.session.query(Categorias).filter(
@@ -72,7 +133,7 @@ def crear():
             
             if categoria_existe:
                 flash(f'Ya existe una categoría con el nombre "{nombre}".', 'error')
-                return render_template('categorias/form.html')
+                return render_template('categorias/form.html', categoria=None)
             
             # Crear categoría
             nuevo_id = get_next_id()
@@ -80,7 +141,7 @@ def crear():
             nueva_categoria = Categorias(
                 id_categoria=nuevo_id,
                 nombre=nombre.strip().title(),  # Capitalizar
-                descripcion=descripcion.strip() if descripcion else None,
+                descripcion=descripcion.strip(),
                 observaciones=observaciones.strip() if observaciones else None
             )
             
@@ -123,6 +184,13 @@ def editar(id):
                 flash(error, 'error')
                 return render_template('categorias/form.html', categoria=categoria)
             
+            # Validar observaciones
+            if observaciones:
+                valido, error = validar_observaciones(observaciones)
+                if not valido:
+                    flash(error, 'error')
+                    return render_template('categorias/form.html', categoria=categoria)
+            
             # Verificar nombre único (excepto la categoría actual, case-insensitive)
             categoria_existe = db.session.query(Categorias).filter(
                 func.lower(Categorias.nombre) == nombre.lower(),
@@ -135,7 +203,7 @@ def editar(id):
             
             # Actualizar datos
             categoria.nombre = nombre.strip().title()  # Capitalizar
-            categoria.descripcion = descripcion.strip() if descripcion else None
+            categoria.descripcion = descripcion.strip()
             categoria.observaciones = observaciones.strip() if observaciones else None
             
             db.session.commit()

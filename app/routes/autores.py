@@ -9,19 +9,35 @@ import re
 autores_bp = Blueprint('autores', __name__, url_prefix='/autores')
 
 def validar_solo_letras(texto, campo):
-    """Validar que un campo solo contenga letras y espacios"""
+    """Validar que un campo solo contenga letras y espacios con reglas estrictas"""
     if not texto or not texto.strip():
         return False, f'{campo} es obligatorio'
-    if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', texto):
+    
+    # Eliminar espacios múltiples para validación
+    texto_limpio = ' '.join(texto.split())
+    
+    # Solo letras y espacios
+    if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', texto_limpio):
         return False, f'{campo} solo puede contener letras y espacios'
-    if len(texto.strip()) < 2:
+    
+    # No más de 1 espacio seguido en el texto original
+    if '  ' in texto:  # 2 espacios
+        return False, f'{campo} no puede tener más de 1 espacio consecutivo'
+    
+    # No más de 2 letras iguales seguidas
+    if re.search(r'([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}', texto_limpio):
+        return False, f'{campo} no puede tener la misma letra repetida más de 2 veces seguidas'
+    
+    # Longitud
+    if len(texto_limpio) < 2:
         return False, f'{campo} debe tener al menos 2 caracteres'
-    if len(texto.strip()) > 50:
+    if len(texto_limpio) > 50:
         return False, f'{campo} no puede exceder 50 caracteres'
+    
     return True, None
 
 def validar_fecha_nacimiento(fecha_str):
-    """Validar fecha de nacimiento"""
+    """Validar fecha de nacimiento con reglas estrictas"""
     if not fecha_str:
         return False, 'Fecha de nacimiento es obligatoria'
     
@@ -35,22 +51,83 @@ def validar_fecha_nacimiento(fecha_str):
         # No puede ser muy antigua (más de 150 años)
         edad_maxima = date.today().year - 150
         if fecha.year < edad_maxima:
-            return False, 'Fecha de nacimiento inválida (muy antigua)'
+            return False, 'Fecha de nacimiento inválida (más de 150 años)'
         
         return True, None
     except ValueError:
         return False, 'Formato de fecha inválido'
 
 def validar_nacionalidad(nacionalidad):
-    """Validar nacionalidad"""
+    """Validar nacionalidad con reglas estrictas"""
     if not nacionalidad or not nacionalidad.strip():
         return False, 'Nacionalidad es obligatoria'
-    if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', nacionalidad):
-        return False, 'Nacionalidad solo puede contener letras'
-    if len(nacionalidad.strip()) < 3:
+    
+    nacionalidad_limpia = ' '.join(nacionalidad.split())
+    
+    # Solo letras y espacios
+    if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', nacionalidad_limpia):
+        return False, 'Nacionalidad solo puede contener letras y espacios'
+    
+    # No más de 1 espacio seguido
+    if '  ' in nacionalidad:
+        return False, 'Nacionalidad no puede tener más de 1 espacio consecutivo'
+    
+    # No más de 2 letras iguales seguidas
+    if re.search(r'([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}', nacionalidad_limpia):
+        return False, 'Nacionalidad no puede tener la misma letra repetida más de 2 veces seguidas'
+    
+    # Longitud
+    if len(nacionalidad_limpia) < 3:
         return False, 'Nacionalidad debe tener al menos 3 caracteres'
-    if len(nacionalidad.strip()) > 50:
+    if len(nacionalidad_limpia) > 50:
         return False, 'Nacionalidad no puede exceder 50 caracteres'
+    
+    return True, None
+
+def validar_descripcion(descripcion):
+    """Validar descripción/biografía"""
+    if not descripcion:
+        return True, None
+    
+    descripcion = descripcion.strip()
+    
+    # No más de 1 espacio consecutivo
+    if '  ' in descripcion:
+        return False, 'La descripción no puede tener más de 1 espacio consecutivo'
+    
+    # No más de 2 caracteres iguales seguidos (excepto espacios)
+    if re.search(r'([^\s])\1{2,}', descripcion):
+        return False, 'La descripción no puede tener el mismo carácter repetido más de 2 veces seguidas'
+    
+    # Longitud máxima
+    if len(descripcion) > 1000:
+        return False, 'La descripción no puede exceder 1000 caracteres'
+    
+    # Longitud mínima si se proporciona
+    if len(descripcion) < 10:
+        return False, 'La descripción debe tener al menos 10 caracteres si se proporciona'
+    
+    return True, None
+
+def validar_observaciones(observaciones):
+    """Validar observaciones"""
+    if not observaciones:
+        return True, None
+    
+    observaciones = observaciones.strip()
+    
+    # No más de 1 espacio consecutivo
+    if '  ' in observaciones:
+        return False, 'Las observaciones no pueden tener más de 1 espacio consecutivo'
+    
+    # No más de 2 caracteres iguales seguidos (excepto espacios)
+    if re.search(r'([^\s])\1{2,}', observaciones):
+        return False, 'Las observaciones no pueden tener el mismo carácter repetido más de 2 veces seguidas'
+    
+    # Longitud máxima
+    if len(observaciones) > 500:
+        return False, 'Las observaciones no pueden exceder 500 caracteres'
+    
     return True, None
 
 def get_next_id():
@@ -75,30 +152,46 @@ def crear():
             apellidos = request.form.get('apellidos', '').strip()
             nacionalidad = request.form.get('nacionalidad', '').strip()
             fecha_nac_str = request.form.get('fecha_nacimiento', '').strip()
+            descripcion = request.form.get('descripcion', '').strip()
+            observaciones = request.form.get('observaciones', '').strip()
             
             # Validar nombres
             valido, error = validar_solo_letras(nombres, 'Nombres')
             if not valido:
                 flash(error, 'error')
-                return render_template('autores/form.html')
+                return render_template('autores/form.html', autor=None)
             
             # Validar apellidos
             valido, error = validar_solo_letras(apellidos, 'Apellidos')
             if not valido:
                 flash(error, 'error')
-                return render_template('autores/form.html')
+                return render_template('autores/form.html', autor=None)
             
             # Validar nacionalidad
             valido, error = validar_nacionalidad(nacionalidad)
             if not valido:
                 flash(error, 'error')
-                return render_template('autores/form.html')
+                return render_template('autores/form.html', autor=None)
             
             # Validar fecha de nacimiento
             valido, error = validar_fecha_nacimiento(fecha_nac_str)
             if not valido:
                 flash(error, 'error')
-                return render_template('autores/form.html')
+                return render_template('autores/form.html', autor=None)
+            
+            # Validar descripción si se proporciona
+            if descripcion:
+                valido, error = validar_descripcion(descripcion)
+                if not valido:
+                    flash(error, 'error')
+                    return render_template('autores/form.html', autor=None)
+            
+            # Validar observaciones si se proporcionan
+            if observaciones:
+                valido, error = validar_observaciones(observaciones)
+                if not valido:
+                    flash(error, 'error')
+                    return render_template('autores/form.html', autor=None)
             
             # Verificar si ya existe un autor con el mismo nombre
             autor_existe = db.session.query(Autores).filter(
@@ -107,7 +200,7 @@ def crear():
             ).first()
             if autor_existe:
                 flash(f'Ya existe un autor con el nombre {nombres} {apellidos}.', 'error')
-                return render_template('autores/form.html')
+                return render_template('autores/form.html', autor=None)
             
             # Convertir fecha
             fecha_nacimiento = datetime.strptime(fecha_nac_str, '%Y-%m-%d').date()
@@ -121,8 +214,8 @@ def crear():
                 apellidos=apellidos.title(),
                 nacionalidad=nacionalidad.title(),
                 fecha_nacimiento=fecha_nacimiento,
-                descripcion=request.form.get('descripcion', '').strip() or None,
-                observaciones=request.form.get('observaciones', '').strip() or None
+                descripcion=descripcion or None,
+                observaciones=observaciones or None
             )
             
             db.session.add(nuevo_autor)
@@ -152,6 +245,8 @@ def editar(id):
             apellidos = request.form.get('apellidos', '').strip()
             nacionalidad = request.form.get('nacionalidad', '').strip()
             fecha_nac_str = request.form.get('fecha_nacimiento', '').strip()
+            descripcion = request.form.get('descripcion', '').strip()
+            observaciones = request.form.get('observaciones', '').strip()
             
             # Validar nombres
             valido, error = validar_solo_letras(nombres, 'Nombres')
@@ -177,6 +272,20 @@ def editar(id):
                 flash(error, 'error')
                 return render_template('autores/form.html', autor=autor)
             
+            # Validar descripción si se proporciona
+            if descripcion:
+                valido, error = validar_descripcion(descripcion)
+                if not valido:
+                    flash(error, 'error')
+                    return render_template('autores/form.html', autor=autor)
+            
+            # Validar observaciones si se proporcionan
+            if observaciones:
+                valido, error = validar_observaciones(observaciones)
+                if not valido:
+                    flash(error, 'error')
+                    return render_template('autores/form.html', autor=autor)
+            
             # Verificar si ya existe otro autor con el mismo nombre
             autor_existe = db.session.query(Autores).filter(
                 func.lower(Autores.nombres) == nombres.lower(),
@@ -195,8 +304,8 @@ def editar(id):
             autor.apellidos = apellidos.title()
             autor.nacionalidad = nacionalidad.title()
             autor.fecha_nacimiento = fecha_nacimiento
-            autor.descripcion = request.form.get('descripcion', '').strip() or None
-            autor.observaciones = request.form.get('observaciones', '').strip() or None
+            autor.descripcion = descripcion or None
+            autor.observaciones = observaciones or None
             
             db.session.commit()
             flash(f'Autor {nombres} {apellidos} actualizado exitosamente.', 'success')

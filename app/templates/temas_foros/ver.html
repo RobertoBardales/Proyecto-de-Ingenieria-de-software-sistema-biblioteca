@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tema.titulo }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{{ url_for('temas_foros.listar') }}">Foros</a>
+        <span>›</span>
+        <span>{{ tema.categoria_foro }}</span>
+    </div>
+
+    <!-- Tema principal -->
+    <div class="tema-principal">
+        <!-- Header -->
+        <div class="tema-header">
+            <div class="tema-badges">
+                <span class="badge badge-categoria">{{ tema.categoria_foro }}</span>
+                {% if tema.destacado %}
+                <span class="badge badge-destacado">⭐ Destacado</span>
+                {% endif %}
+            </div>
+            
+            <!-- Acciones (solo para creador o admin) -->
+            {% if current_user.id_cliente == tema.id_cliente_creador or current_user.tipo_usuario == 'admin' %}
+            <div class="tema-acciones">
+                <a href="{{ url_for('temas_foros.editar', id=tema.id_tema) }}" 
+                   class="btn-action btn-edit" 
+                   title="Editar">
+                    ✏️
+                </a>
+                
+                {% if current_user.tipo_usuario == 'admin' %}
+                <form action="{{ url_for('temas_foros.destacar', id=tema.id_tema) }}" 
+                      method="POST" 
+                      style="display: inline;">
+                    <button type="submit" 
+                            class="btn-action btn-star" 
+                            title="{{ 'Desmarcar' if tema.destacado else 'Destacar' }}">
+                        {{ '⭐' if not tema.destacado else '☆' }}
+                    </button>
+                </form>
+                {% endif %}
+                
+                <form action="{{ url_for('temas_foros.eliminar', id=tema.id_tema) }}" 
+                      method="POST" 
+                      style="display: inline;"
+                      onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar este tema?\n\nSe eliminará el tema y todas sus respuestas.');">
+                    <button type="submit" 
+                            class="btn-action btn-delete" 
+                            title="Eliminar">
+                        🗑️
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Título -->
+        <h1 class="tema-titulo">{{ tema.titulo }}</h1>
+
+        <!-- Info del autor -->
+        <div class="tema-autor">
+            <div class="avatar">{{ creador.nombres[0] }}{{ creador.apellidos[0] }}</div>
+            <div class="autor-info">
+                <span class="autor-nombre">{{ creador.nombres }} {{ creador.apellidos }}</span>
+                <span class="tema-fecha">
+                    📅 {{ tema.fecha_creacion.strftime('%d/%m/%Y %H:%M') }} 
+                    · 👁️ {{ tema.vistas or 0 }} vistas
+                </span>
+            </div>
+        </div>
+
+        <!-- Descripción -->
+        <div class="tema-contenido">
+            {{ tema.descripcion | replace('\n', '<br>') | safe }}
+        </div>
+    </div>
+
+    <!-- Respuestas -->
+    <div class="respuestas-section">
+        <h2 class="respuestas-titulo">
+            💬 {{ mensajes|length }} Respuesta{{ 's' if mensajes|length != 1 else '' }}
+        </h2>
+
+        {% if mensajes %}
+            {% for mensaje, autor in mensajes %}
+            <div class="mensaje-card">
+                <div class="mensaje-autor">
+                    <div class="avatar-small">{{ autor.nombres[0] }}{{ autor.apellidos[0] }}</div>
+                    <div>
+                        <span class="autor-nombre">{{ autor.nombres }} {{ autor.apellidos }}</span>
+                        <span class="mensaje-fecha">{{ mensaje.fecha_publicacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                </div>
+                
+                <div class="mensaje-contenido">
+                    {{ mensaje.contenido | replace('\n', '<br>') | safe }}
+                </div>
+                
+                <!-- Acciones del mensaje (solo para autor o admin) -->
+                {% if current_user.id_cliente == mensaje.id_cliente or current_user.tipo_usuario == 'admin' %}
+                <div class="mensaje-acciones">
+                    <button class="btn-texto" onclick="editarMensaje({{ mensaje.id_mensaje }})">
+                        ✏️ Editar
+                    </button>
+                    <form action="/mensajes_foros/eliminar/{{ mensaje.id_mensaje }}" 
+                          method="POST" 
+                          style="display: inline;"
+                          onsubmit="return confirm('¿Eliminar este mensaje?');">
+                        <button type="submit" class="btn-texto btn-texto-danger">🗑️ Eliminar</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-respuestas">
+                <p>💬 Aún no hay respuestas. ¡Sé el primero en responder!</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Formulario de respuesta -->
+    <div class="responder-section">
+        <h3>✍️ Tu Respuesta</h3>
+        <form action="/mensajes_foros/nuevo" method="POST" id="formRespuesta">
+            <input type="hidden" name="id_tema" value="{{ tema.id_tema }}">
+            
+            <textarea name="contenido" 
+                      id="respuestaTexto"
+                      class="form-textarea" 
+                      rows="6"
+                      placeholder="Escribe tu respuesta aquí..."
+                      required></textarea>
+            
+            <small class="help-text" id="contadorRespuesta">0 / 2000 caracteres</small>
+            <div id="errorRespuesta" class="error-message"></div>
+            
+            <button type="submit" class="btn btn-primary">
+                📤 Publicar Respuesta
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    color: #718096;
+}
+
+.breadcrumb a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.tema-principal {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tema-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.tema-badges {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-categoria {
+    background: #e6f3ff;
+    color: #0066cc;
+}
+
+.badge-destacado {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #856404;
+}
+
+.tema-acciones {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 1.1rem;
+    background: white;
+}
+
+.btn-edit {
+    background: #fff3cd;
+    color: #856404;
+    border: 2px solid #ffc107;
+}
+
+.btn-edit:hover {
+    background: #ffc107;
+    color: white;
+}
+
+.btn-star {
+    background: #fff9e6;
+    color: #ffd700;
+    border: 2px solid #ffd700;
+}
+
+.btn-star:hover {
+    background: #ffd700;
+}
+
+.btn-delete {
+    background: #ffe0e0;
+    color: #c41e3a;
+    border: 2px solid #dc3545;
+}
+
+.btn-delete:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.tema-titulo {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+.tema-autor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.autor-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.autor-nombre {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.tema-fecha {
+    font-size: 0.85rem;
+    color: #a0aec0;
+}
+
+.tema-contenido {
+    color: #4a5568;
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.respuestas-section {
+    margin-bottom: 2rem;
+}
+
+.respuestas-titulo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+}
+
+.mensaje-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mensaje-autor {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.avatar-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.mensaje-fecha {
+    font-size: 0.8rem;
+    color: #a0aec0;
+    display: block;
+}
+
+.mensaje-contenido {
+    color: #4a5568;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+.mensaje-acciones {
+    display: flex;
+    gap: 1rem;
+    padding-top: 0.5rem;
+}
+
+.btn-texto {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+}
+
+.btn-texto:hover {
+    text-decoration: underline;
+}
+
+.btn-texto-danger {
+    color: #dc3545;
+}
+
+.empty-respuestas {
+    text-align: center;
+    padding: 3rem;
+    color: #a0aec0;
+    background: white;
+    border-radius: 12px;
+}
+
+.responder-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.responder-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+    color: #1a202c;
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 0.5rem;
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.help-text {
+    display: block;
+    color: #718096;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.error-message {
+    display: none;
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8d7da;
+    border-radius: 4px;
+    border-left: 3px solid #dc3545;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+@media (max-width: 768px) {
+    .tema-titulo {
+        font-size: 1.5rem;
+    }
+    
+    .tema-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('respuestaTexto');
+    const contador = document.getElementById('contadorRespuesta');
+    const errorDiv = document.getElementById('errorRespuesta');
+    const form = document.getElementById('formRespuesta');
+
+    // Contador de caracteres
+    textarea.addEventListener('input', function() {
+        const count = this.value.length;
+        contador.textContent = `${count} / 2000 caracteres`;
+        
+        if (count > 2000) {
+            contador.style.color = '#dc3545';
+            errorDiv.textContent = '❌ La respuesta no puede exceder 2000 caracteres';
+            errorDiv.classList.add('show');
+        } else {
+            contador.style.color = '#718096';
+            errorDiv.classList.remove('show');
+        }
+    });
+
+    // Validación al enviar
+    form.addEventListener('submit', function(e) {
+        const valor = textarea.value.trim();
+        
+        if (valor.length < 5) {
+            e.preventDefault();
+            errorDiv.textContent = '❌ La respuesta debe tener al menos 5 caracteres';
+            errorDiv.classList.add('show');
+            return;
+        }
+        
+        if (valor.length > 2000) {
+            e.preventDefault();
+            errorDiv.textContent = '❌ La respuesta no puede exceder 2000 caracteres';
+            errorDiv.classList.add('show');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
-from models import Clientes, EstadoUsuarios
+from models import Clientes, EstadoUsuarios, ClientesDocumento, TiposDocumentos
 from bcrypt import hashpw, gensalt
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 import re
 import secrets
@@ -61,12 +61,12 @@ def validar_solo_letras(texto, campo):
     if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', texto_limpio):
         return False, f'{campo} solo puede contener letras y espacios'
     
-    # No más de 2 espacios seguidos en el texto original
-    if '   ' in texto:  # 3 espacios
-        return False, f'{campo} no puede tener más de 2 espacios consecutivos'
+    # No más de 1 espacio seguido en el texto original
+    if '  ' in texto:  # 2 espacios
+        return False, f'{campo} no puede tener más de 1 espacio consecutivo'
     
     # No más de 2 letras iguales seguidas (no existe en español)
-    if re.search(r'(.)\1{2,}', texto_limpio):
+    if re.search(r'([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}', texto_limpio):
         return False, f'{campo} no puede tener la misma letra repetida más de 2 veces seguidas'
     
     # Longitud
@@ -155,9 +155,9 @@ def validar_direccion(direccion):
     
     direccion = direccion.strip()
     
-    # No más de 2 espacios consecutivos
-    if '   ' in direccion:
-        return False, 'La dirección no puede tener más de 2 espacios consecutivos'
+    # No más de 1 espacio consecutivo
+    if '  ' in direccion:
+        return False, 'La dirección no puede tener más de 1 espacio consecutivo'
     
     # No más de 2 caracteres iguales seguidos (excepto espacios)
     if re.search(r'([^\s])\1{2,}', direccion):
@@ -180,9 +180,9 @@ def validar_observaciones(observaciones):
     
     observaciones = observaciones.strip()
     
-    # No más de 2 espacios consecutivos
-    if '   ' in observaciones:
-        return False, 'Las observaciones no pueden tener más de 2 espacios consecutivos'
+    # No más de 1 espacio consecutivo
+    if '  ' in observaciones:
+        return False, 'Las observaciones no pueden tener más de 1 espacio consecutivo'
     
     # Longitud máxima
     if len(observaciones) > 500:
@@ -190,10 +190,77 @@ def validar_observaciones(observaciones):
     
     return True, None
 
+def validar_valor_documento(valor, tipo_documento_nombre):
+    """
+    Valida el formato del documento según el tipo
+    Retorna (es_valido, mensaje_error)
+    """
+    valor = valor.strip()
+    
+    # Validar que no esté vacío
+    if not valor:
+        return False, "El valor del documento no puede estar vacío"
+    
+    # Validación según tipo de documento
+    tipo_lower = tipo_documento_nombre.lower()
+    
+    if 'identidad' in tipo_lower or 'dni' in tipo_lower:
+        # Formato: 0000-0000-00000 (13 dígitos + 2 guiones)
+        if not re.match(r'^\d{4}-\d{4}-\d{5}$', valor):
+            return False, "Formato inválido. Debe ser: 0000-0000-00000 (13 dígitos)"
+    
+    elif 'rtn' in tipo_lower:
+        # Formato RTN: 0000-0000-000000 (14 dígitos + 2 guiones)
+        if not re.match(r'^\d{4}-\d{4}-\d{6}$', valor):
+            return False, "Formato inválido. Debe ser: 0000-0000-000000 (14 dígitos)"
+    
+    elif 'pasaporte' in tipo_lower:
+        # Formato pasaporte: letras y números, 6-9 caracteres
+        if not re.match(r'^[A-Z0-9]{6,9}$', valor.upper()):
+            return False, "Formato inválido. Debe tener 6-9 caracteres alfanuméricos (sin espacios)"
+    
+    elif 'licencia' in tipo_lower:
+        # Formato licencia: Letras opcionales + números
+        if not re.match(r'^[A-Z]{0,2}\d{6,10}$', valor.upper()):
+            return False, "Formato inválido. Ej: HN123456 o 12345678"
+    
+    else:
+        # Para otros tipos: mínimo 3 caracteres, máximo 50
+        if len(valor) < 3:
+            return False, "El documento debe tener al menos 3 caracteres"
+        if len(valor) > 50:
+            return False, "El documento no puede exceder 50 caracteres"
+    
+    return True, None
+
+def validar_duplicado_documento(id_cliente, id_tipo_documento, valor_documento, id_actual=None):
+    """
+    Verifica si ya existe un documento con el mismo valor para el mismo cliente y tipo
+    """
+    query = select(ClientesDocumento).where(
+        ClientesDocumento.id_cliente == id_cliente,
+        ClientesDocumento.id_tipo_documento == id_tipo_documento,
+        ClientesDocumento.valor_documento == valor_documento
+    )
+    
+    # Si estamos editando, excluir el registro actual
+    if id_actual:
+        query = query.where(ClientesDocumento.id_cliente_documento != id_actual)
+    
+    existe = db.session.execute(query).scalar_one_or_none()
+    return existe is not None
+
 def get_next_id():
     """Obtener el siguiente ID disponible para clientes"""
     ultimo_id = db.session.query(func.max(Clientes.id_cliente)).scalar()
     return (ultimo_id or 0) + 1
+
+def get_next_documento_id():
+    """Obtiene el siguiente ID disponible para ClientesDocumento"""
+    max_id = db.session.execute(
+        select(func.max(ClientesDocumento.id_cliente_documento))
+    ).scalar()
+    return (max_id or 0) + 1
 
 # READ - Listar todos los clientes
 @clientes_bp.route('/')
@@ -215,6 +282,9 @@ def listar():
 @login_required
 def crear():
     estados = db.session.query(EstadoUsuarios).all()
+    tipos_documentos = db.session.execute(
+        select(TiposDocumentos).where(TiposDocumentos.activo == True).order_by(TiposDocumentos.nombre)
+    ).scalars().all()
     
     if request.method == 'POST':
         try:
@@ -229,19 +299,19 @@ def crear():
             valido, error = validar_solo_letras(nombres, 'Nombres')
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados)
+                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Validar apellidos
             valido, error = validar_solo_letras(apellidos, 'Apellidos')
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados)
+                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Validar email
             valido, error = validar_email(email)
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados)
+                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Verificar email duplicado
             email_existe = db.session.query(Clientes).filter(
@@ -249,27 +319,27 @@ def crear():
             ).first()
             if email_existe:
                 flash('Este email ya está registrado.', 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados)
+                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Validar teléfono
             valido, error = validar_telefono(telefono)
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados)
+                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Validar dirección
             if direccion:
                 valido, error = validar_direccion(direccion)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('clientes/form.html', cliente=None, estados=estados)
+                    return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Validar observaciones
             if observaciones:
                 valido, error = validar_observaciones(observaciones)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('clientes/form.html', cliente=None, estados=estados)
+                    return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
             
             # Generar contraseña temporal automáticamente (más segura)
             # Incluye mayúsculas, minúsculas, dígitos y símbolos
@@ -306,13 +376,17 @@ def crear():
             flash(f'Error al crear cliente: {str(e)}', 'error')
             print(f"Error en crear cliente: {str(e)}")
     
-    return render_template('clientes/form.html', cliente=None, estados=estados)
+    return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
 
 # UPDATE - Mostrar formulario de edición
 @clientes_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     estados = db.session.query(EstadoUsuarios).all()
+    tipos_documentos = db.session.execute(
+        select(TiposDocumentos).where(TiposDocumentos.activo == True).order_by(TiposDocumentos.nombre)
+    ).scalars().all()
+    
     # Use joinedload to eagerly load the Estado_Usuarios relationship
     cliente = db.session.query(Clientes).options(
         joinedload(Clientes.Estado_Usuarios)
@@ -321,6 +395,14 @@ def editar(id):
     if not cliente:
         flash('Cliente no encontrado.', 'error')
         return redirect(url_for('clientes.listar'))
+    
+    # Get existing documents for this client
+    documentos_cliente = db.session.execute(
+        select(ClientesDocumento, TiposDocumentos)
+        .join(TiposDocumentos, ClientesDocumento.id_tipo_documento == TiposDocumentos.id_tipo_documento)
+        .where(ClientesDocumento.id_cliente == id)
+        .order_by(TiposDocumentos.nombre)
+    ).all()
     
     if request.method == 'POST':
         try:
@@ -334,35 +416,76 @@ def editar(id):
             valido, error = validar_solo_letras(nombres, 'Nombres')
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=cliente, estados=estados)
+                return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
             
             # Validar apellidos
             valido, error = validar_solo_letras(apellidos, 'Apellidos')
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=cliente, estados=estados)
+                return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
             
             # Validar teléfono
             valido, error = validar_telefono(telefono)
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=cliente, estados=estados)
+                return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
             
             # Validar dirección
             if direccion:
                 valido, error = validar_direccion(direccion)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('clientes/form.html', cliente=cliente, estados=estados)
+                    return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
             
             # Validar observaciones
             if observaciones:
                 valido, error = validar_observaciones(observaciones)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('clientes/form.html', cliente=cliente, estados=estados)
+                    return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
             
-            # Actualizar datos
+            # Procesar nuevos documentos si existen
+            nuevos_documentos = []
+            if 'nuevo_tipo_documento' in request.form and 'nuevo_valor_documento' in request.form:
+                tipos = request.form.getlist('nuevo_tipo_documento')
+                valores = request.form.getlist('nuevo_valor_documento')
+                
+                for tipo_id, valor in zip(tipos, valores):
+                    if tipo_id and valor:
+                        tipo_id = int(tipo_id)
+                        valor = valor.strip().upper()
+                        
+                        # Obtener el tipo de documento para validación
+                        tipo_doc = db.session.get(TiposDocumentos, tipo_id)
+                        if not tipo_doc:
+                            flash(f'Tipo de documento no encontrado', 'error')
+                            return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                        
+                        # Validar formato del documento
+                        es_valido, mensaje_error = validar_valor_documento(valor, tipo_doc.nombre)
+                        if not es_valido:
+                            flash(mensaje_error, 'error')
+                            return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                        
+                        # Validar duplicados
+                        if validar_duplicado_documento(id, tipo_id, valor):
+                            flash(f'El cliente ya tiene un documento de tipo "{tipo_doc.nombre}" con el mismo valor', 'error')
+                            return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                        
+                        nuevos_documentos.append({
+                            'id_tipo_documento': tipo_id,
+                            'valor_documento': valor
+                        })
+            
+            # Actualizar datos del cliente
             cliente.nombres = nombres.title()
             cliente.apellidos = apellidos.title()
             cliente.telefono = telefono if telefono else 'No especificado'
@@ -372,15 +495,32 @@ def editar(id):
             cliente.ot = int(request.form.get('ot', 0))
             cliente.observaciones = observaciones or None
             
+            # Agregar nuevos documentos
+            for doc_data in nuevos_documentos:
+                nuevo_doc = ClientesDocumento(
+                    id_cliente_documento=get_next_documento_id(),
+                    id_cliente=id,
+                    id_tipo_documento=doc_data['id_tipo_documento'],
+                    valor_documento=doc_data['valor_documento']
+                )
+                db.session.add(nuevo_doc)
+            
             db.session.commit()
-            flash(f'Cliente {nombres} {apellidos} actualizado exitosamente.', 'success')
+            
+            mensaje = f'Cliente {nombres} {apellidos} actualizado exitosamente.'
+            if nuevos_documentos:
+                mensaje += f' Se agregaron {len(nuevos_documentos)} documento(s).'
+            
+            flash(mensaje, 'success')
             return redirect(url_for('clientes.listar'))
             
         except Exception as e:
             db.session.rollback()
             flash(f'Error al actualizar cliente: {str(e)}', 'error')
+            print(f"Error en editar cliente: {str(e)}")
     
-    return render_template('clientes/form.html', cliente=cliente, estados=estados)
+    return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
 
 # DELETE - Eliminar cliente
 @clientes_bp.route('/eliminar/<int:id>', methods=['POST'])
@@ -438,3 +578,58 @@ def resetear_password(id):
         print(f"Error en resetear password: {str(e)}")
     
     return redirect(url_for('clientes.editar', id=id))
+
+# API endpoint to delete a document (called from form)
+@clientes_bp.route('/eliminar-documento/<int:id>', methods=['POST'])
+@login_required
+def eliminar_documento(id):
+    try:
+        documento = db.session.get(ClientesDocumento, id)
+        if not documento:
+            return jsonify({'success': False, 'message': 'Documento no encontrado'}), 404
+        
+        db.session.delete(documento)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Documento eliminado exitosamente'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
+
+# Add this route to your clientes_bp in the routes file
+
+@clientes_bp.route('/documentos/<int:id>', methods=['GET'])
+@login_required
+def obtener_documentos(id):
+    """API endpoint to get client documents"""
+    try:
+        # Get documents for the client
+        documentos = db.session.execute(
+            select(ClientesDocumento, TiposDocumentos)
+            .join(TiposDocumentos, ClientesDocumento.id_tipo_documento == TiposDocumentos.id_tipo_documento)
+            .where(ClientesDocumento.id_cliente == id)
+            .order_by(TiposDocumentos.nombre)
+        ).all()
+        
+        # Format documents for JSON response
+        docs_list = []
+        for documento, tipo_doc in documentos:
+            docs_list.append({
+                'id': documento.id_cliente_documento,
+                'tipo_documento': tipo_doc.nombre,
+                'valor_documento': documento.valor_documento
+            })
+        
+        return jsonify({
+            'success': True,
+            'documentos': docs_list
+        })
+        
+    except Exception as e:
+        print(f"Error getting documents: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

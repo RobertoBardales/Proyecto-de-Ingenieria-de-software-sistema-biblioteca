@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if editorial else 'Nueva' }} Editorial{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-container">
+        <div class="form-header">
+            <a href="{{ url_for('editoriales.listar') }}" class="back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <h1>{{ 'Editar Editorial' if editorial else 'Nueva Editorial' }}</h1>
+            <p>{{ 'Actualiza la información de la editorial' if editorial else 'Completa los datos de la nueva editorial' }}</p>
+        </div>
+
+        <form method="POST" id="editorialForm" class="form-content">
+            <div class="form-grid">
+                <!-- Nombre -->
+                <div class="form-group full-width">
+                    <label for="nombre">Nombre de la Editorial <span class="required">*</span></label>
+                    <input type="text" 
+                           id="nombre" 
+                           name="nombre" 
+                           class="form-input"
+                           value="{{ editorial.nombre if editorial else '' }}" 
+                           required 
+                           minlength="2"
+                           maxlength="150"
+                           placeholder="Ej: Penguin Random House">
+                    <small class="form-hint">Mínimo 2 caracteres, máximo 150</small>
+                </div>
+
+                <!-- País -->
+                <div class="form-group">
+                    <label for="id_pais">País <span class="required">*</span></label>
+                    <select id="id_pais" name="id_pais" class="form-input" required>
+                        <option value="">Seleccionar país</option>
+                        {% for pais in paises %}
+                        <option value="{{ pais.id_pais }}" 
+                                {% if editorial and editorial.id_pais == pais.id_pais %}selected{% endif %}>
+                            {{ pais.nombre_pais }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">País donde se encuentra la editorial</small>
+                </div>
+
+                <!-- Teléfono -->
+                <div class="form-group">
+                    <label for="telefono">Teléfono <span class="required">*</span></label>
+                    <input type="tel" 
+                           id="telefono" 
+                           name="telefono" 
+                           class="form-input"
+                           value="{{ editorial.telefono if editorial else '' }}" 
+                           required
+                           maxlength="16"
+                           placeholder="+504 9999-9999">
+                    <small class="form-hint">Formato: +504 9999-9999 (se formatea automáticamente)</small>
+                </div>
+
+                <!-- Email -->
+                <div class="form-group full-width">
+                    <label for="email">Email <span class="required">*</span></label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           class="form-input"
+                           value="{{ editorial.email if editorial else '' }}" 
+                           required
+                           maxlength="100"
+                           placeholder="contacto@editorial.com">
+                    <small class="form-hint">Formato válido de email, máximo 100 caracteres</small>
+                </div>
+
+                <!-- Dirección -->
+                <div class="form-group full-width">
+                    <label for="direccion">Dirección</label>
+                    <textarea id="direccion" 
+                              name="direccion" 
+                              class="form-input" 
+                              rows="3"
+                              maxlength="200"
+                              placeholder="Ej: Av. Principal, Edificio Torre del Libro, Piso 5 (5-200 caracteres)">{{ editorial.direccion if editorial else '' }}</textarea>
+                    <small class="form-hint">Mínimo 5 caracteres, máximo 200 (opcional)</small>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="form-actions">
+                <a href="{{ url_for('editoriales.listar') }}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    {{ 'Actualizar' if editorial else 'Crear' }} Editorial
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-wrapper {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.form-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+}
+
+.back-link {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.back-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.form-header h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.form-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.form-content {
+    padding: 2rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.95rem;
+}
+
+.required {
+    color: #dc3545;
+}
+
+.form-input {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-input.error {
+    border-color: #dc3545;
+}
+
+textarea.form-input {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-hint {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e2e8f0;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e0;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .back-link {
+        position: static;
+        display: inline-flex;
+        margin-bottom: 1rem;
+    }
+
+    .form-content {
+        padding: 1.5rem;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// Real-time validation for nombre
+document.getElementById('nombre').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Prevent more than 2 consecutive spaces
+    value = value.replace(/\s{3,}/g, '  ');
+    
+    // Remove more than 2 consecutive same characters
+    value = value.replace(/(.)\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Real-time validation for telefono - format +504 9999-9999
+document.getElementById('telefono').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Remove all non-digits except +
+    let digits = value.replace(/[^\d+]/g, '');
+    
+    // Remove any + that's not at the start
+    if (digits.includes('+')) {
+        digits = '+' + digits.replace(/\+/g, '');
+    }
+    
+    // If user starts typing without +504, add it
+    if (digits && !digits.startsWith('+504')) {
+        if (digits.startsWith('+')) {
+            digits = '+504' + digits.substring(1);
+        } else {
+            digits = '+504' + digits;
+        }
+    }
+    
+    // Extract just the 8-digit number part (after +504)
+    let numberPart = digits.replace('+504', '');
+    
+    // Limit to 8 digits
+    if (numberPart.length > 8) {
+        numberPart = numberPart.substring(0, 8);
+    }
+    
+    // Format as +504 9999-9999
+    if (numberPart.length > 0) {
+        if (numberPart.length <= 4) {
+            value = '+504 ' + numberPart;
+        } else {
+            value = '+504 ' + numberPart.substring(0, 4) + '-' + numberPart.substring(4);
+        }
+    } else {
+        value = '';
+    }
+    
+    e.target.value = value;
+});
+
+// Real-time validation for email
+document.getElementById('email').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Remove more than 2 consecutive same characters
+    value = value.replace(/(.)\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value.toLowerCase();
+});
+
+// Real-time validation for direccion
+document.getElementById('direccion').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Prevent more than 2 consecutive spaces
+    value = value.replace(/\s{3,}/g, '  ');
+    
+    // Remove more than 2 consecutive same non-space characters
+    value = value.replace(/([^\s])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Form validation before submit
+document.getElementById('editorialForm').addEventListener('submit', function(e) {
+    const nombre = document.getElementById('nombre').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const pais = document.getElementById('id_pais').value;
+    const direccion = document.getElementById('direccion').value.trim();
+    
+    // Validate nombre
+    if (!nombre || nombre.length < 2) {
+        e.preventDefault();
+        alert('El nombre debe tener al menos 2 caracteres');
+        document.getElementById('nombre').focus();
+        return false;
+    }
+    
+    if (nombre.length > 150) {
+        e.preventDefault();
+        alert('El nombre no puede exceder 150 caracteres');
+        document.getElementById('nombre').focus();
+        return false;
+    }
+    
+    // Check for more than 2 spaces
+    if (/\s{3,}/.test(nombre)) {
+        e.preventDefault();
+        alert('El nombre no puede tener más de 2 espacios consecutivos');
+        document.getElementById('nombre').focus();
+        return false;
+    }
+    
+    // Check for more than 2 same characters
+    if (/(.)\1{2,}/.test(nombre)) {
+        e.preventDefault();
+        alert('El nombre no puede tener el mismo carácter repetido más de 2 veces seguidas');
+        document.getElementById('nombre').focus();
+        return false;
+    }
+    
+    // Validate pais
+    if (!pais) {
+        e.preventDefault();
+        alert('Debes seleccionar un país');
+        document.getElementById('id_pais').focus();
+        return false;
+    }
+    
+    // Validate telefono
+    if (!telefono) {
+        e.preventDefault();
+        alert('El teléfono es obligatorio');
+        document.getElementById('telefono').focus();
+        return false;
+    }
+    
+    // Check if starts with +504
+    const cleanPhone = telefono.replace(/[\s\-\(\)]/g, '');
+    if (!cleanPhone.startsWith('+504')) {
+        e.preventDefault();
+        alert('El teléfono debe incluir el código de país +504\nEjemplo: +504 9999-9999');
+        document.getElementById('telefono').focus();
+        return false;
+    }
+    
+    // Check if has 8 digits after +504
+    const digits = cleanPhone.replace('+504', '');
+    if (digits.length !== 8) {
+        e.preventDefault();
+        alert('El teléfono debe tener exactamente 8 dígitos después de +504');
+        document.getElementById('telefono').focus();
+        return false;
+    }
+    
+    // Check if starts with 3, 7, 8, or 9
+    if (!['3', '7', '8', '9'].includes(digits[0])) {
+        e.preventDefault();
+        alert('El número de teléfono debe empezar con 3, 7, 8 o 9');
+        document.getElementById('telefono').focus();
+        return false;
+    }
+    
+    // Validate email
+    if (!email) {
+        e.preventDefault();
+        alert('El email es obligatorio');
+        document.getElementById('email').focus();
+        return false;
+    }
+    
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailPattern.test(email)) {
+        e.preventDefault();
+        alert('Por favor ingresa un email válido');
+        document.getElementById('email').focus();
+        return false;
+    }
+    
+    // Check email local part (before @)
+    const emailParts = email.split('@');
+    if (emailParts[0].length < 2) {
+        e.preventDefault();
+        alert('El email debe tener al menos 2 caracteres antes del @');
+        document.getElementById('email').focus();
+        return false;
+    }
+    
+    // Check domain part (before first dot after @)
+    const domainParts = emailParts[1].split('.');
+    if (domainParts[0].length > 8) {
+        e.preventDefault();
+        alert('El dominio del email no puede tener más de 8 caracteres antes del punto');
+        document.getElementById('email').focus();
+        return false;
+    }
+    
+    // Check for more than 2 same characters in email
+    if (/(.)\1{2,}/.test(email)) {
+        e.preventDefault();
+        alert('El email no puede tener el mismo carácter repetido más de 2 veces seguidas');
+        document.getElementById('email').focus();
+        return false;
+    }
+    
+    if (email.length > 100) {
+        e.preventDefault();
+        alert('El email no puede exceder 100 caracteres');
+        document.getElementById('email').focus();
+        return false;
+    }
+    
+    // Validate direccion if provided
+    if (direccion) {
+        if (direccion.length < 5) {
+            e.preventDefault();
+            alert('La dirección debe tener al menos 5 caracteres');
+            document.getElementById('direccion').focus();
+            return false;
+        }
+        
+        if (direccion.length > 200) {
+            e.preventDefault();
+            alert('La dirección no puede exceder 200 caracteres');
+            document.getElementById('direccion').focus();
+            return false;
+        }
+        
+        // Check for more than 2 spaces
+        if (/\s{3,}/.test(direccion)) {
+            e.preventDefault();
+            alert('La dirección no puede tener más de 2 espacios consecutivos');
+            document.getElementById('direccion').focus();
+            return false;
+        }
+        
+        // Check for more than 2 same non-space characters
+        if (/([^\s])\1{2,}/.test(direccion)) {
+            e.preventDefault();
+            alert('La dirección no puede tener el mismo carácter repetido más de 2 veces seguidas');
+            document.getElementById('direccion').focus();
+            return false;
+        }
+    }
+    
+    return true;
+});
+
+// Add visual feedback on focus
+const inputs = document.querySelectorAll('.form-input');
+inputs.forEach(input => {
+    input.addEventListener('focus', function() {
+        this.parentElement.style.transform = 'translateX(2px)';
+    });
+    
+    input.addEventListener('blur', function() {
+        this.parentElement.style.transform = 'translateX(0)';
+    });
+});
+</script>
+{% endblock %}

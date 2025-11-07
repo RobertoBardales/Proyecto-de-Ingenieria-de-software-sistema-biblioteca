@@ -28,10 +28,9 @@
                            value="{{ cliente.nombres if cliente else '' }}" 
                            required 
                            minlength="2"
-                           maxlength="20"
-                           pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+"
+                           maxlength="50"
                            placeholder="Ej: Juan Carlos">
-                    <small class="form-hint">Solo letras y espacios (2-20 caracteres)</small>
+                    <small class="form-hint">Solo letras y espacios (2-50 caracteres)</small>
                 </div>
 
                 <!-- Apellidos -->
@@ -44,10 +43,9 @@
                            value="{{ cliente.apellidos if cliente else '' }}" 
                            required
                            minlength="2"
-                           maxlength="20"
-                           pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+"
+                           maxlength="50"
                            placeholder="Ej: García López">
-                    <small class="form-hint">Solo letras y espacios (2-20 caracteres)</small>
+                    <small class="form-hint">Solo letras y espacios (2-50 caracteres)</small>
                 </div>
 
                 <!-- Email -->
@@ -65,7 +63,7 @@
                     {% if cliente %}
                     <small class="form-hint text-warning">⚠️ El email no se puede modificar</small>
                     {% else %}
-                    <small class="form-hint">Formato válido de email, máximo 100 caracteres</small>
+                    <small class="form-hint">Mínimo 2 caracteres antes del @, dominio máx 8 caracteres antes del punto</small>
                     {% endif %}
                 </div>
 
@@ -79,7 +77,7 @@
                            value="{{ cliente.telefono if cliente and cliente.telefono != 'No especificado' else '' }}" 
                            maxlength="16"
                            placeholder="+504 9999-9999">
-                    <small class="form-hint">Formato: +504 9999-9999 (se formatea automáticamente)</small>
+                    <small class="form-hint">Formato: +504 seguido de 8 dígitos (debe empezar con 3, 7, 8 o 9)</small>
                 </div>
 
                 <!-- Tipo de Usuario -->
@@ -87,8 +85,8 @@
                     <label for="tipo_usuario">Tipo de Usuario <span class="required">*</span></label>
                     <select id="tipo_usuario" name="tipo_usuario" class="form-input" required>
                         <option value="cliente" {{ 'selected' if not cliente or cliente.tipo_usuario == 'cliente' else '' }}>Cliente</option>
-                        <option value="admin" {{ 'selected' if cliente and cliente.tipo_usuario == 'admin' else '' }}>Administrador</option>
-                        <option value="bibliotecario" {{ 'selected' if cliente and cliente.tipo_usuario == 'bibliotecario' else '' }}>Bibliotecario</option>
+                        <option value="administrador" {{ 'selected' if cliente and cliente.tipo_usuario == 'administrador' else '' }}>Administrador</option>
+                        <option value="empleado" {{ 'selected' if cliente and cliente.tipo_usuario == 'empleado' else '' }}>Empleado</option>
                     </select>
                 </div>
 
@@ -99,9 +97,9 @@
                               name="direccion" 
                               class="form-input" 
                               rows="2"
-                              maxlength="150"
-                              placeholder="Ej: Col. Palmira, Calle Principal (5-150 caracteres)">{{ cliente.direccion if cliente and cliente.direccion != 'No especificada' else '' }}</textarea>
-                    <small class="form-hint">Mínimo 5 caracteres, máximo 150</small>
+                              maxlength="200"
+                              placeholder="Ej: Col. Palmira, Calle Principal (5-200 caracteres)">{{ cliente.direccion if cliente and cliente.direccion != 'No especificada' else '' }}</textarea>
+                    <small class="form-hint">Mínimo 5 caracteres, máximo 200. Sin más de 1 espacio consecutivo.</small>
                 </div>
 
                 <!-- Gestión de Contraseña -->
@@ -185,10 +183,77 @@
                               name="observaciones" 
                               class="form-input" 
                               rows="3"
-                              maxlength="300"
-                              placeholder="Notas adicionales sobre el cliente (máximo 300 caracteres)...">{{ cliente.observaciones if cliente else '' }}</textarea>
-                    <small class="form-hint">Máximo 300 caracteres</small>
+                              maxlength="500"
+                              placeholder="Notas adicionales sobre el cliente (máximo 500 caracteres)...">{{ cliente.observaciones if cliente else '' }}</textarea>
+                    <small class="form-hint">Máximo 500 caracteres. Sin más de 1 espacio consecutivo.</small>
                 </div>
+
+                <!-- Documents Section - Only shown when editing -->
+                {% if cliente %}
+                <div class="form-group full-width">
+                    <label class="documents-label">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        Documentos del Cliente
+                    </label>
+                    
+                    <div class="documents-container">
+                        <!-- Existing Documents -->
+                        {% if documentos_cliente %}
+                        <div class="documents-list" id="documentosExistentes">
+                            {% for documento, tipo_doc in documentos_cliente %}
+                            <div class="document-item" data-doc-id="{{ documento.id_cliente_documento }}">
+                                <div class="document-info">
+                                    <span class="document-type">{{ tipo_doc.nombre }}</span>
+                                    <span class="document-value">{{ documento.valor_documento }}</span>
+                                </div>
+                                <button type="button" 
+                                        class="btn-delete-doc" 
+                                        onclick="eliminarDocumentoExistente({{ documento.id_cliente_documento }})"
+                                        title="Eliminar documento">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- New Documents Section -->
+                        <div id="nuevosDocumentos" class="nuevos-documentos-section">
+                            <!-- New documents will be added here -->
+                        </div>
+                        
+                        {% if not documentos_cliente %}
+                        <div class="no-documents" id="noDocuments">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <p>No hay documentos registrados</p>
+                        </div>
+                        {% endif %}
+                        
+                        <button type="button" class="btn-add-document" onclick="agregarNuevoDocumento()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar Documento
+                        </button>
+                        <small class="form-hint text-info" style="display: block; margin-top: 0.5rem;">
+                            ℹ️ Los documentos nuevos se guardarán al hacer clic en "Actualizar Cliente"
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Botones -->
@@ -207,6 +272,63 @@
     </div>
 </div>
 
+<!-- Modal - Nuevo Estado -->
+<div id="modalEstado" class="quick-modal">
+    <div class="quick-modal-content">
+        <div class="quick-modal-header">
+            <h3>Nuevo Estado de Usuario</h3>
+        </div>
+        <div class="quick-modal-body">
+            <form id="formEstadoRapido">
+                <div class="form-group">
+                    <label for="quick_nombre">Nombre <span class="required">*</span></label>
+                    <input type="text" 
+                           id="quick_nombre" 
+                           name="nombre" 
+                           class="form-input" 
+                           required
+                           minlength="2"
+                           maxlength="50"
+                           placeholder="Ej: En Revisión">
+                    <small class="form-hint">2-50 caracteres, solo letras</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quick_descripcion">Descripción <span class="required">*</span></label>
+                    <textarea id="quick_descripcion" 
+                              name="descripcion" 
+                              class="form-input" 
+                              rows="3"
+                              required
+                              minlength="5"
+                              maxlength="200"
+                              placeholder="Describe el estado... (5-200 caracteres)"></textarea>
+                    <small class="form-hint">5-200 caracteres</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quick_permite_login">¿Permite Login?</label>
+                    <select id="quick_permite_login" name="permite_login" class="form-input" required>
+                        <option value="1">Sí - Usuario puede hacer login</option>
+                        <option value="0">No - Usuario no puede acceder</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="quick-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="cerrarModalEstado()">
+                Cancelar
+            </button>
+            <button type="button" class="btn btn-primary" onclick="guardarEstadoRapido()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                </svg>
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
 <style>
 .form-wrapper {
     max-width: 800px;
@@ -221,7 +343,6 @@
     overflow: hidden;
 }
 
-/* Input with action button */
 .input-with-action {
     display: flex;
     gap: 0.5rem;
@@ -252,7 +373,189 @@
     box-shadow: 0 4px 12px rgba(102,126,234,0.4);
 }
 
-/* Quick Modal */
+.documents-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.documents-container {
+    padding: 1.5rem;
+    background: #f7fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.nuevos-documentos-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.nuevo-documento-card {
+    background: #e0f2fe;
+    border: 2px solid #0ea5e9;
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+}
+
+.nuevo-documento-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.nuevo-documento-badge {
+    background: #0ea5e9;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-remove-nuevo {
+    padding: 0.4rem;
+    background: #fee;
+    color: #dc3545;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-nuevo:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.nuevo-documento-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.document-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.document-item:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.document-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.document-type {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.document-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2d3748;
+    font-family: 'Courier New', monospace;
+}
+
+.btn-delete-doc {
+    padding: 0.5rem;
+    background: #fee;
+    color: #dc3545;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete-doc:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+    transform: scale(1.1);
+}
+
+.no-documents {
+    text-align: center;
+    padding: 2rem;
+    color: #a0aec0;
+    margin-bottom: 1rem;
+}
+
+.no-documents svg {
+    opacity: 0.3;
+    margin-bottom: 1rem;
+}
+
+.no-documents p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.btn-add-document {
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #48bb78, #38a169);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    font-family: 'Poppins', sans-serif;
+}
+
+.btn-add-document:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+}
+
+.text-info {
+    color: #0ea5e9 !important;
+    font-weight: 500;
+}
+
 .quick-modal {
     display: none;
     position: fixed;
@@ -551,72 +854,84 @@
     .btn-reset-password {
         justify-content: center;
     }
+    
+    .document-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .btn-delete-doc {
+        align-self: flex-end;
+    }
+    
+    .nuevo-documento-fields {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
 <script>
-// Real-time validation for nombres - no more than 2 same letters
+let nuevoDocumentoCounter = 0;
+
+// Store tipos_documentos data for JavaScript use
+const tiposDocumentos = [
+    {% for tipo in tipos_documentos %}
+    { id: {{ tipo.id_tipo_documento }}, nombre: "{{ tipo.nombre }}" }{{ "," if not loop.last else "" }}
+    {% endfor %}
+];
+
+// Real-time validation for Nombres
 document.getElementById('nombres').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Remove invalid characters
+    // Only letters and spaces
     value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    // Prevent more than 2 consecutive spaces
-    value = value.replace(/\s{3,}/g, '  ');
-    // Remove more than 2 consecutive same characters (letters only, not spaces)
+    // Max 1 space consecutive
+    value = value.replace(/\s{2,}/g, ' ');
+    // Max 2 same letters consecutive
     value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Real-time validation for apellidos
+// Real-time validation for Apellidos
 document.getElementById('apellidos').addEventListener('input', function(e) {
     let value = e.target.value;
     value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    // Prevent more than 2 consecutive spaces
-    value = value.replace(/\s{3,}/g, '  ');
-    // Remove more than 2 consecutive same characters (letters only, not spaces)
+    value = value.replace(/\s{2,}/g, ' ');
     value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Real-time validation for telefono - format +504 9999-9999
+// Real-time validation for Email
+document.getElementById('email').addEventListener('input', function(e) {
+    let value = e.target.value.toLowerCase();
+    // Max 2 same characters consecutive
+    value = value.replace(/(.)\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    e.target.value = value;
+});
+
+// Real-time validation for Teléfono (Honduran format)
 document.getElementById('telefono').addEventListener('input', function(e) {
     let value = e.target.value;
-    
-    // Remove all non-digits except +
-    let digits = value.replace(/[^\d+]/g, '');
-    
-    // Remove any + that's not at the start
-    if (digits.includes('+')) {
-        digits = '+' + digits.replace(/\+/g, '');
-    }
-    
-    // If user starts typing without +504, add it
-    if (digits && !digits.startsWith('+504')) {
-        if (digits.startsWith('+')) {
-            digits = '+504' + digits.substring(1);
-        } else {
-            digits = '+504' + digits;
-        }
-    }
-    
-    // Extract just the 8-digit number part (after +504)
-    let numberPart = digits.replace('+504', '');
+    let digits = value.replace(/[^\d]/g, '');
     
     // Limit to 8 digits
-    if (numberPart.length > 8) {
-        numberPart = numberPart.substring(0, 8);
+    if (digits.length > 8) {
+        digits = digits.substring(0, 8);
     }
     
-    // Format as +504 9999-9999
-    if (numberPart.length > 0) {
-        if (numberPart.length <= 4) {
-            value = '+504 ' + numberPart;
+    // Format: +504 9999-9999
+    if (digits.length > 0) {
+        if (digits.length <= 4) {
+            value = '+504 ' + digits;
         } else {
-            value = '+504 ' + numberPart.substring(0, 4) + '-' + numberPart.substring(4);
+            value = '+504 ' + digits.substring(0, 4) + '-' + digits.substring(4);
         }
     } else {
         value = '';
@@ -625,36 +940,326 @@ document.getElementById('telefono').addEventListener('input', function(e) {
     e.target.value = value;
 });
 
-// Real-time validation for direccion
+// Real-time validation for Dirección
 document.getElementById('direccion').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Prevent more than 2 consecutive spaces
-    value = value.replace(/\s{3,}/g, '  ');
-    // Remove more than 2 consecutive same non-space characters
+    // Max 1 space consecutive
+    value = value.replace(/\s{2,}/g, ' ');
+    // Max 2 same characters consecutive (except spaces)
     value = value.replace(/([^\s])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Real-time validation for observaciones
+// Real-time validation for Observaciones
 document.getElementById('observaciones').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Prevent more than 2 consecutive spaces
-    value = value.replace(/\s{3,}/g, '  ');
+    value = value.replace(/\s{2,}/g, ' ');
     e.target.value = value;
 });
 
-// Reset password function
-function resetPassword(clienteId) {
-    if (confirm('¿Estás seguro de resetear la contraseña?\n\nSe generará una contraseña temporal aleatoria segura de 10 caracteres con mayúsculas, minúsculas, números y símbolos.')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/clientes/resetear-password/${clienteId}`;
-        document.body.appendChild(form);
-        form.submit();
+// Form validation before submit
+document.getElementById('clienteForm').addEventListener('submit', function(e) {
+    const telefono = document.getElementById('telefono').value.trim();
+    
+    // Validate phone if provided
+    if (telefono && telefono !== '') {
+        const cleanPhone = telefono.replace(/[\s\-]/g, '');
+        
+        if (!cleanPhone.startsWith('+504')) {
+            e.preventDefault();
+            alert('El teléfono debe incluir el código de país +504\nEjemplo: +504 9999-9999');
+            document.getElementById('telefono').focus();
+            return false;
+        }
+        
+        const digits = cleanPhone.replace('+504', '');
+        
+        if (digits.length !== 8) {
+            e.preventDefault();
+            alert('El teléfono debe tener exactamente 8 dígitos después de +504');
+            document.getElementById('telefono').focus();
+            return false;
+        }
+        
+        if (!['3', '7', '8', '9'].includes(digits[0])) {
+            e.preventDefault();
+            alert('El número de teléfono debe empezar con 3, 7, 8 o 9');
+            document.getElementById('telefono').focus();
+            return false;
+        }
+    }
+    
+    // Validate email format
+    const email = document.getElementById('email').value.trim();
+    if (email) {
+        const emailParts = email.split('@');
+        if (emailParts.length === 2) {
+            const localPart = emailParts[0];
+            const domainPart = emailParts[1];
+            
+            if (localPart.length < 2) {
+                e.preventDefault();
+                alert('El email debe tener al menos 2 caracteres antes del @');
+                document.getElementById('email').focus();
+                return false;
+            }
+            
+            const domainBeforeDot = domainPart.split('.')[0];
+            if (domainBeforeDot.length > 8) {
+                e.preventDefault();
+                alert('El dominio del email no puede tener más de 8 caracteres antes del punto');
+                document.getElementById('email').focus();
+                return false;
+            }
+        }
+    }
+});
+
+// ============ DOCUMENT MANAGEMENT ============
+
+function agregarNuevoDocumento() {
+    console.log('agregarNuevoDocumento called');
+    console.log('Tipos documentos disponibles:', tiposDocumentos);
+    
+    nuevoDocumentoCounter++;
+    
+    // Remove "no documents" message if exists
+    const noDocuments = document.getElementById('noDocuments');
+    if (noDocuments) {
+        console.log('Removiendo mensaje "no documents"');
+        noDocuments.remove();
+    }
+    
+    const container = document.getElementById('nuevosDocumentos');
+    console.log('Container encontrado:', container);
+    
+    if (!container) {
+        console.error('No se encontró el container nuevosDocumentos');
+        return;
+    }
+    
+    const docCard = document.createElement('div');
+    docCard.className = 'nuevo-documento-card';
+    docCard.id = `nuevoDoc_${nuevoDocumentoCounter}`;
+    
+    // Build options HTML
+    let optionsHtml = '<option value="">Seleccione...</option>';
+    tiposDocumentos.forEach(tipo => {
+        optionsHtml += `<option value="${tipo.id}">${tipo.nombre}</option>`;
+    });
+    
+    docCard.innerHTML = `
+        <div class="nuevo-documento-header">
+            <span class="nuevo-documento-badge">Nuevo Documento</span>
+            <button type="button" 
+                    class="btn-remove-nuevo" 
+                    onclick="removerNuevoDocumento('nuevoDoc_${nuevoDocumentoCounter}')"
+                    title="Eliminar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="nuevo-documento-fields">
+            <div class="form-group">
+                <label>Tipo de Documento <span class="required">*</span></label>
+                <select class="form-input" name="nuevo_tipo_documento" required onchange="actualizarPlaceholder(this)">
+                    ${optionsHtml}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valor del Documento <span class="required">*</span></label>
+                <input type="text" 
+                       class="form-input nuevo-valor-doc" 
+                       name="nuevo_valor_documento" 
+                       placeholder="Seleccione tipo primero..."
+                       required
+                       maxlength="50">
+                <small class="form-hint doc-hint"></small>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(docCard);
+    console.log('Documento card agregado:', docCard.id);
+}
+
+function removerNuevoDocumento(id) {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+        elemento.remove();
+    }
+    
+    // Check if there are any documents left
+    const nuevosContainer = document.getElementById('nuevosDocumentos');
+    const existentesContainer = document.getElementById('documentosExistentes');
+    
+    if ((!nuevosContainer || nuevosContainer.children.length === 0) && 
+        (!existentesContainer || existentesContainer.children.length === 0)) {
+        
+        const container = document.querySelector('.documents-container');
+        const noDocsDiv = document.createElement('div');
+        noDocsDiv.className = 'no-documents';
+        noDocsDiv.id = 'noDocuments';
+        noDocsDiv.innerHTML = `
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <p>No hay documentos registrados</p>
+        `;
+        container.insertBefore(noDocsDiv, container.querySelector('.btn-add-document'));
     }
 }
+
+function actualizarPlaceholder(selectElement) {
+    const card = selectElement.closest('.nuevo-documento-card');
+    const valorInput = card.querySelector('.nuevo-valor-doc');
+    const hintElement = card.querySelector('.doc-hint');
+    const tipoTexto = selectElement.options[selectElement.selectedIndex].text.toLowerCase();
+    
+    valorInput.value = '';
+    
+    if (tipoTexto.includes('identidad') || tipoTexto.includes('dni')) {
+        valorInput.placeholder = '0000-0000-00000';
+        hintElement.textContent = 'Formato: 0000-0000-00000 (13 dígitos)';
+        valorInput.maxLength = 17; // Including hyphens
+    } else if (tipoTexto.includes('rtn')) {
+        valorInput.placeholder = '0000-0000-000000';
+        hintElement.textContent = 'Formato: 0000-0000-000000 (14 dígitos)';
+        valorInput.maxLength = 18; // Including hyphens
+    } else if (tipoTexto.includes('pasaporte')) {
+        valorInput.placeholder = 'ABC123456';
+        hintElement.textContent = 'Formato: 6-9 caracteres alfanuméricos';
+        valorInput.maxLength = 9;
+    } else if (tipoTexto.includes('licencia')) {
+        valorInput.placeholder = 'HN123456';
+        hintElement.textContent = 'Formato: Letras opcionales + 6-10 dígitos';
+        valorInput.maxLength = 10;
+    } else {
+        valorInput.placeholder = 'Ingrese el valor...';
+        hintElement.textContent = 'Mínimo 3 caracteres, máximo 50';
+        valorInput.maxLength = 50;
+    }
+    
+    valorInput.focus();
+}
+
+// Auto-format document values based on type
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('nuevo-valor-doc')) {
+        const selectElement = e.target.closest('.nuevo-documento-card').querySelector('select[name="nuevo_tipo_documento"]');
+        const tipoTexto = selectElement.options[selectElement.selectedIndex]?.text.toLowerCase() || '';
+        let value = e.target.value.toUpperCase();
+        
+        if (tipoTexto.includes('identidad') || tipoTexto.includes('dni')) {
+            // Format: 0000-0000-00000
+            value = value.replace(/[^\d]/g, '');
+            if (value.length > 13) value = value.substring(0, 13);
+            if (value.length > 4) {
+                value = value.substring(0, 4) + '-' + value.substring(4);
+            }
+            if (value.length > 9) {
+                value = value.substring(0, 9) + '-' + value.substring(9);
+            }
+        } else if (tipoTexto.includes('rtn')) {
+            // Format: 0000-0000-000000
+            value = value.replace(/[^\d]/g, '');
+            if (value.length > 14) value = value.substring(0, 14);
+            if (value.length > 4) {
+                value = value.substring(0, 4) + '-' + value.substring(4);
+            }
+            if (value.length > 9) {
+                value = value.substring(0, 9) + '-' + value.substring(9);
+            }
+        } else if (tipoTexto.includes('pasaporte')) {
+            // Format: ABC123456 (alphanumeric only)
+            value = value.replace(/[^A-Z0-9]/g, '');
+            if (value.length > 9) value = value.substring(0, 9);
+        } else if (tipoTexto.includes('licencia')) {
+            // Format: HN123456 (letters + numbers)
+            value = value.replace(/[^A-Z0-9]/g, '');
+            if (value.length > 10) value = value.substring(0, 10);
+        } else {
+            // Generic: max 50 chars
+            if (value.length > 50) value = value.substring(0, 50);
+        }
+        
+        e.target.value = value;
+    }
+});
+
+// Delete existing document
+async function eliminarDocumentoExistente(docId) {
+    console.log('Intentando eliminar documento:', docId);
+    
+    if (!confirm('¿Estás seguro de eliminar este documento?')) {
+        return;
+    }
+    
+    try {
+        const url = `/clientes/eliminar-documento/${docId}`;
+        console.log('URL:', url);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            const docItem = document.querySelector(`[data-doc-id="${docId}"]`);
+            console.log('Documento encontrado:', docItem);
+            
+            if (docItem) {
+                docItem.remove();
+            }
+            
+            // Check if there are any documents left
+            const documentsList = document.getElementById('documentosExistentes');
+            const nuevosContainer = document.getElementById('nuevosDocumentos');
+            
+            if (documentsList && documentsList.children.length === 0) {
+                documentsList.remove();
+            }
+            
+            if ((!documentsList || documentsList.children.length === 0) && 
+                (!nuevosContainer || nuevosContainer.children.length === 0)) {
+                
+                const container = document.querySelector('.documents-container');
+                const noDocsDiv = document.createElement('div');
+                noDocsDiv.className = 'no-documents';
+                noDocsDiv.id = 'noDocuments';
+                noDocsDiv.innerHTML = `
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <p>No hay documentos registrados</p>
+                `;
+                container.insertBefore(noDocsDiv, container.querySelector('.btn-add-document'));
+            }
+            
+            mostrarToast('Documento eliminado exitosamente', 'success');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error completo:', error);
+        alert('Error al eliminar el documento: ' + error.message);
+    }
+}
+
+// ============ ESTADO MODAL ============
 
 function abrirModalEstado() {
     document.getElementById('modalEstado').classList.add('show');
@@ -706,6 +1311,18 @@ async function guardarEstadoRapido() {
     }
 }
 
+// ============ UTILITY FUNCTIONS ============
+
+function resetPassword(clienteId) {
+    if (confirm('¿Estás seguro de resetear la contraseña?\n\nSe generará una contraseña temporal aleatoria segura de 10 caracteres con mayúsculas, minúsculas, números y símbolos.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/clientes/resetear-password/${clienteId}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
 function mostrarToast(mensaje, tipo = 'success') {
     const toast = document.createElement('div');
     toast.textContent = mensaje;
@@ -730,112 +1347,18 @@ function mostrarToast(mensaje, tipo = 'success') {
     }, 3000);
 }
 
+// Modal click outside to close
 document.getElementById('modalEstado')?.addEventListener('click', function(e) {
     if (e.target === this) {
         cerrarModalEstado();
     }
 });
 
-// Form validation before submit
-document.getElementById('clienteForm').addEventListener('submit', function(e) {
-    const telefono = document.getElementById('telefono').value.trim();
-    
-    if (telefono && telefono !== '') {
-        // Check if starts with +504
-        const cleanPhone = telefono.replace(/[\s\-\(\)]/g, '');
-        if (!cleanPhone.startsWith('+504')) {
-            e.preventDefault();
-            alert('El teléfono debe incluir el código de país +504\nEjemplo: +504 9999-9999');
-            document.getElementById('telefono').focus();
-            return false;
-        }
-        
-        // Check if has 8 digits after +504
-        const digits = cleanPhone.replace('+504', '');
-        if (digits.length !== 8) {
-            e.preventDefault();
-            alert('El teléfono debe tener exactamente 8 dígitos después de +504');
-            document.getElementById('telefono').focus();
-            return false;
-        }
-        
-        // Check if starts with 3, 7, 8, or 9
-        if (!['3', '7', '8', '9'].includes(digits[0])) {
-            e.preventDefault();
-            alert('El número de teléfono debe empezar con 3, 7, 8 o 9');
-            document.getElementById('telefono').focus();
-            return false;
-        }
-    }
-});
-</script>
-
-<!-- Modal Quick - Nuevo Estado -->
-<div id="modalEstado" class="quick-modal">
-    <div class="quick-modal-content">
-        <div class="quick-modal-header">
-            <h3>Nuevo Estado de Usuario</h3>
-        </div>
-        <div class="quick-modal-body">
-            <form id="formEstadoRapido">
-                <div class="form-group">
-                    <label for="quick_nombre">Nombre <span class="required">*</span></label>
-                    <input type="text" 
-                           id="quick_nombre" 
-                           name="nombre" 
-                           class="form-input" 
-                           required
-                           minlength="2"
-                           maxlength="20"
-                           placeholder="Ej: En Revisión">
-                    <small class="form-hint">2-20 caracteres</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="quick_descripcion">Descripción <span class="required">*</span></label>
-                    <textarea id="quick_descripcion" 
-                              name="descripcion" 
-                              class="form-input" 
-                              rows="3"
-                              required
-                              minlength="5"
-                              maxlength="150"
-                              placeholder="Describe el estado... (5-150 caracteres)"></textarea>
-                    <small class="form-hint">5-150 caracteres</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="quick_permite_login">¿Permite Login?</label>
-                    <select id="quick_permite_login" name="permite_login" class="form-input" required>
-                        <option value="1">Sí - Usuario puede hacer login</option>
-                        <option value="0">No - Usuario no puede acceder</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-        <div class="quick-modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="cerrarModalEstado()">
-                Cancelar
-            </button>
-            <button type="button" class="btn btn-primary" onclick="guardarEstadoRapido()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                </svg>
-                Guardar
-            </button>
-        </div>
-    </div>
-</div>
-
-<script>
-// Add validation for modal fields
+// Real-time validation for Estado modal
 document.getElementById('quick_nombre')?.addEventListener('input', function(e) {
     let value = e.target.value;
-    // Remove invalid characters
     value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    // Prevent more than 2 consecutive spaces
-    value = value.replace(/\s{3,}/g, '  ');
-    // Remove more than 2 consecutive same characters
+    value = value.replace(/\s{2,}/g, ' ');
     value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
@@ -844,9 +1367,9 @@ document.getElementById('quick_nombre')?.addEventListener('input', function(e) {
 
 document.getElementById('quick_descripcion')?.addEventListener('input', function(e) {
     let value = e.target.value;
-    // Prevent more than 2 consecutive spaces
-    value = value.replace(/\s{3,}/g, '  ');
+    value = value.replace(/\s{2,}/g, ' ');
     e.target.value = value;
 });
 </script>
+
 {% endblock %}

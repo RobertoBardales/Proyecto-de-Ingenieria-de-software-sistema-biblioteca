@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Países{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('main.index') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Gestión de Países</h1>
+                <p class="subtitle">Administra los países del sistema</p>
+            </div>
+        </div>
+        <a href="{{ url_for('pais.crear') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo País
+        </a>
+    </div>
+
+    <!-- Search Filter -->
+    <div class="filters-container">
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre o código ISO..." class="search-input">
+            <button class="clear-btn" id="clearBtn" onclick="clearSearch()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="filter-stats">
+            <span id="statsText">{{ paises|length }} países</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>País</th>
+                    <th>Código ISO</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for pais in paises %}
+                <tr data-search="{{ (pais.nombre_pais + ' ' + pais.codigo_iso)|lower }}">
+                    <td><span class="badge badge-id">#{{ pais.id_pais }}</span></td>
+                    <td>
+                        <div class="country-info">
+                            <div class="flag-icon">{{ pais.codigo_iso }}</div>
+                            <span class="country-name">{{ pais.nombre_pais }}</span>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-code">{{ pais.codigo_iso }}</span></td>
+                    <td>
+                        <div class="actions">
+                            <button class="action-btn view" title="Ver detalles"
+                                onclick='showDetails({{ pais.id_pais }}, "{{ pais.nombre_pais }}", "{{ pais.codigo_iso }}")'>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                            <a href="{{ url_for('pais.editar', id=pais.id_pais) }}" class="action-btn edit" title="Editar">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
+                            <button class="action-btn delete" onclick='showDelete({{ pais.id_pais }}, "{{ pais.nombre_pais }}")' title="Eliminar">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <p>No se encontraron resultados</p>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div id="detailsModal" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header">
+            <h3>Detalles del País</h3>
+            <button class="close-btn" onclick="closeModal('detailsModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-row"><label>ID:</label><span id="dId"></span></div>
+                <div class="detail-row"><label>País:</label><span id="dNombre"></span></div>
+                <div class="detail-row"><label>Código ISO:</label><span id="dCodigo"></span></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('detailsModal')">Cerrar</button>
+            <a href="#" id="editBtn" class="btn btn-primary">Editar</a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header modal-danger">
+            <h3>Confirmar Eliminación</h3>
+            <button class="close-btn" onclick="closeModal('deleteModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <p>¿Eliminar el país <strong id="deleteName"></strong>?</p>
+            <p class="text-muted">Esta acción no se puede deshacer</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancelar</button>
+            <form id="deleteForm" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-box { position: relative; margin-bottom: 0.5rem; }
+.search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.search-input { width: 100%; padding: 0.75rem 3rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: border 0.2s; }
+.search-input:focus { outline: none; border-color: #667eea; }
+.clear-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; }
+.clear-btn.show { display: flex; }
+.filter-stats { color: #718096; font-size: 0.9rem; }
+.filter-stats span { font-weight: 600; color: #667eea; }
+
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.9rem; }
+.data-table td { padding: 1rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.country-info { display: flex; align-items: center; gap: 0.75rem; }
+.flag-icon { width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; }
+.country-name { font-weight: 600; color: #1a202c; }
+
+.badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; }
+.badge-id { background: #e0f2fe; color: #0284c7; }
+.badge-code { background: #f3e8ff; color: #7c3aed; font-family: monospace; }
+
+.actions { display: flex; gap: 0.5rem; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
+.action-btn.view { background: #e6f3ff; color: #0066cc; }
+.action-btn.view:hover { background: #0066cc; color: white; }
+.action-btn.edit { background: #fff3cd; color: #856404; }
+.action-btn.edit:hover { background: #ffc107; color: white; }
+.action-btn.delete { background: #ffe0e0; color: #c41e3a; }
+.action-btn.delete:hover { background: #dc3545; color: white; }
+
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover { background: #c82333; }
+
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; }
+.no-results.show { display: block; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results p { color: #718096; margin: 0; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+.modal-small { max-width: 400px; }
+.modal-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; font-size: 1.25rem; }
+.modal-danger { background: #dc3545; color: white; border-bottom: none; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.close-btn:hover { background: rgba(0,0,0,0.1); }
+.modal-body { padding: 1.5rem; }
+.detail-grid { display: grid; gap: 1rem; }
+.detail-row { display: grid; grid-template-columns: 120px 1fr; gap: 1rem; padding: 0.75rem; background: #f7fafc; border-radius: 6px; }
+.detail-row label { font-weight: 600; color: #4a5568; }
+.text-muted { color: #a0aec0; font-size: 0.9rem; margin-top: 0.5rem; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; }
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+}
+</style>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const clearBtn = document.getElementById('clearBtn');
+const tableBody = document.getElementById('tableBody');
+const noResults = document.getElementById('noResults');
+const statsText = document.getElementById('statsText');
+const rows = [...tableBody.querySelectorAll('tr')];
+
+function applySearch() {
+    const search = searchInput.value.toLowerCase();
+    let visible = 0;
+    
+    rows.forEach(row => {
+        const matchSearch = !search || row.dataset.search.includes(search);
+        
+        if (matchSearch) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    noResults.classList.toggle('show', visible === 0);
+    statsText.textContent = `${visible} de ${rows.length} países`;
+    clearBtn.classList.toggle('show', search.length > 0);
+}
+
+function clearSearch() {
+    searchInput.value = '';
+    applySearch();
+}
+
+searchInput.addEventListener('input', applySearch);
+
+function showDetails(id, nombre, codigo) {
+    document.getElementById('dId').textContent = '#' + id;
+    document.getElementById('dNombre').textContent = nombre;
+    document.getElementById('dCodigo').textContent = codigo;
+    document.getElementById('editBtn').href = `/pais/editar/${id}`;
+    document.getElementById('detailsModal').classList.add('show');
+}
+
+function showDelete(id, nombre) {
+    document.getElementById('deleteName').textContent = nombre;
+    document.getElementById('deleteForm').action = `/pais/eliminar/${id}`;
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+window.onclick = e => {
+    if (e.target.classList.contains('modal')) closeModal(e.target.id);
+};
+</script>
+{% endblock %}

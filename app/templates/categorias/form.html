@@ -96,6 +96,10 @@
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
+    .form-input.error {
+        border-color: #dc3545;
+    }
+
     .form-hint {
         font-size: 0.85rem;
         color: #718096;
@@ -109,10 +113,12 @@
 
     .char-count.warning {
         color: #f59e0b;
+        font-weight: 600;
     }
 
     .char-count.danger {
         color: #dc3545;
+        font-weight: 700;
     }
 
     .form-actions {
@@ -209,7 +215,7 @@
                            maxlength="100"
                            placeholder="Ej: Ficción, Ciencia, Historia">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <small class="form-hint">Nombre único de la categoría (2-100 caracteres)</small>
+                        <small class="form-hint">Nombre único de la categoría (2-100 caracteres, letras y números)</small>
                         <small class="char-count" id="nombreCount">0/100</small>
                     </div>
                 </div>
@@ -226,7 +232,7 @@
                               maxlength="500"
                               placeholder="Describe el tipo de libros que pertenecen a esta categoría...">{{ categoria.descripcion if categoria else '' }}</textarea>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <small class="form-hint">Descripción clara de la categoría (10-200 caracteres)</small>
+                        <small class="form-hint">Descripción clara de la categoría (10-500 caracteres)</small>
                         <small class="char-count" id="descripcionCount">0/500</small>
                     </div>
                 </div>
@@ -241,7 +247,7 @@
                               maxlength="500"
                               placeholder="Notas adicionales sobre la categoría (opcional)...">{{ categoria.observaciones if categoria else '' }}</textarea>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <small class="form-hint">Información adicional opcional</small>
+                        <small class="form-hint">Información adicional opcional (máximo 500 caracteres)</small>
                         <small class="char-count" id="observacionesCount">0/500</small>
                     </div>
                 </div>
@@ -266,7 +272,55 @@
 
 {% block extra_js %}
 <script>
-// Character counters
+// Real-time validation for nombre - prevent invalid characters and patterns
+document.getElementById('nombre').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Remove invalid characters (only allow letters, numbers, and spaces)
+    value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]/g, '');
+    
+    // Prevent more than 2 consecutive spaces
+    value = value.replace(/\s{3,}/g, '  ');
+    
+    // Remove more than 2 consecutive same characters (except spaces)
+    value = value.replace(/([^\s])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Real-time validation for descripcion
+document.getElementById('descripcion').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Prevent more than 2 consecutive spaces
+    value = value.replace(/\s{3,}/g, '  ');
+    
+    // Remove more than 2 consecutive same characters (except spaces)
+    value = value.replace(/([^\s])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Real-time validation for observaciones
+document.getElementById('observaciones').addEventListener('input', function(e) {
+    let value = e.target.value;
+    
+    // Prevent more than 2 consecutive spaces
+    value = value.replace(/\s{3,}/g, '  ');
+    
+    // Remove more than 2 consecutive same characters (except spaces)
+    value = value.replace(/([^\s])\1{2,}/g, function(match) {
+        return match.substring(0, 2);
+    });
+    
+    e.target.value = value;
+});
+
+// Character counters with color coding
 function updateCharCount(inputId, countId, max) {
     const input = document.getElementById(inputId);
     const counter = document.getElementById(countId);
@@ -275,15 +329,12 @@ function updateCharCount(inputId, countId, max) {
         const length = input.value.length;
         counter.textContent = `${length}/${max}`;
         
-        // Color coding
+        // Color coding based on usage
+        counter.classList.remove('warning', 'danger');
         if (length > max * 0.9) {
             counter.classList.add('danger');
-            counter.classList.remove('warning');
         } else if (length > max * 0.7) {
             counter.classList.add('warning');
-            counter.classList.remove('danger');
-        } else {
-            counter.classList.remove('warning', 'danger');
         }
     }
     
@@ -295,20 +346,60 @@ updateCharCount('nombre', 'nombreCount', 100);
 updateCharCount('descripcion', 'descripcionCount', 500);
 updateCharCount('observaciones', 'observacionesCount', 500);
 
-// Form validation
+// Form validation before submit
 document.getElementById('categoriaForm').addEventListener('submit', function(e) {
     const nombre = document.getElementById('nombre').value.trim();
     const descripcion = document.getElementById('descripcion').value.trim();
     
+    // Validate nombre
     if (nombre.length < 2) {
         e.preventDefault();
         alert('El nombre debe tener al menos 2 caracteres');
+        document.getElementById('nombre').focus();
         return false;
     }
     
+    if (nombre.length > 100) {
+        e.preventDefault();
+        alert('El nombre no puede exceder 100 caracteres');
+        document.getElementById('nombre').focus();
+        return false;
+    }
+    
+    // Check if nombre has at least one letter
+    if (!/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(nombre)) {
+        e.preventDefault();
+        alert('El nombre debe contener al menos algunas letras');
+        document.getElementById('nombre').focus();
+        return false;
+    }
+    
+    // Validate descripcion
     if (descripcion.length < 10) {
         e.preventDefault();
         alert('La descripción debe tener al menos 10 caracteres');
+        document.getElementById('descripcion').focus();
+        return false;
+    }
+    
+    if (descripcion.length > 500) {
+        e.preventDefault();
+        alert('La descripción no puede exceder 500 caracteres');
+        document.getElementById('descripcion').focus();
+        return false;
+    }
+    
+    // Check for invalid patterns (more than 2 consecutive spaces)
+    if (/\s{3,}/.test(nombre) || /\s{3,}/.test(descripcion)) {
+        e.preventDefault();
+        alert('Los campos no pueden tener más de 2 espacios consecutivos');
+        return false;
+    }
+    
+    // Check for more than 2 consecutive same characters (excluding spaces)
+    if (/([^\s])\1{2,}/.test(nombre) || /([^\s])\1{2,}/.test(descripcion)) {
+        e.preventDefault();
+        alert('Los campos no pueden tener el mismo carácter repetido más de 2 veces seguidas');
         return false;
     }
 });

@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if documento else 'Nuevo' }} Documento{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('clientes_documento.listar') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>{{ 'Editar' if documento else 'Nuevo' }} Documento</h1>
+                <p class="subtitle">{{ 'Actualiza la información del documento' if documento else 'Agrega un nuevo documento de identidad' }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <form method="POST" id="formDocumento">
+            <!-- Cliente Selection -->
+            <div class="form-group">
+                <label for="id_cliente" class="form-label required">Cliente</label>
+                <select id="id_cliente" name="id_cliente" class="form-input" required 
+                        {{ 'disabled' if documento else '' }}>
+                    <option value="">Seleccionar cliente...</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id_cliente }}" 
+                            {{ 'selected' if documento and documento.id_cliente == cliente.id_cliente else '' }}>
+                        {{ cliente.nombres }} {{ cliente.apellidos }} - {{ cliente.email }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if documento %}
+                <input type="hidden" name="id_cliente" value="{{ documento.id_cliente }}">
+                <div class="info-message">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    No se puede cambiar el cliente en modo edición
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Document Type -->
+            <div class="form-group">
+                <label for="id_tipo_documento" class="form-label required">Tipo de Documento</label>
+                <select id="id_tipo_documento" name="id_tipo_documento" class="form-input" required>
+                    <option value="">Seleccionar tipo...</option>
+                    {% for tipo in tipos_documentos %}
+                    <option value="{{ tipo.id_tipo_documento }}" 
+                            data-nombre="{{ tipo.nombre }}"
+                            {{ 'selected' if documento and documento.id_tipo_documento == tipo.id_tipo_documento else '' }}>
+                        {{ tipo.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div id="descripcionTipo" class="help-text"></div>
+            </div>
+
+            <!-- Document Value -->
+            <div class="form-group">
+                <label for="valor_documento" class="form-label required">Número/Valor del Documento</label>
+                <input type="text" 
+                       id="valor_documento" 
+                       name="valor_documento" 
+                       class="form-input document-input" 
+                       value="{{ documento.valor_documento if documento else '' }}"
+                       placeholder="Seleccione un tipo de documento primero"
+                       maxlength="50"
+                       required>
+                <div id="formatoAyuda" class="help-text">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    Seleccione un tipo de documento para ver el formato requerido
+                </div>
+                <div id="errorValor" class="error-message"></div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <a href="{{ url_for('clientes_documento.listar') }}" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary" id="btnGuardar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    {{ 'Actualizar' if documento else 'Guardar' }} Documento
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Format Examples Card -->
+    <div class="examples-card">
+        <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+            </svg>
+            Formatos de Documentos
+        </h3>
+        <div class="examples-grid">
+            <div class="example-item">
+                <div class="example-header">
+                    <span class="example-icon">🆔</span>
+                    <strong>DNI/Identidad</strong>
+                </div>
+                <code>0801-1990-12345</code>
+                <small>13 dígitos con guiones</small>
+            </div>
+            <div class="example-item">
+                <div class="example-header">
+                    <span class="example-icon">📋</span>
+                    <strong>RTN</strong>
+                </div>
+                <code>0801-1990-123456</code>
+                <small>14 dígitos con guiones</small>
+            </div>
+            <div class="example-item">
+                <div class="example-header">
+                    <span class="example-icon">✈️</span>
+                    <strong>Pasaporte</strong>
+                </div>
+                <code>AB123456</code>
+                <small>6-9 caracteres alfanuméricos</small>
+            </div>
+            <div class="example-item">
+                <div class="example-header">
+                    <span class="example-icon">🚗</span>
+                    <strong>Licencia</strong>
+                </div>
+                <code>HN12345678</code>
+                <small>Letras opcionales + 6-10 dígitos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header { margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+.form-card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+
+.form-group { margin-bottom: 1.5rem; }
+.form-label { display: block; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; font-size: 0.95rem; }
+.form-label.required::after { content: " *"; color: #e53e3e; }
+
+.form-input { width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; background: white; }
+.form-input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+.form-input:disabled { background-color: #f7fafc; cursor: not-allowed; opacity: 0.7; color: #718096; }
+.form-input.invalid { border-color: #e53e3e; }
+.form-input.invalid:focus { box-shadow: 0 0 0 3px rgba(229,62,62,0.1); }
+
+.document-input { text-transform: uppercase; font-family: 'Courier New', monospace; font-weight: 600; letter-spacing: 1px; font-size: 1rem; }
+
+.help-text { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.875rem; color: #667eea; }
+.help-text svg { flex-shrink: 0; }
+
+.info-message { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; padding: 0.75rem; background: #e6f3ff; border-left: 3px solid: #0066cc; border-radius: 6px; font-size: 0.875rem; color: #0066cc; }
+.info-message svg { flex-shrink: 0; }
+
+.error-message { display: none; align-items: flex-start; gap: 0.5rem; margin-top: 0.5rem; padding: 0.75rem; background: #fff5f5; border-left: 3px solid #e53e3e; border-radius: 6px; font-size: 0.875rem; color: #e53e3e; }
+.error-message.show { display: flex; }
+.error-message::before { content: "⚠"; font-size: 1.1em; flex-shrink: 0; }
+
+.form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; }
+
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; font-size: 0.95rem; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+
+.examples-card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.examples-card h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0; color: #2d3748; font-size: 1.1rem; }
+.examples-card h3 svg { color: #667eea; }
+
+.examples-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.example-item { padding: 1rem; background: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+.example-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.example-icon { font-size: 1.5rem; }
+.example-item strong { color: #2d3748; font-size: 0.95rem; }
+.example-item code { display: block; background: white; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; font-family: 'Courier New', monospace; font-weight: 600; color: #667eea; border: 1px solid #e2e8f0; }
+.example-item small { color: #718096; font-size: 0.85rem; }
+
+@media (max-width: 768px) {
+    .header-left { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .form-card { padding: 1.5rem; }
+    .form-actions { flex-direction: column-reverse; }
+    .form-actions .btn { width: 100%; justify-content: center; }
+    .examples-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectTipo = document.getElementById('id_tipo_documento');
+    const inputValor = document.getElementById('valor_documento');
+    const formatoAyuda = document.getElementById('formatoAyuda');
+    const errorValor = document.getElementById('errorValor');
+    const form = document.getElementById('formDocumento');
+
+    // Formatos por tipo de documento
+    const formatos = {
+        'identidad': {
+            regex: /^\d{4}-\d{4}-\d{5}$/,
+            formato: '0000-0000-00000 (13 dígitos)',
+            placeholder: '0801-1990-12345',
+            descripcion: 'Formato: 0000-0000-00000 (13 dígitos con guiones)'
+        },
+        'dni': {
+            regex: /^\d{4}-\d{4}-\d{5}$/,
+            formato: '0000-0000-00000 (13 dígitos)',
+            placeholder: '0801-1990-12345',
+            descripcion: 'Formato: 0000-0000-00000 (13 dígitos con guiones)'
+        },
+        'rtn': {
+            regex: /^\d{4}-\d{4}-\d{6}$/,
+            formato: '0000-0000-000000 (14 dígitos)',
+            placeholder: '0801-1990-123456',
+            descripcion: 'Formato: 0000-0000-000000 (14 dígitos con guiones)'
+        },
+        'pasaporte': {
+            regex: /^[A-Z0-9]{6,9}$/,
+            formato: '6-9 caracteres alfanuméricos',
+            placeholder: 'AB123456',
+            descripcion: 'Formato: 6-9 caracteres alfanuméricos (sin espacios)'
+        },
+        'licencia': {
+            regex: /^[A-Z]{0,2}\d{6,10}$/,
+            formato: 'Letras opcionales + 6-10 dígitos',
+            placeholder: 'HN12345678',
+            descripcion: 'Formato: Ej. HN12345678 o 12345678'
+        }
+    };
+
+    // Actualizar ayuda al cambiar tipo
+    selectTipo.addEventListener('change', function() {
+        const nombreTipo = this.options[this.selectedIndex]?.dataset.nombre?.toLowerCase() || '';
+        let formatoEncontrado = false;
+
+        for (const [key, config] of Object.entries(formatos)) {
+            if (nombreTipo.includes(key)) {
+                inputValor.placeholder = config.placeholder;
+                formatoAyuda.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    ${config.descripcion}
+                `;
+                formatoAyuda.style.color = '#667eea';
+                formatoEncontrado = true;
+                break;
+            }
+        }
+
+        if (!formatoEncontrado) {
+            inputValor.placeholder = 'Ingrese el número del documento';
+            formatoAyuda.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Formato libre: 3-50 caracteres
+            `;
+            formatoAyuda.style.color = '#718096';
+        }
+
+        // Limpiar error al cambiar tipo
+        errorValor.classList.remove('show');
+        inputValor.classList.remove('invalid');
+        inputValor.focus();
+    });
+
+    // Validación en tiempo real
+    inputValor.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        
+        const nombreTipo = selectTipo.options[selectTipo.selectedIndex]?.dataset.nombre?.toLowerCase() || '';
+        let regex = null;
+        let mensaje = '';
+
+        // Buscar el formato correspondiente
+        for (const [key, config] of Object.entries(formatos)) {
+            if (nombreTipo.includes(key)) {
+                regex = config.regex;
+                mensaje = config.formato;
+                break;
+            }
+        }
+
+        // Validar
+        if (this.value && regex && !regex.test(this.value)) {
+            errorValor.textContent = `Formato inválido. Debe ser: ${mensaje}`;
+            errorValor.classList.add('show');
+            this.classList.add('invalid');
+        } else {
+            errorValor.classList.remove('show');
+            this.classList.remove('invalid');
+        }
+    });
+
+    // Validación antes de enviar
+    form.addEventListener('submit', function(e) {
+        const nombreTipo = selectTipo.options[selectTipo.selectedIndex]?.dataset.nombre?.toLowerCase() || '';
+        const valor = inputValor.value.trim();
+
+        // Validar que no esté vacío
+        if (!valor) {
+            e.preventDefault();
+            errorValor.textContent = 'El valor del documento es obligatorio';
+            errorValor.classList.add('show');
+            inputValor.classList.add('invalid');
+            inputValor.focus();
+            return;
+        }
+
+        // Buscar formato y validar
+        for (const [key, config] of Object.entries(formatos)) {
+            if (nombreTipo.includes(key)) {
+                if (!config.regex.test(valor)) {
+                    e.preventDefault();
+                    errorValor.textContent = `Formato inválido. Debe ser: ${config.formato}`;
+                    errorValor.classList.add('show');
+                    inputValor.classList.add('invalid');
+                    inputValor.focus();
+                    return;
+                }
+                break;
+            }
+        }
+
+        // Si no hay formato específico, validar longitud mínima
+        if (valor.length < 3) {
+            e.preventDefault();
+            errorValor.textContent = 'El documento debe tener al menos 3 caracteres';
+            errorValor.classList.add('show');
+            inputValor.classList.add('invalid');
+            inputValor.focus();
+            return;
+        }
+    });
+
+    // Trigger al cargar si ya hay tipo seleccionado (modo edición)
+    if (selectTipo.value) {
+        selectTipo.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}
