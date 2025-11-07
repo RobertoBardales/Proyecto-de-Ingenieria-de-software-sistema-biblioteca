@@ -1,0 +1,129 @@
+/* Estilo general */
+body {
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    background: #f7f9fc;
+    color: #333;
+}
+
+/* Encabezado */
+header {
+    background-color: #004b8d;
+    color: white;
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header .logo h1 {
+    margin: 0;
+    font-size: 1.6em;
+}
+
+header .logo p {
+    margin: 0;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+nav a {
+    color: white;
+    margin: 0 10px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+/* Hero principal */
+.hero {
+    background: linear-gradient(120deg, #0073e6, #00bfff);
+    color: white;
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.hero h2 {
+    font-size: 2em;
+}
+
+.hero p {
+    font-size: 1.1em;
+    margin-bottom: 25px;
+}
+
+.btn {
+    background-color: white;
+    color: #0073e6;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    background-color: #004b8d;
+    color: white;
+}
+
+/* Servicios */
+.services {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.cards {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    width: 280px;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* Funcionalidades */
+.features {
+    background-color: #e9f3ff;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.features ul {
+    list-style: none;
+    padding: 0;
+}
+
+.features li {
+    margin: 10px 0;
+    font-size: 1.1em;
+}
+
+/* Contacto */
+.contact {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+/* Footer */
+footer {
+    background-color: #00345f;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    font-size: 0.9em;
+}

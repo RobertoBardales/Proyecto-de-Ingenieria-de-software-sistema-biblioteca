@@ -373,28 +373,7 @@
         </div>
 
         <div class="register-body">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="flash-messages">
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    {% if category == 'error' %}
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                                    {% else %}
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                    {% endif %}
-                                </svg>
-                                <span>{{ message }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            <form method="POST" action="{{ url_for('auth.registrar') }}" id="registerForm">
+            <form method="POST" action="/registrar" id="registerForm">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nombres">Nombres <span class="required">*</span></label>
@@ -449,8 +428,8 @@
                                maxlength="100"
                                placeholder="tu@email.com">
                     </div>
-                    <small class="form-hint">Este será tu nombre de usuario</small>
-                    <small class="error-message" id="email-error">Email inválido</small>
+                    <small class="form-hint">Mínimo 3 caracteres antes del @</small>
+                    <small class="error-message" id="email-error">El correo debe tener al menos 3 caracteres antes del @</small>
                 </div>
 
                 <div class="form-group full-width">
@@ -479,9 +458,9 @@
                                id="password" 
                                name="password" 
                                required
-                               minlength="8"
+                               minlength="12"
                                maxlength="100"
-                               placeholder="••••••••">
+                               placeholder="••••••••••••">
                     </div>
                     <div class="password-strength">
                         <div class="password-strength-bar" id="strengthBar"></div>
@@ -496,20 +475,9 @@
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            <span>Mínimo 10 caracteres</span>
+                            <span>Mínimo 12 caracteres</span>
                         </div>
-                        <div class="requirement" id="req-upper">
-                            <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="15" y1="9" x2="9" y2="15"></line>
-                                <line x1="9" y1="9" x2="15" y2="15"></line>
-                            </svg>
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                            <span>Al menos una mayúscula (A-Z)</span>
-                        </div>
-                        <div class="requirement" id="req-lower">
+                        <div class="requirement" id="req-lowercase">
                             <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="15" y1="9" x2="9" y2="15"></line>
@@ -519,6 +487,17 @@
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
                             <span>Al menos una minúscula (a-z)</span>
+                        </div>
+                        <div class="requirement" id="req-uppercase">
+                            <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="15" y1="9" x2="9" y2="15"></line>
+                                <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Al menos una mayúscula (A-Z)</span>
                         </div>
                         <div class="requirement" id="req-number">
                             <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -540,7 +519,7 @@
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            <span>Al menos un carácter especial (!@#$%)</span>
+                            <span>Al menos un carácter especial (!@#$...)</span>
                         </div>
                         <div class="requirement" id="req-max">
                             <svg class="x-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -567,8 +546,8 @@
                                id="password_confirm" 
                                name="password_confirm" 
                                required
-                               minlength="8"
-                               placeholder="••••••••">
+                               minlength="12"
+                               placeholder="••••••••••••">
                     </div>
                     <small class="error-message" id="password-error">Las contraseñas no coinciden</small>
                 </div>
@@ -589,7 +568,7 @@
             </div>
 
             <div class="login-link">
-                ¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}">Inicia sesión aquí</a>
+                ¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a>
             </div>
 
             <div class="back-to-home">
@@ -695,27 +674,67 @@
             e.target.value = value;
         });
 
-        // Password validation function
+        // Validación de email - mínimo 3 caracteres antes del @
+        document.getElementById('email').addEventListener('input', function(e) {
+            const email = e.target.value;
+            const error = document.getElementById('email-error');
+            
+            if (email.includes('@')) {
+                const parteLocal = email.split('@')[0];
+                
+                if (parteLocal.length < 3) {
+                    e.target.classList.add('error');
+                    e.target.classList.remove('success');
+                    error.classList.add('show');
+                } else {
+                    e.target.classList.remove('error');
+                    e.target.classList.add('success');
+                    error.classList.remove('show');
+                }
+            } else {
+                e.target.classList.remove('error', 'success');
+                error.classList.remove('show');
+            }
+        });
+
+        // Password validation function - NUEVAS VALIDACIONES
         function validatePassword() {
             const password = document.getElementById('password').value;
             const strengthBar = document.getElementById('strengthBar');
             
-            // Check requirements
-            const hasMinLength = password.length >= 8;
-            const hasNumber = /[0-9]/.test(password);
-            const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+            // Check requirements - ACTUALIZADOS SEGÚN INGENIERO
+            const hasMinLength = password.length >= 12; // Cambio de 8 a 12
+            const hasLowercase = /[a-z]/.test(password); // NUEVO
+            const hasUppercase = /[A-Z]/.test(password); // NUEVO
+            const hasNumber = /[0-9]/.test(password); // NUEVO
+            const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password); // YA EXISTÍA
             const withinMaxLength = password.length <= 100;
             
-            // Update requirement indicators
+            // Update requirement indicators - ACTUALIZADOS
             const reqLength = document.getElementById('req-length');
+            const reqLowercase = document.getElementById('req-lowercase');
+            const reqUppercase = document.getElementById('req-uppercase');
             const reqNumber = document.getElementById('req-number');
             const reqSpecial = document.getElementById('req-special');
             const reqMax = document.getElementById('req-max');
             
+            // Actualizar indicadores visuales
             if (hasMinLength) {
                 reqLength.classList.add('met');
             } else {
                 reqLength.classList.remove('met');
+            }
+            
+            if (hasLowercase) {
+                reqLowercase.classList.add('met');
+            } else {
+                reqLowercase.classList.remove('met');
+            }
+            
+            if (hasUppercase) {
+                reqUppercase.classList.add('met');
+            } else {
+                reqUppercase.classList.remove('met');
             }
             
             if (hasNumber) {
@@ -739,28 +758,29 @@
             // Calculate strength
             let strength = 0;
             if (hasMinLength) strength++;
+            if (hasLowercase) strength++;
+            if (hasUppercase) strength++;
             if (hasNumber) strength++;
             if (hasSpecialChar) strength++;
-            if (password.length >= 12) strength++;
-            if (/[A-Z]/.test(password)) strength++;
+            if (password.length >= 16) strength++; // Extra point for longer passwords
             
             // Update strength bar
-            const percentage = (strength / 5) * 100;
+            const percentage = (strength / 6) * 100;
             strengthBar.style.width = percentage + '%';
             
             if (strength <= 2) {
                 strengthBar.style.background = '#dc3545';
-            } else if (strength <= 3) {
+            } else if (strength <= 4) {
                 strengthBar.style.background = '#ffc107';
             } else {
                 strengthBar.style.background = '#28a745';
             }
             
-            // Check if password is valid
-            const isValid = hasMinLength && hasNumber && hasSpecialChar && withinMaxLength;
+            // Check if password is valid - TODAS LAS VALIDACIONES DEBEN CUMPLIRSE
+            const isValid = hasMinLength && hasLowercase && hasUppercase && hasNumber && hasSpecialChar && withinMaxLength;
             const passwordInput = document.getElementById('password');
             
-            if (password.length > 0) {
+          if (password.length > 0) {
                 if (isValid) {
                     passwordInput.classList.remove('error');
                     passwordInput.classList.add('success');
@@ -804,10 +824,10 @@
         }
 
         document.getElementById('password_confirm').addEventListener('input', validatePasswordMatch);
-        document.getElementById('password').addEventListener('input', validatePasswordMatch);
 
-        // Form submission validation
+        // Form submission validation - VALIDACIONES ACTUALIZADAS
         document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const passwordConfirm = document.getElementById('password_confirm').value;
             const telefono = document.getElementById('telefono').value.trim();
@@ -856,6 +876,60 @@
                 return false;
             }
             
+            // VALIDACIÓN DEL EMAIL - Mínimo 3 caracteres antes del @
+            if (email.includes('@')) {
+                const parteLocal = email.split('@')[0];
+                if (parteLocal.length < 3) {
+                    e.preventDefault();
+                    alert('El correo debe tener mínimo 3 caracteres antes del @');
+                    return false;
+                }
+            }
+            
+            // VALIDACIONES DE CONTRASEÑA - ACTUALIZADAS SEGÚN INGENIERO
+            const hasMinLength = password.length >= 12; // Mínimo 12 caracteres
+            const hasLowercase = /[a-z]/.test(password); // Al menos una minúscula
+            const hasUppercase = /[A-Z]/.test(password); // Al menos una mayúscula
+            const hasNumber = /[0-9]/.test(password); // Al menos un número
+            const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password); // Al menos un carácter especial
+            const withinMaxLength = password.length <= 100;
+            
+            if (!hasMinLength) {
+                e.preventDefault();
+                alert('La contraseña debe tener al menos 12 caracteres');
+                return false;
+            }
+            
+            if (!hasLowercase) {
+                e.preventDefault();
+                alert('La contraseña debe contener al menos una letra minúscula');
+                return false;
+            }
+            
+            if (!hasUppercase) {
+                e.preventDefault();
+                alert('La contraseña debe contener al menos una letra mayúscula');
+                return false;
+            }
+            
+            if (!hasNumber) {
+                e.preventDefault();
+                alert('La contraseña debe contener al menos un número');
+                return false;
+            }
+            
+            if (!hasSpecialChar) {
+                e.preventDefault();
+                alert('La contraseña debe contener al menos un carácter especial');
+                return false;
+            }
+            
+            if (!withinMaxLength) {
+                e.preventDefault();
+                alert('La contraseña no puede exceder 100 caracteres');
+                return false;
+            }
+            
             if (password !== passwordConfirm) {
                 e.preventDefault();
                 document.getElementById('password_confirm').classList.add('error');
@@ -864,34 +938,26 @@
                 return false;
             }
             
-            // Validate phone format if provided
-            if (telefono && telefono !== '') {
-                const cleanPhone = telefono.replace(/[\s\-\(\)]/g, '');
-                if (!cleanPhone.startsWith('+504')) {
-                    e.preventDefault();
-                    alert('El teléfono debe incluir el código de país +504\nEjemplo: +504 9999-9999');
-                    document.getElementById('telefono').focus();
-                    return false;
-                }
-                
-                const digits = cleanPhone.replace('+504', '');
-                if (digits.length !== 8) {
-                    e.preventDefault();
-                    alert('El teléfono debe tener exactamente 8 dígitos después de +504');
-                    document.getElementById('telefono').focus();
-                    return false;
-                }
-                
-                if (!['3', '7', '8', '9'].includes(digits[0])) {
-                    e.preventDefault();
-                    alert('El número de teléfono debe empezar con 3, 7, 8 o 9');
-                    document.getElementById('telefono').focus();
-                    return false;
-                }
-            }
-            
             return true;
+ });
+
+        // Validación de teléfono - solo números, espacios, guiones y paréntesis
+        document.getElementById('telefono').addEventListener('input', function(e) {
+            // Permitir solo números, espacios, guiones, + y paréntesis
+            const regex = /^[\d\s\-\+\(\)]*$/;
+            
+            if (!regex.test(e.target.value)) {
+                // Remover cualquier carácter que no sea número, espacio, guión, + o paréntesis
+                e.target.value = e.target.value.replace(/[^\d\s\-\+\(\)]/g, '');
+                e.target.classList.add('error');
+                
+                // Quitar el error después de medio segundo
+                setTimeout(() => {
+                    e.target.classList.remove('error');
+                }, 500);
+            }
         });
+
     </script>
 </body>
 </html>
