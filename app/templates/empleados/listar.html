@@ -1,0 +1,927 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Empleados{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div>
+            <h1>👥 Gestión de Empleados</h1>
+            <p class="subtitle">Administra el personal de la biblioteca</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <a href="{{ url_for('empleados_documento.listar') }}" class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                Documentos
+            </a>
+            <a href="{{ url_for('empleados.crear') }}" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nuevo Empleado
+            </a>
+        </div>
+    </div>
+
+    <!-- Búsqueda y filtros -->
+    <div class="filters-container">
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, usuario o rol..." class="search-input">
+            <button class="clear-btn" id="clearBtn" onclick="clearFilters()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="filter-group">
+            <select id="filtroEstado" class="filter-select">
+                <option value="">👤 Todos los estados</option>
+                <option value="1">Activos</option>
+                <option value="0">Inactivos</option>
+            </select>
+            
+            <select id="filtroRol" class="filter-select">
+                <option value="">💼 Todos los roles</option>
+                {% set roles_unicos = empleados | map(attribute='0.rol') | unique | sort %}
+                {% for rol in roles_unicos %}
+                <option value="{{ rol }}">{{ rol }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="filter-stats">
+            <span id="statsText">{{ empleados|length }} empleados</span>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empleado</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Sucursal</th>
+                    <th>Salario</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% if empleados %}
+                    {% for empleado, sucursal, pais in empleados %}
+                    <tr data-search="{{ (empleado.nombres + ' ' + empleado.apellidos + ' ' + empleado.usuario + ' ' + empleado.rol)|lower }}"
+                        data-estado="{{ empleado.activo }}"
+                        data-rol="{{ empleado.rol }}">
+                        <td>
+                            <div class="empleado-info">
+                                <div class="avatar">{{ empleado.nombres[0] }}{{ empleado.apellidos[0] }}</div>
+                                <div>
+                                    <div class="empleado-nombre">{{ empleado.nombres }} {{ empleado.apellidos }}</div>
+                                    <div class="empleado-email">{{ empleado.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <code class="usuario-badge">{{ empleado.usuario }}</code>
+                        </td>
+                        <td>
+                            <span class="badge badge-rol">{{ empleado.rol }}</span>
+                        </td>
+                        <td>{{ sucursal.nombre }}</td>
+                        <td>
+                            <span class="salario">L {{ "{:,.2f}".format(empleado.salario) }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'badge-active' if empleado.activo else 'badge-inactive' }}">
+                                {{ 'Activo' if empleado.activo else 'Inactivo' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <button class="action-btn view" 
+                                        title="Ver detalles"
+                                        onclick='showDetails({{ empleado.id_empleado }}, "{{ empleado.nombres }}", "{{ empleado.apellidos }}", "{{ empleado.usuario }}", "{{ empleado.email }}", "{{ empleado.telefono }}", "{{ empleado.rol }}", "{{ sucursal.nombre }}", "{{ pais.nombre_pais }}", "{{ empleado.fecha_contratacion }}", "{{ empleado.salario }}", "{{ empleado.observaciones or '' }}")'>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                                <a href="{{ url_for('empleados.editar', id=empleado.id_empleado) }}" 
+                                   class="action-btn edit" 
+                                   title="Editar">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </a>
+                                <button class="action-btn delete" 
+                                        onclick='showDelete({{ empleado.id_empleado }}, "{{ empleado.nombres }} {{ empleado.apellidos }}")' 
+                                        title="Eliminar">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div style="padding: 3rem; text-align: center;">
+                                <div style="font-size: 3em; margin-bottom: 1rem;">👥</div>
+                                <h3>No hay empleados registrados</h3>
+                                <p>Comienza agregando empleados al sistema</p>
+                                <a href="{{ url_for('empleados.crear') }}" class="btn btn-primary" style="margin-top: 1rem;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Agregar Primer Empleado
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <p>No se encontraron resultados</p>
+        </div>
+    </div>
+
+    <!-- Total -->
+    <div class="table-footer">
+        <p>Total: <strong id="totalEmpleados">{{ empleados|length }}</strong> empleados</p>
+    </div>
+</div>
+
+<!-- Modal Detalles -->
+<div id="modalDetalles" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3>Detalles del Empleado</h3>
+            <button class="close-btn" onclick="closeModal('modalDetalles')">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-row"><label>ID:</label><span id="dId"></span></div>
+                <div class="detail-row"><label>Nombres:</label><span id="dNombres"></span></div>
+                <div class="detail-row"><label>Apellidos:</label><span id="dApellidos"></span></div>
+                <div class="detail-row"><label>Usuario:</label><span id="dUsuario"></span></div>
+                <div class="detail-row"><label>Email:</label><span id="dEmail"></span></div>
+                <div class="detail-row"><label>Teléfono:</label><span id="dTelefono"></span></div>
+                <div class="detail-row"><label>Rol:</label><span id="dRol"></span></div>
+                <div class="detail-row"><label>Sucursal:</label><span id="dSucursal"></span></div>
+                <div class="detail-row"><label>País:</label><span id="dPais"></span></div>
+                <div class="detail-row"><label>Fecha Contratación:</label><span id="dFecha"></span></div>
+                <div class="detail-row"><label>Salario:</label><span id="dSalario"></span></div>
+                <div class="detail-row full"><label>Observaciones:</label><span id="dObs"></span></div>
+            </div>
+            
+            <!-- Documents Section -->
+            <div class="documents-section">
+                <div class="documents-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    <h4>Documentos del Empleado</h4>
+                </div>
+                <div id="dDocuments" class="documents-list">
+                    <!-- Documents will be loaded here -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modalDetalles')">Cerrar</button>
+            <a href="#" id="editBtn" class="btn btn-primary">Editar</a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar -->
+<div id="modalEliminar" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header modal-danger">
+            <h3>⚠️ Confirmar Eliminación</h3>
+            <button class="close-btn" onclick="closeModal('modalEliminar')">×</button>
+        </div>
+        <div class="modal-body">
+            <p>¿Eliminar a <strong id="deleteName"></strong>?</p>
+            <p class="text-muted">Esta acción no se puede deshacer</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modalEliminar')">Cancelar</button>
+            <form id="deleteForm" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #1a202c;
+}
+
+.subtitle {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.filters-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.search-box {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 3rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.clear-btn {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #e2e8f0;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.clear-btn.show { display: flex; }
+.clear-btn:hover { background: #cbd5e0; }
+
+.filter-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-select {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    background: white;
+    transition: border 0.2s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.filter-stats {
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.filter-stats span {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.table-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.data-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f7fafc;
+}
+
+.data-table tbody tr {
+    transition: background 0.2s;
+}
+
+.data-table tbody tr:hover {
+    background: #f7fafc;
+}
+
+.empleado-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.empleado-nombre {
+    font-weight: 600;
+    color: #1a202c;
+}
+
+.empleado-email {
+    font-size: 0.85rem;
+    color: #a0aec0;
+}
+
+.usuario-badge {
+    background: #f7fafc;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.badge-rol {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-active {
+    background: #d4f4dd;
+    color: #1e7e34;
+}
+
+.badge-inactive {
+    background: #ffe0e0;
+    color: #c41e3a;
+}
+
+.salario {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.action-btn.view {
+    background: #e6f3ff;
+    color: #0066cc;
+}
+
+.action-btn.view:hover {
+    background: #0066cc;
+    color: white;
+}
+
+.action-btn.edit {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.action-btn.edit:hover {
+    background: #ffc107;
+    color: white;
+}
+
+.action-btn.delete {
+    background: #ffe0e0;
+    color: #c41e3a;
+}
+
+.action-btn.delete:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e0;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.table-footer {
+    background: white;
+    padding: 1rem;
+    border-radius: 0 0 12px 12px;
+    text-align: center;
+    color: #718096;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-top: 1.5rem;
+}
+
+.no-results {
+    display: none;
+    text-align: center;
+    padding: 3rem;
+    color: #a0aec0;
+}
+
+.no-results.show {
+    display: block;
+}
+
+.no-results svg {
+    margin: 0 auto 1rem;
+    opacity: 0.3;
+}
+
+.no-results p {
+    color: #718096;
+    margin: 0;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show { display: flex; }
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-small { max-width: 400px; }
+.modal-large { max-width: 800px; }
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-danger {
+    background: #dc3545;
+    color: white;
+    border-bottom: none;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(0,0,0,0.1);
+}
+
+.modal-body { padding: 1.5rem; }
+
+.detail-grid {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f7fafc;
+    border-radius: 6px;
+}
+
+.detail-row.full {
+    grid-column: 1/-1;
+}
+
+.detail-row label {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.text-muted {
+    color: #a0aec0;
+    font-size: 0.9rem;
+}
+
+/* Documents Section in Modal */
+.documents-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e2e8f0;
+}
+
+.documents-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: #667eea;
+}
+
+.documents-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.document-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.document-card:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.document-type-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.document-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2d3748;
+    font-family: 'Courier New', monospace;
+}
+
+.no-documents-msg {
+    text-align: center;
+    padding: 2rem;
+    color: #a0aec0;
+    background: #f7fafc;
+    border-radius: 8px;
+    border: 2px dashed #e2e8f0;
+}
+
+.no-documents-msg svg {
+    opacity: 0.3;
+    margin-bottom: 0.5rem;
+}
+
+.no-documents-msg p {
+    margin: 0;
+}
+
+.documents-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #667eea;
+}
+
+.documents-loading svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .filter-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .detail-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Filtrado
+const searchInput = document.getElementById('searchInput');
+const filtroEstado = document.getElementById('filtroEstado');
+const filtroRol = document.getElementById('filtroRol');
+const clearBtn = document.getElementById('clearBtn');
+const tableBody = document.getElementById('tableBody');
+const totalElement = document.getElementById('totalEmpleados');
+const statsText = document.getElementById('statsText');
+const noResults = document.getElementById('noResults');
+
+const allRows = [...tableBody.querySelectorAll('tr:not(.empty-state)')];
+const totalRows = allRows.length;
+
+function filtrarTabla() {
+    const search = searchInput.value.toLowerCase();
+    const estado = filtroEstado.value;
+    const rol = filtroRol.value;
+    
+    let visibles = 0;
+    
+    allRows.forEach(fila => {
+        const matchSearch = !search || fila.dataset.search.includes(search);
+        const matchEstado = !estado || fila.dataset.estado === estado;
+        const matchRol = !rol || fila.dataset.rol === rol;
+        
+        if (matchSearch && matchEstado && matchRol) {
+            fila.style.display = '';
+            visibles++;
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+    
+    totalElement.textContent = visibles;
+    statsText.textContent = `${visibles} de ${totalRows} empleados`;
+    noResults.classList.toggle('show', visibles === 0 && totalRows > 0);
+    clearBtn.classList.toggle('show', search || estado || rol);
+}
+
+function clearFilters() {
+    searchInput.value = '';
+    filtroEstado.value = '';
+    filtroRol.value = '';
+    filtrarTabla();
+}
+
+searchInput.addEventListener('input', filtrarTabla);
+filtroEstado.addEventListener('change', filtrarTabla);
+filtroRol.addEventListener('change', filtrarTabla);
+
+// Load employee documents
+async function loadEmployeeDocuments(empleadoId) {
+    const documentsContainer = document.getElementById('dDocuments');
+    
+    // Show loading
+    documentsContainer.innerHTML = `
+        <div class="documents-loading">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="2" x2="12" y2="6"></line>
+                <line x1="12" y1="18" x2="12" y2="22"></line>
+                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                <line x1="2" y1="12" x2="6" y2="12"></line>
+                <line x1="18" y1="12" x2="22" y2="12"></line>
+                <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+            </svg>
+            <p>Cargando documentos...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/empleados/documentos/${empleadoId}`);
+        const data = await response.json();
+        
+        if (data.success && data.documentos && data.documentos.length > 0) {
+            documentsContainer.innerHTML = data.documentos.map(doc => `
+                <div class="document-card">
+                    <div>
+                        <div class="document-type-label">${doc.tipo_documento}</div>
+                        <div class="document-value">${doc.valor_documento}</div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            documentsContainer.innerHTML = `
+                <div class="no-documents-msg">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <p>No hay documentos registrados para este empleado</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading documents:', error);
+        documentsContainer.innerHTML = `
+            <div class="no-documents-msg">
+                <p style="color: #dc3545;">Error al cargar los documentos</p>
+            </div>
+        `;
+    }
+}
+
+// Modals
+function showDetails(id, nombres, apellidos, usuario, email, telefono, rol, sucursal, pais, fecha, salario, obs) {
+    document.getElementById('dId').textContent = '#' + id;
+    document.getElementById('dNombres').textContent = nombres;
+    document.getElementById('dApellidos').textContent = apellidos;
+    document.getElementById('dUsuario').textContent = usuario;
+    document.getElementById('dEmail').textContent = email;
+    document.getElementById('dTelefono').textContent = telefono;
+    document.getElementById('dRol').textContent = rol;
+    document.getElementById('dSucursal').textContent = sucursal;
+    document.getElementById('dPais').textContent = pais;
+    document.getElementById('dFecha').textContent = fecha;
+    document.getElementById('dSalario').textContent = 'L ' + parseFloat(salario).toLocaleString('es-HN', {minimumFractionDigits: 2});
+    document.getElementById('dObs').textContent = obs || 'Sin observaciones';
+    document.getElementById('editBtn').href = `/empleados/editar/${id}`;
+    
+    // Load documents
+    loadEmployeeDocuments(id);
+    
+    document.getElementById('modalDetalles').classList.add('show');
+}
+
+function showDelete(id, name) {
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('deleteForm').action = `/empleados/eliminar/${id}`;
+    document.getElementById('modalEliminar').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+window.onclick = e => {
+    if (e.target.classList.contains('modal')) closeModal(e.target.id);
+};
+</script>
+{% endblock %}

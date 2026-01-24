@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #10b981, #14b8a6);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .check-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="check-icon">✅</div>
+        <h1>¡Pago Confirmado!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Estimado/a <strong>{{ cliente.nombres }} {{ cliente.apellidos }}</strong>,</p>
+        
+        <p>Tu pago ha sido confirmado exitosamente.</p>
+        
+        <p><strong>Factura:</strong> {{ venta.numero_factura }}</p>
+        <p><strong>Monto:</strong> L {{ "{:,.2f}".format(venta.total) }}</p>
+        
+        <a href="{{ url_for('ventas.ver', id=venta.id_venta, _external=True) }}" class="btn">Ver Detalles de Compra</a>
+        
+        <p>Gracias por tu compra en nuestro sistema.</p>
+    </div>
+    
+    <div class="footer">
+        <p>Este es un correo automático, por favor no responder.</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if ticket %}Editar Ticket{% else %}Crear Ticket{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+                <!-- Header del Card -->
+                <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 2rem; color: white;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em;">
+                                {% if ticket %}Editar Ticket #{{ ticket.id_ticket }}{% else %}Crear Nuevo Ticket{% endif %}
+                            </h2>
+                            <p style="margin: 0.25rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">
+                                {% if ticket %}Actualiza los detalles de tu ticket{% else %}Describe tu problema o solicitud{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body del Card -->
+                <div style="padding: 2.5rem;">
+                    <form method="POST" novalidate>
+                        <!-- Asunto -->
+                        <div style="margin-bottom: 1.75rem;">
+                            <label for="asunto" style="display: block; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                                Asunto <span style="color: #ef4444;">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="asunto" 
+                                name="asunto" 
+                                maxlength="100"
+                                value="{{ ticket.asunto if ticket else '' }}"
+                                placeholder="Ejemplo: Problema con acceso a libros"
+                                required
+                                style="width: 100%; padding: 0.875rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; transition: all 0.2s; font-family: inherit;"
+                                onblur="this.style.borderColor='#e2e8f0'"
+                                onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                            >
+                            <small style="display: block; color: #64748b; margin-top: 0.5rem; font-size: 0.85rem;">Mínimo 5 caracteres, máximo 100</small>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div style="margin-bottom: 1.75rem;">
+                            <label for="descripcion" style="display: block; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                                Descripción <span style="color: #ef4444;">*</span>
+                            </label>
+                            <textarea 
+                                id="descripcion" 
+                                name="descripcion" 
+                                rows="6"
+                                placeholder="Describe detalladamente el problema o lo que necesitas..."
+                                required
+                                style="width: 100%; padding: 0.875rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; transition: all 0.2s; font-family: inherit; resize: vertical; min-height: 150px;"
+                                onblur="this.style.borderColor='#e2e8f0'"
+                                onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                            >{{ ticket.descripcion if ticket else '' }}</textarea>
+                            <small style="display: block; color: #64748b; margin-top: 0.5rem; font-size: 0.85rem;">Mínimo 10 caracteres</small>
+                        </div>
+
+                        <!-- Prioridad -->
+                        <div style="margin-bottom: 1.75rem;">
+                            <label for="prioridad" style="display: block; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                                Prioridad <span style="color: #ef4444;">*</span>
+                            </label>
+                            <select 
+                                id="prioridad" 
+                                name="prioridad" 
+                                required
+                                style="width: 100%; padding: 0.875rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; transition: all 0.2s; font-family: inherit; background: white; cursor: pointer;"
+                                onblur="this.style.borderColor='#e2e8f0'"
+                                onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                            >
+                                <option value="">-- Selecciona una prioridad --</option>
+                                <option value="Baja" {% if ticket and ticket.prioridad == 'Baja' %}selected{% endif %}>🔽 Baja</option>
+                                <option value="Media" {% if ticket and ticket.prioridad == 'Media' %}selected{% endif %}>➡️ Media</option>
+                                <option value="Alta" {% if ticket and ticket.prioridad == 'Alta' %}selected{% endif %}>🔼 Alta</option>
+                                <option value="Urgente" {% if ticket and ticket.prioridad == 'Urgente' %}selected{% endif %}>⚠️ Urgente</option>
+                            </select>
+                        </div>
+
+                        <!-- Estado (solo para empleados) -->
+                        {% if ticket and current_user.id_empleado %}
+                        <div style="margin-bottom: 1.75rem;">
+                            <label for="estado" style="display: block; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                                Estado
+                            </label>
+                            <select 
+                                id="estado" 
+                                name="estado"
+                                style="width: 100%; padding: 0.875rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; transition: all 0.2s; font-family: inherit; background: white; cursor: pointer;"
+                                onblur="this.style.borderColor='#e2e8f0'"
+                                onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                            >
+                                <option value="Abierto" {% if ticket.estado == 'Abierto' %}selected{% endif %}>Abierto</option>
+                                <option value="En Proceso" {% if ticket.estado == 'En Proceso' %}selected{% endif %}>En Proceso</option>
+                                <option value="En Espera" {% if ticket.estado == 'En Espera' %}selected{% endif %}>En Espera</option>
+                                <option value="Resuelto" {% if ticket.estado == 'Resuelto' %}selected{% endif %}>Resuelto</option>
+                                <option value="Cerrado" {% if ticket.estado == 'Cerrado' %}selected{% endif %}>Cerrado</option>
+                                <option value="Cancelado" {% if ticket.estado == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <!-- Botones -->
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;">
+                            <a href="{{ url_for('tickets.listar_tickets') }}" style="padding: 0.875rem 1.75rem; background: #f1f5f9; color: #334155; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem;"
+                                onmouseover="this.style.background='#e2e8f0'"
+                                onmouseout="this.style.background='#f1f5f9'"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                                Cancelar
+                            </a>
+                            <button type="submit" style="padding: 0.875rem 1.75rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);"
+                                onmouseover="this.style.boxShadow='0 6px 20px rgba(99, 102, 241, 0.4)'; this.style.transform='translateY(-2px)'"
+                                onmouseout="this.style.boxShadow='0 4px 12px rgba(99, 102, 241, 0.3)'; this.style.transform='translateY(0)'"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                {% if ticket %}Actualizar{% else %}Crear{% endif %} Ticket
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const asunto = document.getElementById('asunto').value.trim();
+        const descripcion = document.getElementById('descripcion').value.trim();
+        
+        if (asunto.length < 5) {
+            e.preventDefault();
+            alert('El asunto debe tener al menos 5 caracteres');
+            return false;
+        }
+        
+        if (descripcion.length < 10) {
+            e.preventDefault();
+            alert('La descripción debe tener al menos 10 caracteres');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

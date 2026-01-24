@@ -1,53 +1,18 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
-from models import Clientes, EstadoUsuarios, ClientesDocumento, TiposDocumentos
-from bcrypt import hashpw, gensalt
+from models import Clientes, EstadoUsuarios, ClientesDocumento, TiposDocumentos, Sucursales
 from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 import re
 import secrets
 import string
-import hmac
-import hashlib
+
+# Import shared password function from utils
+from utils import hash_password
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
-
-def hash_password(password):
-    """
-    Hash de contraseña completamente aleatorio y único:
-    1. Genera una sal aleatoria única de 32 bytes
-    2. HMAC con pepper + sal
-    3. Bcrypt
-    4. Almacena: sal_aleatoria + hash (todo en hex)
-    Resultado: Cada hash comienza diferente
-    """
-    # Obtener pepper desde configuración
-    try:
-        pepper = current_app.config.get('PEPPER_SECRET', '')
-    except RuntimeError:
-        from config import Config
-        pepper = Config.PEPPER_SECRET
-    
-    # Generar sal aleatoria única de 32 bytes
-    random_salt = secrets.token_bytes(32)
-    
-    # HMAC con pepper + sal aleatoria
-    hmac_hash = hmac.new(
-        (pepper + random_salt.hex()).encode('utf-8'),
-        password.encode('utf-8'),
-        hashlib.sha256
-    ).digest()
-    
-    # Bcrypt sobre el HMAC
-    bcrypt_hash = hashpw(hmac_hash, gensalt(rounds=12))
-    
-    # Combinar: sal_aleatoria + bcrypt_hash, todo en hexadecimal
-    # La sal aleatoria va primero (64 caracteres hex = 32 bytes)
-    final_hash = random_salt.hex() + bcrypt_hash.hex()
-    
-    return final_hash
 
 def validar_solo_letras(texto, campo):
     """Validar que un campo solo contenga letras y espacios con reglas estrictas"""
@@ -266,9 +231,10 @@ def get_next_documento_id():
 @clientes_bp.route('/')
 @login_required
 def listar():
-    # Use joinedload to eagerly load the Estado_Usuarios relationship
+    # Use joinedload to eagerly load the Estado_Usuarios and Sucursales relationships
     clientes = db.session.query(Clientes).options(
-        joinedload(Clientes.Estado_Usuarios)
+        joinedload(Clientes.Estado_Usuarios),
+        joinedload(Clientes.Sucursales_)
     ).order_by(Clientes.fecha_registro.desc()).all()
     
     # Create a dictionary of estados for easy lookup
@@ -282,6 +248,12 @@ def listar():
 @login_required
 def crear():
     estados = db.session.query(EstadoUsuarios).all()
+    
+    # Get active sucursales for the form
+    sucursales = db.session.execute(
+        select(Sucursales).order_by(Sucursales.nombre)
+    ).scalars().all()
+    
     tipos_documentos = db.session.execute(
         select(TiposDocumentos).where(TiposDocumentos.activo == True).order_by(TiposDocumentos.nombre)
     ).scalars().all()
@@ -294,24 +266,28 @@ def crear():
             telefono = request.form.get('telefono', '').strip()
             direccion = request.form.get('direccion', '').strip()
             observaciones = request.form.get('observaciones', '').strip()
+            id_sucursal = request.form.get('id_sucursal', '').strip()
             
             # Validar nombres
             valido, error = validar_solo_letras(nombres, 'Nombres')
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                     tipos_documentos=tipos_documentos, sucursales=sucursales)
             
             # Validar apellidos
             valido, error = validar_solo_letras(apellidos, 'Apellidos')
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                     tipos_documentos=tipos_documentos, sucursales=sucursales)
             
             # Validar email
             valido, error = validar_email(email)
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                     tipos_documentos=tipos_documentos, sucursales=sucursales)
             
             # Verificar email duplicado
             email_existe = db.session.query(Clientes).filter(
@@ -319,56 +295,74 @@ def crear():
             ).first()
             if email_existe:
                 flash('Este email ya está registrado.', 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                     tipos_documentos=tipos_documentos, sucursales=sucursales)
             
             # Validar teléfono
             valido, error = validar_telefono(telefono)
             if not valido:
                 flash(error, 'error')
-                return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                     tipos_documentos=tipos_documentos, sucursales=sucursales)
             
             # Validar dirección
             if direccion:
                 valido, error = validar_direccion(direccion)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                    return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                         tipos_documentos=tipos_documentos, sucursales=sucursales)
             
             # Validar observaciones
             if observaciones:
                 valido, error = validar_observaciones(observaciones)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+                    return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                         tipos_documentos=tipos_documentos, sucursales=sucursales)
+            
+            # Process sucursal
+            if id_sucursal:
+                id_sucursal = int(id_sucursal)
+                # Verify sucursal exists
+                sucursal = db.session.get(Sucursales, id_sucursal)
+                if not sucursal:
+                    flash('Sucursal seleccionada no existe', 'error')
+                    return render_template('clientes/form.html', cliente=None, estados=estados, 
+                                         tipos_documentos=tipos_documentos, sucursales=sucursales)
+            else:
+                id_sucursal = None
             
             # Generar contraseña temporal automáticamente (más segura)
             # Incluye mayúsculas, minúsculas, dígitos y símbolos
             chars = string.ascii_letters + string.digits + '!@#$%'
             temp_password = ''.join(secrets.choice(chars) for _ in range(10))
             
-            # Crear cliente con el método de hash personalizado
+            # Crear cliente con el método de hash personalizado (imported from utils)
             nuevo_id = get_next_id()
-            password_hash = hash_password(temp_password)
+            password_hash_value = hash_password(temp_password)
             
             nuevo_cliente = Clientes(
                 id_cliente=nuevo_id,
                 nombres=nombres.title(),
                 apellidos=apellidos.title(),
                 email=email,
-                password_hash=password_hash,
+                password_hash=password_hash_value,
                 telefono=telefono if telefono else 'No especificado',
                 direccion=direccion or 'No especificada',
                 tipo_usuario=request.form.get('tipo_usuario', 'cliente'),
                 fecha_registro=datetime.now(),
                 id_estado=int(request.form.get('id_estado', 1)),
                 ot=int(request.form.get('ot', 0)),
-                observaciones=observaciones or None
+                observaciones=observaciones or None,
+                id_sucursal=id_sucursal
             )
             
             db.session.add(nuevo_cliente)
             db.session.commit()
             
-            flash(f'Cliente {nombres} {apellidos} creado exitosamente. Contraseña temporal: {temp_password} (Comparte esta contraseña con el usuario)', 'success')
+            sucursal_msg = f' - Sucursal: {sucursal.nombre}' if id_sucursal else ' - Sin sucursal asignada (usará la predeterminada)'
+            flash(f'Cliente {nombres} {apellidos} creado exitosamente{sucursal_msg}. Contraseña temporal: {temp_password} (Comparte esta contraseña con el usuario)', 'success')
             return redirect(url_for('clientes.listar'))
             
         except Exception as e:
@@ -376,20 +370,28 @@ def crear():
             flash(f'Error al crear cliente: {str(e)}', 'error')
             print(f"Error en crear cliente: {str(e)}")
     
-    return render_template('clientes/form.html', cliente=None, estados=estados, tipos_documentos=tipos_documentos)
+    return render_template('clientes/form.html', cliente=None, estados=estados, 
+                         tipos_documentos=tipos_documentos, sucursales=sucursales)
 
 # UPDATE - Mostrar formulario de edición
 @clientes_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     estados = db.session.query(EstadoUsuarios).all()
+    
+    # Get all sucursales for the form
+    sucursales = db.session.execute(
+        select(Sucursales).order_by(Sucursales.nombre)
+    ).scalars().all()
+    
     tipos_documentos = db.session.execute(
         select(TiposDocumentos).where(TiposDocumentos.activo == True).order_by(TiposDocumentos.nombre)
     ).scalars().all()
     
-    # Use joinedload to eagerly load the Estado_Usuarios relationship
+    # Use joinedload to eagerly load relationships
     cliente = db.session.query(Clientes).options(
-        joinedload(Clientes.Estado_Usuarios)
+        joinedload(Clientes.Estado_Usuarios),
+        joinedload(Clientes.Sucursales_)
     ).filter(Clientes.id_cliente == id).first()
     
     if not cliente:
@@ -411,27 +413,31 @@ def editar(id):
             telefono = request.form.get('telefono', '').strip()
             direccion = request.form.get('direccion', '').strip()
             observaciones = request.form.get('observaciones', '').strip()
+            id_sucursal = request.form.get('id_sucursal', '').strip()
             
             # Validar nombres
             valido, error = validar_solo_letras(nombres, 'Nombres')
             if not valido:
                 flash(error, 'error')
                 return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                     sucursales=sucursales)
             
             # Validar apellidos
             valido, error = validar_solo_letras(apellidos, 'Apellidos')
             if not valido:
                 flash(error, 'error')
                 return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                     sucursales=sucursales)
             
             # Validar teléfono
             valido, error = validar_telefono(telefono)
             if not valido:
                 flash(error, 'error')
                 return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                     tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                     sucursales=sucursales)
             
             # Validar dirección
             if direccion:
@@ -439,7 +445,8 @@ def editar(id):
                 if not valido:
                     flash(error, 'error')
                     return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                         sucursales=sucursales)
             
             # Validar observaciones
             if observaciones:
@@ -447,7 +454,21 @@ def editar(id):
                 if not valido:
                     flash(error, 'error')
                     return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                         sucursales=sucursales)
+            
+            # Process sucursal
+            if id_sucursal:
+                id_sucursal = int(id_sucursal)
+                # Verify sucursal exists
+                sucursal = db.session.get(Sucursales, id_sucursal)
+                if not sucursal:
+                    flash('Sucursal seleccionada no existe', 'error')
+                    return render_template('clientes/form.html', cliente=cliente, estados=estados, 
+                                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                         sucursales=sucursales)
+            else:
+                id_sucursal = None
             
             # Procesar nuevos documentos si existen
             nuevos_documentos = []
@@ -465,20 +486,23 @@ def editar(id):
                         if not tipo_doc:
                             flash(f'Tipo de documento no encontrado', 'error')
                             return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                                 sucursales=sucursales)
                         
                         # Validar formato del documento
                         es_valido, mensaje_error = validar_valor_documento(valor, tipo_doc.nombre)
                         if not es_valido:
                             flash(mensaje_error, 'error')
                             return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                                 sucursales=sucursales)
                         
                         # Validar duplicados
                         if validar_duplicado_documento(id, tipo_id, valor):
                             flash(f'El cliente ya tiene un documento de tipo "{tipo_doc.nombre}" con el mismo valor', 'error')
                             return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                                                 tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                                                 sucursales=sucursales)
                         
                         nuevos_documentos.append({
                             'id_tipo_documento': tipo_id,
@@ -494,6 +518,7 @@ def editar(id):
             cliente.id_estado = int(request.form.get('id_estado', 1))
             cliente.ot = int(request.form.get('ot', 0))
             cliente.observaciones = observaciones or None
+            cliente.id_sucursal = id_sucursal
             
             # Agregar nuevos documentos
             for doc_data in nuevos_documentos:
@@ -510,6 +535,11 @@ def editar(id):
             mensaje = f'Cliente {nombres} {apellidos} actualizado exitosamente.'
             if nuevos_documentos:
                 mensaje += f' Se agregaron {len(nuevos_documentos)} documento(s).'
+            if id_sucursal:
+                sucursal = db.session.get(Sucursales, id_sucursal)
+                mensaje += f' Sucursal asignada: {sucursal.nombre}.'
+            else:
+                mensaje += ' Sin sucursal asignada (usará la predeterminada).'
             
             flash(mensaje, 'success')
             return redirect(url_for('clientes.listar'))
@@ -520,7 +550,8 @@ def editar(id):
             print(f"Error en editar cliente: {str(e)}")
     
     return render_template('clientes/form.html', cliente=cliente, estados=estados, 
-                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente)
+                         tipos_documentos=tipos_documentos, documentos_cliente=documentos_cliente,
+                         sucursales=sucursales)
 
 # DELETE - Eliminar cliente
 @clientes_bp.route('/eliminar/<int:id>', methods=['POST'])
@@ -562,11 +593,8 @@ def resetear_password(id):
         chars = string.ascii_letters + string.digits + '!@#$%'
         temp_password = ''.join(secrets.choice(chars) for _ in range(10))
         
-        # Hash the temporary password usando el método personalizado
+        # Hash the temporary password usando el método personalizado (imported from utils)
         cliente.password_hash = hash_password(temp_password)
-        
-        # Optionally set estado to "Pendiente cambio de contraseña"
-        # cliente.id_estado = 4
         
         db.session.commit()
         
@@ -596,9 +624,6 @@ def eliminar_documento(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
-    
-
-# Add this route to your clientes_bp in the routes file
 
 @clientes_bp.route('/documentos/<int:id>', methods=['GET'])
 @login_required
@@ -620,8 +645,7 @@ def obtener_documentos(id):
                 'id': documento.id_cliente_documento,
                 'tipo_documento': tipo_doc.nombre,
                 'valor_documento': documento.valor_documento
-            })
-        
+    })
         return jsonify({
             'success': True,
             'documentos': docs_list
@@ -632,4 +656,4 @@ def obtener_documentos(id):
         return jsonify({
             'success': False,
             'error': str(e)
-        }), 500
+        }), 

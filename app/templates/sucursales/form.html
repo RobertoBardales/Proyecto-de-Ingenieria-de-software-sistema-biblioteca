@@ -74,21 +74,6 @@
                     <small class="form-hint">10-200 caracteres, dirección completa</small>
                 </div>
 
-                <!-- Ciudad -->
-                <div class="form-group">
-                    <label for="ciudad">Ciudad <span class="required">*</span></label>
-                    <input type="text" 
-                           id="ciudad" 
-                           name="ciudad" 
-                           class="form-input"
-                           value="{{ sucursal.ciudad if sucursal else '' }}" 
-                           required
-                           minlength="3"
-                           maxlength="50"
-                           placeholder="Ej: Tegucigalpa, San Pedro Sula">
-                    <small class="form-hint">Solo letras y espacios (3-50 caracteres)</small>
-                </div>
-
                 <!-- Departamento -->
                 <div class="form-group">
                     <label for="departamento">Departamento <span class="required">*</span></label>
@@ -114,6 +99,36 @@
                         <option value="Yoro" {{ 'selected' if sucursal and sucursal.departamento == 'Yoro' else '' }}>Yoro</option>
                     </select>
                     <small class="form-hint">Departamento de Honduras</small>
+                </div>
+
+                <!-- Ciudad -->
+                <div class="form-group">
+                    <label for="ciudad">Ciudad <span class="required">*</span></label>
+                    <select id="ciudad" 
+                            name="ciudad" 
+                            class="form-input"
+                            required
+                            disabled>
+                        <option value="">Primero seleccione un departamento</option>
+                        {% if sucursal and sucursal.ciudad %}
+                        <option value="{{ sucursal.ciudad }}" selected>{{ sucursal.ciudad }}</option>
+                        {% endif %}
+                    </select>
+                    <small class="form-hint" id="ciudad-hint">Seleccione primero un departamento</small>
+                </div>
+
+                <!-- País (Read-only, always Honduras) -->
+                <div class="form-group">
+                    <label for="pais_display">País <span class="required">*</span></label>
+                    <input type="text" 
+                           id="pais_display" 
+                           class="form-input" 
+                           value="Honduras (HN)" 
+                           disabled
+                           readonly
+                           style="background-color: #f7fafc; cursor: not-allowed; color: #4a5568;">
+                    <input type="hidden" name="id_pais" value="{{ honduras_id }}">
+                    <small class="form-hint">Las sucursales solo pueden estar ubicadas en Honduras</small>
                 </div>
 
                 <!-- Código Postal -->
@@ -195,8 +210,16 @@
 .required { color: #dc3545; }
 .form-input { padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: all 0.2s; font-family: 'Poppins', sans-serif; }
 .form-input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+.form-input:disabled,
+.form-input[readonly] {
+    background-color: #f7fafc !important;
+    cursor: not-allowed;
+    color: #4a5568 !important;
+    opacity: 1;
+}
 textarea.form-input { resize: vertical; min-height: 80px; }
 .form-hint { font-size: 0.85rem; color: #718096; }
+
 .toggle-container { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; }
 .toggle-label { position: relative; display: inline-block; width: 56px; height: 32px; flex-shrink: 0; }
 .toggle-label input { opacity: 0; width: 0; height: 0; }
@@ -222,54 +245,122 @@ textarea.form-input { resize: vertical; min-height: 80px; }
     .toggle-container { flex-direction: column; align-items: flex-start; }
 }
 </style>
-
 <script>
-// Validation: Nombre (only 1 space allowed, no more than 2 consecutive same characters)
+// Ciudad-Departamento mapping
+const CIUDADES_POR_DEPARTAMENTO = {
+    'Atlántida': ['La Ceiba', 'Tela', 'Jutiapa', 'El Porvenir', 'Esparta', 'La Masica', 'San Francisco', 'Arizona'],
+    'Colón': ['Trujillo', 'Tocoa', 'Sabá', 'Bonito Oriental', 'Limón', 'Sonaguera', 'Santa Fe', 'Santa Rosa de Aguán'],
+    'Comayagua': ['Comayagua', 'Siguatepeque', 'La Libertad', 'Ajuterique', 'El Rosario', 'Esquías', 'Humuya', 'Lamaní', 'Meámbar', 'Minas de Oro', 'Ojos de Agua', 'San Jerónimo', 'San José de Comayagua', 'San José del Potrero', 'San Luis', 'San Sebastián', 'Taulabé', 'Villa de San Antonio'],
+    'Copán': ['Santa Rosa de Copán', 'Copán Ruinas', 'Corquín', 'Cucuyagua', 'Dolores', 'Dulce Nombre', 'El Paraíso', 'Florida', 'La Jigua', 'La Unión', 'Nueva Arcadia', 'San Agustín', 'San Antonio', 'San Jerónimo', 'San José', 'San Juan de Opoa', 'San Nicolás', 'San Pedro', 'Santa Rita', 'Trinidad de Copán', 'Veracruz'],
+    'Cortés': ['San Pedro Sula', 'Choloma', 'La Lima', 'Villanueva', 'Omoa', 'Pimienta', 'Potrerillos', 'Puerto Cortés', 'San Antonio de Cortés', 'San Francisco de Yojoa', 'San Manuel', 'Santa Cruz de Yojoa'],
+    'Choluteca': ['Choluteca', 'Apacilagua', 'Concepción de María', 'Duyure', 'El Corpus', 'El Triunfo', 'Marcovia', 'Morolica', 'Namasigüe', 'Orocuina', 'Pespire', 'San Antonio de Flores', 'San Isidro', 'San José', 'San Marcos de Colón', 'Santa Ana de Yusguare'],
+    'El Paraíso': ['Yuscarán', 'Danlí', 'El Paraíso', 'Alauca', 'Güinope', 'Jacaleapa', 'Liure', 'Morocelí', 'Oropoli', 'Potrerillos', 'San Antonio de Flores', 'San Lucas', 'San Matías', 'Soledad', 'Teupasenti', 'Texiguat', 'Vado Ancho', 'Yauyupe', 'Trojes'],
+    'Francisco Morazán': ['Tegucigalpa', 'Comayagüela', 'Alubarén', 'Cedros', 'Curarén', 'El Porvenir', 'Guaimaca', 'La Libertad', 'La Venta', 'Lepaterique', 'Maraita', 'Marale', 'Nueva Armenia', 'Ojojona', 'Orica', 'Reitoca', 'Sabanagrande', 'San Antonio de Oriente', 'San Buenaventura', 'San Ignacio', 'San Juan de Flores', 'San Miguelito', 'Santa Ana', 'Santa Lucía', 'Talanga', 'Tatumbla', 'Valle de Ángeles', 'Villa de San Francisco', 'Vallecillo'],
+    'Gracias a Dios': ['Puerto Lempira', 'Brus Laguna', 'Ahuas', 'Juan Francisco Bulnes', 'Villeda Morales', 'Wampusirpi'],
+    'Intibucá': ['La Esperanza', 'Camasca', 'Colomoncagua', 'Concepción', 'Dolores', 'Intibucá', 'Jesús de Otoro', 'Magdalena', 'Masaguara', 'San Antonio', 'San Isidro', 'San Juan', 'San Marcos de la Sierra', 'San Miguelito', 'Santa Lucía', 'Yamaranguila', 'San Francisco de Opalaca'],
+    'Islas de la Bahía': ['Roatán', 'Utila', 'Guanaja', 'José Santos Guardiola'],
+    'La Paz': ['La Paz', 'Aguanqueterique', 'Cabañas', 'Cane', 'Chinacla', 'Guajiquiro', 'Lauterique', 'Marcala', 'Mercedes de Oriente', 'Opatoro', 'San Antonio del Norte', 'San José', 'San Juan', 'San Pedro de Tutule', 'Santa Ana', 'Santa Elena', 'Santa María', 'Santiago de Puringla', 'Yarula'],
+    'Lempira': ['Gracias', 'Belén', 'Candelaria', 'Cololaca', 'Erandique', 'Gualcince', 'Guarita', 'La Campa', 'La Iguala', 'Las Flores', 'La Unión', 'La Virtud', 'Lepaera', 'Mapulaca', 'Piraera', 'San Andrés', 'San Francisco', 'San Juan Guarita', 'San Manuel Colohete', 'San Rafael', 'San Sebastián', 'Santa Cruz', 'Talgua', 'Tambla', 'Tomalá', 'Valladolid', 'Virginia', 'San Marcos de Caiquín'],
+    'Ocotepeque': ['Ocotepeque', 'Belén Gualcho', 'Concepción', 'Dolores Merendón', 'Fraternidad', 'La Encarnación', 'La Labor', 'Lucerna', 'Mercedes', 'San Fernando', 'San Francisco del Valle', 'San Jorge', 'San Marcos', 'Santa Fe', 'Sensenti', 'Sinuapa'],
+    'Olancho': ['Juticalpa', 'Catacamas', 'Campamento', 'Concordia', 'Dulce Nombre de Culmí', 'El Rosario', 'Esquipulas del Norte', 'Gualaco', 'Guarizama', 'Guata', 'Guayape', 'Jano', 'La Unión', 'Mangulile', 'Manto', 'Salamá', 'San Esteban', 'San Francisco de Becerra', 'San Francisco de la Paz', 'Santa María del Real', 'Silca', 'Yocón', 'Patuca'],
+    'Santa Bárbara': ['Santa Bárbara', 'Arada', 'Atima', 'Azacualpa', 'Ceguaca', 'Concepción del Norte', 'Concepción del Sur', 'Chinda', 'El Níspero', 'Gualala', 'Ilama', 'Las Vegas', 'Macuelizo', 'Naranjito', 'Nuevo Celilac', 'Petoa', 'Protección', 'Quimistán', 'San Francisco de Ojuera', 'San José de Colinas', 'San Luis', 'San Marcos', 'San Nicolás', 'San Pedro Zacapa', 'San Vicente Centenario', 'Santa Rita', 'Trinidad'],
+    'Valle': ['Nacaome', 'Alianza', 'Amapala', 'Aramecina', 'Caridad', 'Goascorán', 'Langue', 'San Francisco de Coray', 'San Lorenzo'],
+    'Yoro': ['Yoro', 'El Negrito', 'El Progreso', 'Morazán', 'Arenal', 'Jocón', 'Olanchito', 'Santa Rita', 'Sulaco', 'Victoria', 'Yorito']
+};
+
+// Update city dropdown when department changes
+document.getElementById('departamento').addEventListener('change', function(e) {
+    const departamento = e.target.value;
+    const ciudadSelect = document.getElementById('ciudad');
+    const ciudadHint = document.getElementById('ciudad-hint');
+    
+    // Clear current options
+    ciudadSelect.innerHTML = '<option value="">Seleccione una ciudad</option>';
+    
+    if (departamento && CIUDADES_POR_DEPARTAMENTO[departamento]) {
+        const ciudades = CIUDADES_POR_DEPARTAMENTO[departamento];
+        
+        // Populate select with cities
+        ciudades.forEach(ciudad => {
+            const option = document.createElement('option');
+            option.value = ciudad;
+            option.textContent = ciudad;
+            ciudadSelect.appendChild(option);
+        });
+        
+        // Enable the select - IMPORTANT: Remove disabled attribute
+        ciudadSelect.disabled = false;
+        ciudadSelect.removeAttribute('disabled');
+        
+        // Also remove any inline styles that might be blocking
+        ciudadSelect.style.pointerEvents = 'auto';
+        ciudadSelect.style.opacity = '1';
+        
+        // Update hint
+        ciudadHint.textContent = `${ciudades.length} ciudad${ciudades.length !== 1 ? 'es' : ''} disponible${ciudades.length !== 1 ? 's' : ''} en ${departamento}`;
+        ciudadHint.style.color = '#667eea';
+    } else {
+        // Disable if no department selected
+        ciudadSelect.disabled = true;
+        ciudadSelect.setAttribute('disabled', 'disabled');
+        ciudadSelect.innerHTML = '<option value="">Primero seleccione un departamento</option>';
+        ciudadHint.textContent = 'Seleccione primero un departamento';
+        ciudadHint.style.color = '#718096';
+    }
+});
+
+// Trigger department change on page load if editing
+window.addEventListener('DOMContentLoaded', function() {
+    const departamento = document.getElementById('departamento').value;
+    const ciudadActual = '{{ sucursal.ciudad if sucursal else "" }}';
+    
+    if (departamento) {
+        // Trigger the change event to populate cities
+        const event = new Event('change');
+        document.getElementById('departamento').dispatchEvent(event);
+        
+        // If editing, select the current city after options are loaded
+        if (ciudadActual) {
+            setTimeout(() => {
+                const ciudadSelect = document.getElementById('ciudad');
+                const option = Array.from(ciudadSelect.options).find(opt => opt.value === ciudadActual);
+                if (option) {
+                    ciudadSelect.value = ciudadActual;
+                }
+            }, 100);
+        }
+    }
+});
+
+// Existing validations...
 document.getElementById('nombre').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Prevent more than 1 consecutive space
     value = value.replace(/\s{2,}/g, ' ');
-    // Remove more than 2 consecutive same characters (letters/numbers only, not spaces)
     value = value.replace(/([^\s])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Validation: Email (lowercase, proper format, domain max 8 chars, no more than 2 consecutive same characters)
 document.getElementById('email').addEventListener('input', function(e) {
     let value = e.target.value.toLowerCase();
-    
-    // Remove invalid email characters
     value = value.replace(/[^a-z0-9@._-]/g, '');
-    
-    // Prevent more than 2 consecutive same characters
     value = value.replace(/(.)\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
-    
-    // Ensure only one @ symbol
     const atCount = (value.match(/@/g) || []).length;
     if (atCount > 1) {
         value = value.substring(0, value.lastIndexOf('@'));
     }
-    
     e.target.value = value;
 });
 
-// Validation: Teléfono (Honduras format +504 with proper digit validation)
 document.getElementById('telefono').addEventListener('input', function(e) {
     let value = e.target.value;
-    
-    // Remove all non-digits except +
     let digits = value.replace(/[^\d+]/g, '');
-    
-    // Remove any + that's not at the start
     if (digits.includes('+')) {
         digits = '+' + digits.replace(/\+/g, '');
     }
-    
-    // If user starts typing without +504, add it
     if (digits && !digits.startsWith('+504')) {
         if (digits.startsWith('+')) {
             digits = '+504' + digits.substring(1);
@@ -277,16 +368,10 @@ document.getElementById('telefono').addEventListener('input', function(e) {
             digits = '+504' + digits;
         }
     }
-    
-    // Extract just the 8-digit number part (after +504)
     let numberPart = digits.replace('+504', '');
-    
-    // Limit to 8 digits
     if (numberPart.length > 8) {
         numberPart = numberPart.substring(0, 8);
     }
-    
-    // Format as +504 9999-9999
     if (numberPart.length > 0) {
         if (numberPart.length <= 4) {
             value = '+504 ' + numberPart;
@@ -296,55 +381,45 @@ document.getElementById('telefono').addEventListener('input', function(e) {
     } else {
         value = '';
     }
-    
     e.target.value = value;
 });
 
-// Validation: Ciudad (only letters and spaces, max 1 consecutive space)
-document.getElementById('ciudad').addEventListener('input', function(e) {
-    let value = e.target.value;
-    // Remove invalid characters
-    value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    // Prevent more than 1 consecutive space
-    value = value.replace(/\s{2,}/g, ' ');
-    // Remove more than 2 consecutive same characters (letters only, not spaces)
-    value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
-        return match.substring(0, 2);
-    });
-    e.target.value = value;
-});
-
-// Validation: Código Postal (numbers and hyphens only)
 document.getElementById('codigo_postal').addEventListener('input', function(e) {
     e.target.value = e.target.value.replace(/[^\d\-]/g, '');
 });
 
-// Validation: Dirección (max 1 consecutive space, no more than 2 same non-space characters)
 document.getElementById('direccion').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Prevent more than 1 consecutive space
     value = value.replace(/\s{2,}/g, ' ');
-    // Remove more than 2 consecutive same non-space characters
     value = value.replace(/([^\s])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Validation: Observaciones (max 1 consecutive space)
 document.getElementById('observaciones').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Prevent more than 1 consecutive space
     value = value.replace(/\s{2,}/g, ' ');
     e.target.value = value;
 });
 
 // Form validation before submit
 document.getElementById('sucursalForm').addEventListener('submit', function(e) {
+    const ciudad = document.getElementById('ciudad').value.trim();
+    const departamento = document.getElementById('departamento').value;
+    
+    // Validate ciudad is selected
+    if (!ciudad) {
+        e.preventDefault();
+        alert('Por favor seleccione una ciudad');
+        document.getElementById('ciudad').focus();
+        return false;
+    }
+    
+    // Email validations
     const email = document.getElementById('email').value.trim();
     const telefono = document.getElementById('telefono').value.trim();
     
-    // Validate email format
     if (!email.includes('@')) {
         e.preventDefault();
         alert('El email debe contener el símbolo @');
@@ -360,7 +435,6 @@ document.getElementById('sucursalForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Validate email domain (max 8 characters before the dot)
     const domain = emailParts[1].split('.')[0];
     if (domain.length > 8) {
         e.preventDefault();
@@ -369,7 +443,6 @@ document.getElementById('sucursalForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Validate email must have extension
     if (!emailParts[1].includes('.')) {
         e.preventDefault();
         alert('El email debe tener una extensión válida (ej: .com, .hn, .org)');
@@ -377,7 +450,6 @@ document.getElementById('sucursalForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Validate no consecutive same characters in email (more than 2)
     if (/(.)\1{2,}/.test(email)) {
         e.preventDefault();
         alert('El email no puede tener más de 2 caracteres iguales consecutivos');
@@ -385,7 +457,7 @@ document.getElementById('sucursalForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Validate phone format
+    // Phone validations
     const telefonoLimpio = telefono.replace(/[\s\-\(\)]/g, '');
     if (!telefonoLimpio.startsWith('+504')) {
         e.preventDefault();
@@ -402,7 +474,6 @@ document.getElementById('sucursalForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Validate phone starts with 2, 3, 7, 8, or 9
     if (!['2', '3', '7', '8', '9'].includes(numero[0])) {
         e.preventDefault();
         alert('El número de teléfono debe empezar con 2, 3, 7, 8 o 9');
@@ -413,4 +484,4 @@ document.getElementById('sucursalForm').addEventListener('submit', function(e) {
     return true;
 });
 </script>
-{% endblock %}
+ {% endblock %}

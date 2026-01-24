@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Movimiento #{{ movimiento.id_inventario }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('inventarios.listar') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Movimiento de Inventario</h1>
+                <p class="subtitle">#{{ movimiento.id_inventario }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <!-- Left Column -->
+        <div class="main-column">
+            <!-- Movement Info Card -->
+            <div class="info-card">
+                <div class="card-header card-header-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span>Información del Movimiento</span>
+                </div>
+                <div class="card-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Tipo de Movimiento</label>
+                            <div>
+                                {% if movimiento.tipo_movimiento == 'Entrada' %}
+                                    <span class="badge badge-success badge-lg">{{ movimiento.tipo_movimiento }}</span>
+                                {% elif movimiento.tipo_movimiento == 'Salida' %}
+                                    <span class="badge badge-danger badge-lg">{{ movimiento.tipo_movimiento }}</span>
+                                {% elif movimiento.tipo_movimiento == 'Ajuste' %}
+                                    <span class="badge badge-warning badge-lg">{{ movimiento.tipo_movimiento }}</span>
+                                {% elif movimiento.tipo_movimiento == 'Devolución' %}
+                                    <span class="badge badge-info badge-lg">{{ movimiento.tipo_movimiento }}</span>
+                                {% else %}
+                                    <span class="badge badge-secondary badge-lg">{{ movimiento.tipo_movimiento }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label>Formato</label>
+                            <div>
+                                <span class="badge badge-format badge-lg">{{ movimiento.formato }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label>Fecha y Hora</label>
+                            <div class="date-display">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span>{{ movimiento.fecha_movimiento.strftime('%d/%m/%Y %H:%M:%S') }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <label>Referencia</label>
+                            <div>
+                                {% if movimiento.referencia %}
+                                    <span class="badge badge-ref badge-lg">{{ movimiento.referencia }}</span>
+                                {% else %}
+                                    <span class="text-muted">Sin referencia</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item info-item-full">
+                            <label>Sucursal</label>
+                            <div class="info-with-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                <div>
+                                    <div class="info-value">{{ sucursal.nombre }}</div>
+                                    <div class="info-subtext">{{ sucursal.direccion }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item info-item-full">
+                            <label>Empleado Responsable</label>
+                            <div class="info-with-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                <div>
+                                    <div class="info-value">{{ empleado.nombres }} {{ empleado.apellidos }}</div>
+                                    <div class="info-subtext">{{ empleado.rol }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Book Info Card -->
+            <div class="info-card">
+                <div class="card-header card-header-info">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    <span>Información del Libro</span>
+                </div>
+                <div class="card-body">
+                    <div class="book-display">
+                        <div class="book-cover-container">
+                            {% if libro.portada %}
+                                <img src="{{ libro.portada }}" alt="{{ libro.titulo }}" class="book-cover">
+                            {% else %}
+                                <div class="book-cover-placeholder">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                    </svg>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="book-info">
+                            <h3>{{ libro.titulo }}</h3>
+                            <div class="book-detail">
+                                <strong>ISBN:</strong> <span>{{ libro.isbn }}</span>
+                            </div>
+                            <div class="book-detail">
+                                <strong>Formato:</strong> <span>{{ libro.formato }}</span>
+                            </div>
+                            <div class="book-actions">
+                                <a href="{{ url_for('libros.ver', id=libro.id_libro) }}" class="btn btn-secondary btn-sm">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                    Ver Libro
+                                </a>
+                                <a href="{{ url_for('inventarios.historial_libro', libro_id=libro.id_libro) }}" class="btn btn-secondary btn-sm">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    Ver Historial
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motivo y Observaciones Card -->
+            <div class="info-card">
+                <div class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Motivo y Observaciones</span>
+                </div>
+                <div class="card-body">
+                    <div class="text-section">
+                        <label>Motivo</label>
+                        <p>{{ movimiento.motivo }}</p>
+                    </div>
+                    
+                    {% if movimiento.observaciones %}
+                    <div class="text-section">
+                        <label>Observaciones</label>
+                        <p class="text-muted">{{ movimiento.observaciones }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column (Sidebar) -->
+        <div class="sidebar-column">
+            <!-- Stock Changes Card -->
+            <div class="info-card">
+                <div class="card-header card-header-warning">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <span>Cambios en Stock</span>
+                </div>
+                <div class="card-body">
+                    <div class="stock-flow">
+                        <div class="stock-item">
+                            <div class="stock-value stock-old">{{ movimiento.stock_anterior }}</div>
+                            <div class="stock-label">Stock Anterior</div>
+                        </div>
+                        
+                        <div class="stock-arrow">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <polyline points="19 12 12 19 5 12"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div class="stock-item">
+                            {% if movimiento.tipo_movimiento in ['Entrada', 'Devolución'] %}
+                                <div class="stock-value stock-positive">+{{ movimiento.cantidad }}</div>
+                            {% elif movimiento.tipo_movimiento in ['Salida', 'Transferencia'] %}
+                                <div class="stock-value stock-negative">-{{ movimiento.cantidad }}</div>
+                            {% else %}
+                                <div class="stock-value stock-neutral">{{ movimiento.cantidad }}</div>
+                            {% endif %}
+                            <div class="stock-label">Cantidad del Movimiento</div>
+                        </div>
+                        
+                        <div class="stock-arrow">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <polyline points="19 12 12 19 5 12"></polyline>
+                            </svg>
+                        </div>
+                        
+                        <div class="stock-item">
+                            <div class="stock-value stock-new">{{ movimiento.stock_nuevo }}</div>
+                            <div class="stock-label">Stock Nuevo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Stock Card -->
+            <div class="info-card">
+                <div class="card-header card-header-success">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                    <span>Stock Actual del Libro</span>
+                </div>
+                <div class="card-body">
+                    <div class="stock-summary">
+                        <div class="stock-row">
+                            <div class="stock-type">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                </svg>
+                                <span>Físico</span>
+                            </div>
+                            <strong>{{ libro.stock_fisico }}</strong>
+                        </div>
+                        
+                        <div class="stock-row">
+                            <div class="stock-type">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <span>Digital</span>
+                            </div>
+                            <strong>{{ libro.stock_digital }}</strong>
+                        </div>
+                        
+                        <div class="stock-divider"></div>
+                        
+                        <div class="stock-row stock-total">
+                            <strong>Total</strong>
+                            <strong class="total-value">{{ libro.stock_fisico + libro.stock_digital }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="info-card">
+                <div class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+                    </svg>
+                    <span>Acciones</span>
+                </div>
+                <div class="card-body">
+                    <div class="actions-list">
+                        <a href="{{ url_for('inventarios.nuevo', libro_id=libro.id_libro) }}" class="btn btn-primary btn-full">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Nuevo Movimiento
+                        </a>
+                        <a href="{{ url_for('inventarios.historial_libro', libro_id=libro.id_libro) }}" class="btn btn-info btn-full">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Ver Historial
+                        </a>
+                        <a href="{{ url_for('inventarios.listar') }}" class="btn btn-secondary btn-full">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                            Ver Todos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Content Grid */
+.content-grid { display: grid; grid-template-columns: 1fr 400px; gap: 1.5rem; }
+
+/* Cards */
+.info-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow: hidden; }
+.card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #1a202c; }
+.card-header-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-bottom: none; }
+.card-header-info { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border-bottom: none; }
+.card-header-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border-bottom: none; }
+.card-header-success { background: linear-gradient(135deg, #10b981, #059669); color: white; border-bottom: none; }
+.card-body { padding: 1.5rem; }
+
+/* Info Grid */
+.info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+.info-item { display: flex; flex-direction: column; gap: 0.5rem; }
+.info-item-full { grid-column: 1 / -1; }
+.info-item label { font-size: 0.85rem; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
+.info-with-icon { display: flex; gap: 0.75rem; align-items: flex-start; }
+.info-with-icon svg { color: #667eea; flex-shrink: 0; margin-top: 0.125rem; }
+.info-value { color: #1a202c; font-weight: 600; font-size: 1rem; }
+.info-subtext { color: #718096; font-size: 0.85rem; margin-top: 0.25rem; }
+.date-display { display: flex; align-items: center; gap: 0.5rem; color: #1a202c; font-weight: 500; }
+.date-display svg { color: #a0aec0; }
+
+/* Book Display */
+.book-display { display: flex; gap: 1.5rem; }
+.book-cover-container { flex-shrink: 0; width: 120px; }
+.book-cover { width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.book-cover-placeholder { width: 120px; height: 180px; background: linear-gradient(135deg, #f7fafc, #e2e8f0); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a0aec0; }
+.book-info { flex: 1; }
+.book-info h3 { margin: 0 0 0.75rem 0; color: #1a202c; font-size: 1.25rem; font-weight: 700; }
+.book-detail { margin-bottom: 0.5rem; font-size: 0.9rem; }
+.book-detail strong { color: #718096; font-weight: 600; }
+.book-detail span { color: #1a202c; }
+.book-actions { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* Text Section */
+.text-section { margin-bottom: 1.5rem; }
+.text-section:last-child { margin-bottom: 0; }
+.text-section label { display: block; font-size: 0.85rem; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+.text-section p { margin: 0; color: #1a202c; line-height: 1.6; background: #f7fafc; padding: 1rem; border-radius: 8px; }
+.text-muted { color: #4a5568 !important; }
+
+/* Stock Flow */
+.stock-flow { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.stock-item { text-align: center; }
+.stock-value { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+.stock-old { color: #9ca3af; }
+.stock-positive { color: #059669; }
+.stock-negative { color: #dc2626; }
+.stock-neutral { color: #667eea; }
+.stock-new { color: #667eea; }
+.stock-label { color: #718096; font-size: 0.85rem; }
+.stock-arrow { color: #cbd5e0; }
+
+/* Stock Summary */
+.stock-summary { display: flex; flex-direction: column; gap: 1rem; }
+.stock-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f7fafc; border-radius: 8px; }
+.stock-type { display: flex; align-items: center; gap: 0.5rem; color: #4a5568; }
+.stock-type svg { color: #a0aec0; flex-shrink: 0; }
+.stock-row strong { color: #1a202c; font-size: 1.125rem; }
+.stock-divider { height: 1px; background: #e2e8f0; }
+.stock-total { background: linear-gradient(135deg, #f0f4ff, #e6f3ff); }
+.total-value { color: #667eea; font-size: 1.5rem; }
+
+/* Actions List */
+.actions-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* Badges */
+.badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+.badge-lg { padding: 0.5rem 1rem; font-size: 0.95rem; }
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+.badge-secondary { background: #f3f4f6; color: #4b5563; }
+.badge-format { background: #f3f4f6; color: #1f2937; }
+.badge-ref { background: #f3e8ff; color: #7c3aed; font-family: monospace; }
+
+/* Buttons */
+.btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; white-space: nowrap; justify-content: center; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-info { background: #0891b2; color: white; }
+.btn-info:hover { background: #0e7490; }
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+.btn-full { width: 100%; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .book-display { flex-direction: column; }
+    .book-cover-container { width: 100%; max-width: 200px; margin: 0 auto; }
+    .book-actions { flex-direction: column; }
+    .book-actions .btn { width: 100%; }
+}
+</style>
+{% endblock %}

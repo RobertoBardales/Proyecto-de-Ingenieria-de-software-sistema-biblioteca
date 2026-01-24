@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Reseñas{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('main.index') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Gestión de Reseñas</h1>
+                <p class="subtitle">Administra las reseñas de libros del sistema</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Filters -->
+    <div class="filters-container">
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Buscar por título, libro o cliente..." class="search-input">
+            <button class="clear-btn" id="clearBtn" onclick="clearFilters()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="filter-group">
+            <select id="calificacionFilter" class="filter-select">
+                <option value="">Todas las calificaciones</option>
+                <option value="5">⭐⭐⭐⭐⭐ 5 estrellas</option>
+                <option value="4">⭐⭐⭐⭐ 4 estrellas</option>
+                <option value="3">⭐⭐⭐ 3 estrellas</option>
+                <option value="2">⭐⭐ 2 estrellas</option>
+                <option value="1">⭐ 1 estrella</option>
+            </select>
+            <select id="rowsPerPage" class="filter-select rows-select">
+                <option value="10">10 por página</option>
+                <option value="25" selected>25 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+                <option value="all">Mostrar todos</option>
+            </select>
+        </div>
+        <div class="filter-stats">
+            <span id="statsText">{{ resenas|length }} reseñas</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Reseña</th>
+                    <th>Libro</th>
+                    <th>Cliente</th>
+                    <th>Calificación</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for resena in resenas %}
+                <tr data-search="{{ (resena.titulo + ' ' + resena.Libros_.titulo + ' ' + resena.Clientes_.nombres + ' ' + resena.Clientes_.apellidos)|lower }}"
+                    data-calificacion="{{ resena.calificacion }}">
+                    <td>
+                        <div class="resena-info">
+                            <div class="resena-title">{{ resena.titulo }}</div>
+                            <div class="resena-id">#{{ resena.id_resena }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="libro-info">
+                            <div class="libro-name">{{ resena.Libros_.titulo }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cliente-info">
+                            <div class="avatar">{{ resena.Clientes_.nombres[0] }}{{ resena.Clientes_.apellidos[0] }}</div>
+                            <div>
+                                <div class="cliente-name">{{ resena.Clientes_.nombres }} {{ resena.Clientes_.apellidos }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="rating">
+                            {% for i in range(resena.calificacion) %}⭐{% endfor %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="fecha">{{ resena.fecha_resena.strftime('%d/%m/%Y') }}</span>
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <button class="action-btn view" title="Ver detalles"
+                                onclick='showDetails({{ resena.id_resena }}, "{{ resena.titulo }}", "{{ resena.Libros_.titulo }}", "{{ resena.Clientes_.nombres }} {{ resena.Clientes_.apellidos }}", {{ resena.calificacion }}, "{{ resena.comentario or 'Sin comentario' }}", "{{ resena.fecha_resena.strftime('%d/%m/%Y %H:%M') }}")'>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                            <button class="action-btn delete" onclick='showDelete({{ resena.id_resena }}, "{{ resena.titulo }}")' title="Eliminar">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <p>No se encontraron resultados</p>
+        </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="paginationContainer" class="pagination-container">
+        <div class="pagination-info">
+            Mostrando <span id="pageRange"></span> de <span id="totalVisible"></span> registros
+        </div>
+        <div class="pagination-controls">
+            <button class="pagination-btn" id="firstBtn" onclick="goToPage(1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="11 17 6 12 11 7"></polyline>
+                    <polyline points="18 17 13 12 18 7"></polyline>
+                </svg>
+            </button>
+            <button class="pagination-btn" id="prevBtn" onclick="goToPage(currentPage - 1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <div id="pageNumbers" class="page-numbers"></div>
+            <button class="pagination-btn" id="nextBtn" onclick="goToPage(currentPage + 1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+            <button class="pagination-btn" id="lastBtn" onclick="goToPage(totalPages)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="13 17 18 12 13 7"></polyline>
+                    <polyline points="6 17 11 12 6 7"></polyline>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div id="detailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Detalles de la Reseña</h3>
+            <button class="close-btn" onclick="closeModal('detailsModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-row"><label>ID:</label><span id="dId"></span></div>
+                <div class="detail-row"><label>Título:</label><span id="dTitulo"></span></div>
+                <div class="detail-row"><label>Libro:</label><span id="dLibro"></span></div>
+                <div class="detail-row"><label>Cliente:</label><span id="dCliente"></span></div>
+                <div class="detail-row"><label>Calificación:</label><span id="dCalificacion"></span></div>
+                <div class="detail-row"><label>Fecha:</label><span id="dFecha"></span></div>
+                <div class="detail-row full"><label>Comentario:</label><span id="dComentario"></span></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('detailsModal')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header modal-danger">
+            <h3>Confirmar Eliminación</h3>
+            <button class="close-btn" onclick="closeModal('deleteModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <p>¿Eliminar la reseña <strong id="deleteName"></strong>?</p>
+            <p class="text-muted">Esta acción no se puede deshacer</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancelar</button>
+            <form id="deleteForm" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-box { position: relative; margin-bottom: 1rem; }
+.search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.search-input { width: 100%; padding: 0.75rem 3rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: border 0.2s; }
+.search-input:focus { outline: none; border-color: #667eea; }
+.clear-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.2s; }
+.clear-btn.show { display: flex; }
+.clear-btn:hover { background: #cbd5e0; }
+.filter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.filter-select { padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; cursor: pointer; background: white; transition: border 0.2s; }
+.filter-select:focus { outline: none; border-color: #667eea; }
+.rows-select { font-weight: 500; }
+.filter-stats { color: #718096; font-size: 0.9rem; }
+.filter-stats span { font-weight: 600; color: #667eea; }
+
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.9rem; }
+.data-table td { padding: 1rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.resena-info { display: flex; flex-direction: column; gap: 0.25rem; }
+.resena-title { font-weight: 600; color: #1a202c; }
+.resena-id { font-size: 0.85rem; color: #a0aec0; }
+
+.libro-info { display: flex; flex-direction: column; }
+.libro-name { font-weight: 500; color: #4a5568; }
+
+.cliente-info { display: flex; align-items: center; gap: 0.75rem; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; flex-shrink: 0; }
+.cliente-name { font-weight: 500; color: #1a202c; }
+
+.rating { font-size: 1.1rem; }
+
+.fecha { color: #718096; font-size: 0.9rem; }
+
+.actions { display: flex; gap: 0.5rem; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
+.action-btn.view { background: #e6f3ff; color: #0066cc; }
+.action-btn.view:hover { background: #0066cc; color: white; }
+.action-btn.delete { background: #ffe0e0; color: #c41e3a; }
+.action-btn.delete:hover { background: #dc3545; color: white; }
+
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover { background: #c82333; }
+
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; }
+.no-results.show { display: block; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results p { color: #718096; margin: 0; }
+
+.pagination-container { background: white; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+.pagination-container.hidden { display: none; }
+.pagination-info { color: #718096; font-size: 0.9rem; }
+.pagination-info span { font-weight: 600; color: #667eea; }
+.pagination-controls { display: flex; gap: 0.5rem; align-items: center; }
+.pagination-btn { width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; }
+.pagination-btn:hover:not(:disabled) { border-color: #667eea; color: #667eea; background: #f0f4ff; }
+.pagination-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.25rem; }
+.page-number { min-width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; font-weight: 500; font-size: 0.9rem; padding: 0 0.5rem; }
+.page-number:hover { border-color: #667eea; color: #667eea; background: #f0f4ff; }
+.page-number.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-color: transparent; }
+.page-ellipsis { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #a0aec0; font-weight: 600; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-small { max-width: 400px; }
+.modal-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; font-size: 1.25rem; }
+.modal-danger { background: #dc3545; color: white; border-bottom: none; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: inherit; }
+.close-btn:hover { background: rgba(0,0,0,0.1); }
+.modal-body { padding: 1.5rem; }
+.detail-grid { display: grid; gap: 1rem; }
+.detail-row { display: grid; grid-template-columns: 120px 1fr; gap: 1rem; padding: 0.75rem; background: #f7fafc; border-radius: 6px; }
+.detail-row.full { grid-column: 1/-1; grid-template-columns: 120px 1fr; }
+.detail-row label { font-weight: 600; color: #4a5568; }
+.text-muted { color: #a0aec0; font-size: 0.9rem; margin-top: 0.5rem; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; }
+    .filter-group { grid-template-columns: 1fr; }
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+    .detail-row { grid-template-columns: 1fr; }
+    .pagination-container { flex-direction: column; gap: 1rem; }
+    .pagination-info { text-align: center; }
+}
+</style>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const calificacionFilter = document.getElementById('calificacionFilter');
+const rowsPerPageSelect = document.getElementById('rowsPerPage');
+const clearBtn = document.getElementById('clearBtn');
+const tableBody = document.getElementById('tableBody');
+const noResults = document.getElementById('noResults');
+const statsText = document.getElementById('statsText');
+const paginationContainer = document.getElementById('paginationContainer');
+const pageRange = document.getElementById('pageRange');
+const totalVisible = document.getElementById('totalVisible');
+const pageNumbers = document.getElementById('pageNumbers');
+
+const allRows = [...tableBody.querySelectorAll('tr')];
+let filteredRows = [...allRows];
+let currentPage = 1;
+let totalPages = 1;
+let rowsPerPage = 25;
+
+function applyFilters() {
+    const search = searchInput.value.toLowerCase();
+    const calificacion = calificacionFilter.value;
+    
+    filteredRows = allRows.filter(row => {
+        const matchSearch = !search || row.dataset.search.includes(search);
+        const matchCalificacion = !calificacion || row.dataset.calificacion === calificacion;
+        return matchSearch && matchCalificacion;
+    });
+    
+    currentPage = 1;
+    updatePagination();
+    clearBtn.classList.toggle('show', search || calificacion);
+}
+
+function updatePagination() {
+    const visibleCount = filteredRows.length;
+    
+    allRows.forEach(row => row.style.display = 'none');
+    noResults.classList.toggle('show', visibleCount === 0);
+    statsText.textContent = `${visibleCount} de ${allRows.length} reseñas`;
+    totalVisible.textContent = visibleCount;
+    
+    if (rowsPerPageSelect.value === 'all') {
+        filteredRows.forEach(row => row.style.display = '');
+        paginationContainer.classList.add('hidden');
+        return;
+    }
+    
+    rowsPerPage = parseInt(rowsPerPageSelect.value);
+    totalPages = Math.ceil(visibleCount / rowsPerPage);
+    paginationContainer.classList.toggle('hidden', totalPages <= 1);
+    
+    if (totalPages > 0) {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = Math.min(start + rowsPerPage, visibleCount);
+        
+        filteredRows.slice(start, end).forEach(row => row.style.display = '');
+        pageRange.textContent = `${start + 1}-${end}`;
+        renderPageNumbers();
+        
+        document.getElementById('firstBtn').disabled = currentPage === 1;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        document.getElementById('lastBtn').disabled = currentPage === totalPages;
+    }
+}
+
+function renderPageNumbers() {
+    pageNumbers.innerHTML = '';
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    if (startPage > 1) {
+        pageNumbers.appendChild(createPageButton(1));
+        if (startPage > 2) pageNumbers.appendChild(createEllipsis());
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.appendChild(createPageButton(i));
+    }
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.appendChild(createEllipsis());
+        pageNumbers.appendChild(createPageButton(totalPages));
+    }
+}
+
+function createPageButton(page) {
+    const btn = document.createElement('button');
+    btn.className = 'page-number';
+    btn.textContent = page;
+    btn.onclick = () => goToPage(page);
+    if (page === currentPage) btn.classList.add('active');
+    return btn;
+}
+
+function createEllipsis() {
+    const span = document.createElement('span');
+    span.className = 'page-ellipsis';
+    span.textContent = '...';
+    return span;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    updatePagination();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearFilters() {
+    searchInput.value = '';
+    calificacionFilter.value = '';
+    applyFilters();
+}
+
+searchInput.addEventListener('input', applyFilters);
+calificacionFilter.addEventListener('change', applyFilters);
+rowsPerPageSelect.addEventListener('change', () => {
+    currentPage = 1;
+    updatePagination();
+});
+
+updatePagination();
+
+function showDetails(id, titulo, libro, cliente, calificacion, comentario, fecha) {
+    document.getElementById('dId').textContent = '#' + id;
+    document.getElementById('dTitulo').textContent = titulo;
+    document.getElementById('dLibro').textContent = libro;
+    document.getElementById('dCliente').textContent = cliente;
+    document.getElementById('dCalificacion').innerHTML = '⭐'.repeat(calificacion);
+    document.getElementById('dFecha').textContent = fecha;
+    document.getElementById('dComentario').textContent = comentario;
+    document.getElementById('detailsModal').classList.add('show');
+}
+
+function showDelete(id, name) {
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('deleteForm').action = `/resenas/eliminar/${id}`;
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+window.onclick = e => {
+    if (e.target.classList.contains('modal')) closeModal(e.target.id);
+};
+</script>
+{% endblock %}

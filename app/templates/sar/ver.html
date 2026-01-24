@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles Parámetro SAR{% endblock %}
+
+{% block content %}
+<div class="details-container">
+    <div class="details-header">
+        <div>
+            <h1>Parámetro SAR #{{ parametro.id_parametro }}</h1>
+            <p class="subtitle">{{ sucursal.nombre }}</p>
+        </div>
+        <div class="header-actions">
+            {% if not parametro.anulada and current_user.tipo_usuario == 'admin' %}
+            <form method="POST" action="{{ url_for('sar.anular', id=parametro.id_parametro) }}" 
+                  style="display: inline;"
+                  onsubmit="return confirm('¿Está seguro que desea anular este parámetro SAR? Esta acción no se puede deshacer.');">
+                <button type="submit" class="btn btn-danger">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    Anular SAR
+                </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('sar.listar') }}" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+
+    {% if parametro.anulada %}
+    <div class="alert alert-danger">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <div>
+            <strong>Este parámetro SAR ha sido anulado</strong><br>
+            Fecha de anulación: {{ parametro.fecha_anulacion.strftime('%d/%m/%Y %H:%M') }}
+        </div>
+    </div>
+    {% elif facturas_disponibles < 100 %}
+    <div class="alert alert-danger">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div>
+            <strong>¡ALERTA CRÍTICA!</strong><br>
+            Solo quedan {{ facturas_disponibles }} facturas disponibles. Configure un nuevo rango SAR inmediatamente.
+        </div>
+    </div>
+    {% elif porcentaje_usado > 80 %}
+    <div class="alert alert-warning">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div>
+            <strong>Advertencia:</strong> Se ha utilizado el {{ "%.1f"|format(porcentaje_usado) }}% del rango autorizado.
+            Considere solicitar un nuevo rango SAR pronto.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="details-grid">
+        <!-- CAI Information -->
+        <div class="detail-card">
+            <h2>Información del CAI</h2>
+            <div class="detail-row">
+                <span class="label">CAI:</span>
+                <span class="value cai-value">{{ parametro.cai }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">RTN Empresa:</span>
+                <span class="value">{{ parametro.rtn_empresa }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Fecha Emisión CAI:</span>
+                <span class="value">{{ parametro.fecha_emision.strftime('%d/%m/%Y') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Fecha Límite:</span>
+                <span class="value">{{ parametro.rango_inicial.strftime('%d/%m/%Y') }}</span>
+            </div>
+        </div>
+
+        <!-- Range Information -->
+        <div class="detail-card">
+            <h2>Rango de Facturación</h2>
+            <div class="detail-row">
+                <span class="label">Rango Autorizado:</span>
+                <span class="value">{{ parametro.rango_final }}</span>
+            </div>
+            {% if parametro.ultima_factura %}
+            <div class="detail-row">
+                <span class="label">Última Factura Emitida:</span>
+                <span class="value highlight">{{ parametro.ultima_factura }}</span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="label">Primera Factura:</span>
+                <span class="value">{{ parametro.rango_final.rsplit('-', 1)[0] }}-00000001</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Última Factura Posible:</span>
+                <span class="value">{{ parametro.rango_final }}</span>
+            </div>
+        </div>
+
+        <!-- Usage Statistics -->
+        <div class="detail-card full-width">
+            <h2>Estadísticas de Uso</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Facturas Usadas</div>
+                    <div class="stat-value">{{ correlativo_actual }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Facturas Disponibles</div>
+                    <div class="stat-value {% if facturas_disponibles < 100 %}text-danger{% elif facturas_disponibles < 500 %}text-warning{% endif %}">
+                        {{ facturas_disponibles }}
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Autorizado</div>
+                    <div class="stat-value">{{ rango_final_num }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Ventas Registradas</div>
+                    <div class="stat-value">{{ ventas_count }}</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span>Progreso de Uso</span>
+                    <span class="progress-percentage">{{ "%.1f"|format(porcentaje_usado) }}%</span>
+                </div>
+                <div class="progress-bar-large">
+                    <div class="progress-fill-large {% if porcentaje_usado > 90 %}bg-danger{% elif porcentaje_usado > 80 %}bg-warning{% else %}bg-success{% endif %}"
+                         style="width: {{ porcentaje_usado }}%">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Branch Information -->
+
+        <div class="detail-card">
+            <h2>Información de Sucursal</h2>
+            <div class="detail-row">
+                <span class="label">Nombre:</span>
+                <span class="value">{{ sucursal.nombre }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Ciudad:</span>
+                <span class="value">{{ sucursal.ciudad }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Teléfono:</span>
+                <span class="value">{{ sucursal.telefono }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Email:</span>
+                <span class="value">{{ sucursal.email }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+.details-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.details-header h1 {
+    margin: 0;
+    color: #1a202c;
+}
+
+.subtitle {
+    color: #718096;
+    margin-top: 0.5rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.alert {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.alert svg {
+    flex-shrink: 0;
+}
+
+.alert-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #dc2626;
+}
+
+.alert-warning {
+    background: #fed7aa;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.detail-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.detail-card h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+    color: #1a202c;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f7fafc;
+}
+
+.detail-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f7fafc;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row .label {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.detail-row .value {
+    color: #1a202c;
+    font-family: monospace;
+}
+
+.cai-value {
+    word-break: break-all;
+}
+
+.highlight {
+    background: #fef3c7;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 1.5rem;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #718096;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+}
+
+.text-danger {
+    color: #dc2626 !important;
+}
+
+.text-warning {
+    color: #f59e0b !important;
+}
+
+.progress-section {
+    background: #f7fafc;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.progress-percentage {
+    font-size: 1.25rem;
+    color: #1a202c;
+}
+
+.progress-bar-large {
+    height: 24px;
+    background: #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.progress-fill-large {
+    height: 100%;
+    transition: width 0.3s;
+}
+
+.bg-success {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.bg-warning {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.bg-danger {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+@media (max-width: 968px) {
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .details-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

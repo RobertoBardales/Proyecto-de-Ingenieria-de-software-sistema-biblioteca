@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Movimiento de Inventario{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-plus-circle"></i> Nuevo Movimiento de Inventario</h2>
+        <a href="{{ url_for('inventarios.listar') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+    </div>
+
+    <!-- Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Info Alert -->
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>Importante:</strong> Registra cada entrada, salida, ajuste o transferencia de inventario. 
+        Asegúrate de verificar los datos antes de guardar, ya que esto afectará el stock del libro.
+    </div>
+
+    <div class="row">
+        <!-- Formulario Principal -->
+        <div class="col-md-8">
+            <form method="POST" action="{{ url_for('inventarios.nuevo', libro_id=libro_seleccionado.id_libro if libro_seleccionado else none) }}" id="movimiento-form">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Información del Movimiento</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Libro -->
+                        <div class="mb-3">
+                            <label for="id_libro" class="form-label">
+                                <i class="bi bi-book"></i> Libro <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="id_libro" name="id_libro" required 
+                                    {% if libro_seleccionado %}disabled{% endif %}
+                                    onchange="updateStockInfo()">
+                                <option value="">Selecciona un libro</option>
+                                {% for libro in libros %}
+                                    <option value="{{ libro.id_libro }}" 
+                                            data-stock-fisico="{{ libro.stock_fisico }}"
+                                            data-stock-digital="{{ libro.stock_digital }}"
+                                            data-isbn="{{ libro.isbn }}"
+                                            {% if libro_seleccionado and libro.id_libro == libro_seleccionado.id_libro %}selected{% endif %}>
+                                        {{ libro.titulo }} (ISBN: {{ libro.isbn }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if libro_seleccionado %}
+                                <input type="hidden" name="id_libro" value="{{ libro_seleccionado.id_libro }}">
+                                <small class="text-muted">Libro preseleccionado: {{ libro_seleccionado.titulo }}</small>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sucursal -->
+                        <div class="mb-3">
+                            <label for="id_sucursal" class="form-label">
+                                <i class="bi bi-shop"></i> Sucursal <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="id_sucursal" name="id_sucursal" required>
+                                <option value="">Selecciona una sucursal</option>
+                                {% for sucursal in sucursales %}
+                                    <option value="{{ sucursal.id_sucursal }}">
+                                        {{ sucursal.nombre }} - {{ sucursal.ciudad }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <!-- Tipo de Movimiento -->
+                            <div class="col-md-6 mb-3">
+                                <label for="tipo_movimiento" class="form-label">
+                                    <i class="bi bi-arrow-repeat"></i> Tipo de Movimiento <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="tipo_movimiento" name="tipo_movimiento" required onchange="updateMovimientoHelp()">
+                                    <option value="">Selecciona el tipo</option>
+                                    {% for tipo in tipos_movimiento %}
+                                        <option value="{{ tipo }}">{{ tipo }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div id="tipo-help" class="form-text"></div>
+                            </div>
+
+                            <!-- Formato -->
+                            <div class="col-md-6 mb-3">
+                                <label for="formato" class="form-label">
+                                    <i class="bi bi-file-earmark"></i> Formato <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="formato" name="formato" required onchange="updateStockInfo()">
+                                    <option value="">Selecciona el formato</option>
+                                    {% for formato in formatos %}
+                                        <option value="{{ formato }}">
+                                            {% if formato == 'Físico' %}📦{% else %}💾{% endif %} {{ formato }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Cantidad -->
+                        <div class="mb-3">
+                            <label for="cantidad" class="form-label">
+                                <i class="bi bi-123"></i> Cantidad <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="cantidad" name="cantidad" 
+                                   min="1" required placeholder="Ingresa la cantidad">
+                            <div id="stock-warning" class="form-text text-warning"></div>
+                            <div id="stock-info" class="form-text"></div>
+                        </div>
+
+                        <!-- Motivo -->
+                        <div class="mb-3">
+                            <label for="motivo" class="form-label">
+                                <i class="bi bi-card-text"></i> Motivo <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="motivo" name="motivo" rows="3" 
+                                      required minlength="10" 
+                                      placeholder="Describe el motivo del movimiento (mínimo 10 caracteres)"></textarea>
+                            <div class="form-text">Ejemplo: Reposición de stock mensual, venta realizada, corrección de inventario, etc.</div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="mb-3">
+                            <label for="observaciones" class="form-label">
+                                <i class="bi bi-chat-dots"></i> Observaciones (Opcional)
+                            </label>
+                            <textarea class="form-control" id="observaciones" name="observaciones" rows="2" 
+                                      placeholder="Información adicional que consideres relevante"></textarea>
+                        </div>
+
+                        <!-- Referencia -->
+                        <div class="mb-3">
+                            <label for="referencia" class="form-label">
+                                <i class="bi bi-hash"></i> Referencia (Opcional)
+                            </label>
+                            <input type="text" class="form-control" id="referencia" name="referencia" 
+                                   placeholder="Ej: Factura #12345, Orden de compra #ABC-001">
+                            <div class="form-text">Número de factura, orden de compra u otra referencia externa.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+                    <a href="{{ url_for('inventarios.listar') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle"></i> Registrar Movimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Panel de Ayuda -->
+        <div class="col-md-4">
+            <!-- Stock Actual -->
+            <div class="card mb-3" id="stock-card" style="display: none;">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-boxes"></i> Stock Actual</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="bi bi-box"></i> Físico:</span>
+                        <strong id="stock-fisico-value">-</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span><i class="bi bi-file-earmark"></i> Digital:</span>
+                        <strong id="stock-digital-value">-</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guía de Tipos de Movimiento -->
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-question-circle"></i> Tipos de Movimiento</h6>
+                </div>
+                <div class="card-body small">
+                    <p><strong>Entrada:</strong> Nuevos libros recibidos (compra, donación).</p>
+                    <p><strong>Salida:</strong> Libros que salen del inventario (venta, préstamo).</p>
+                    <p><strong>Ajuste:</strong> Corrección del stock por inventario físico.</p>
+                    <p><strong>Transferencia:</strong> Movimiento entre sucursales.</p>
+                    <p class="mb-0"><strong>Devolución:</strong> Libros que regresan al inventario.</p>
+                </div>
+            </div>
+
+            <!-- Consejos -->
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Consejos</h6>
+                </div>
+                <div class="card-body small">
+                    <ul class="mb-0 ps-3">
+                        <li>Verifica el stock antes de registrar salidas</li>
+                        <li>Usa referencias claras para facilitar seguimiento</li>
+                        <li>El motivo debe ser descriptivo y preciso</li>
+                        <li>Para transferencias, registra salida en origen y entrada en destino</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateStockInfo() {
+    const libroSelect = document.getElementById('id_libro');
+    const formatoSelect = document.getElementById('formato');
+    const stockCard = document.getElementById('stock-card');
+    
+    if (libroSelect.value) {
+        const selectedOption = libroSelect.options[libroSelect.selectedIndex];
+        const stockFisico = selectedOption.getAttribute('data-stock-fisico');
+        const stockDigital = selectedOption.getAttribute('data-stock-digital');
+        
+        document.getElementById('stock-fisico-value').textContent = stockFisico + ' unidades';
+        document.getElementById('stock-digital-value').textContent = stockDigital + ' unidades';
+        
+        stockCard.style.display = 'block';
+        
+        // Update stock info text
+        if (formatoSelect.value) {
+            const stockActual = formatoSelect.value === 'Físico' ? stockFisico : stockDigital;
+            document.getElementById('stock-info').innerHTML = 
+                `<i class="bi bi-info-circle"></i> Stock actual (${formatoSelect.value}): <strong>${stockActual} unidades</strong>`;
+        }
+    } else {
+        stockCard.style.display = 'none';
+    }
+}
+
+function updateMovimientoHelp() {
+    const tipoSelect = document.getElementById('tipo_movimiento');
+    const helpDiv = document.getElementById('tipo-help');
+    
+    const helpText = {
+        'Entrada': '➕ Aumenta el stock (ej: compra, donación)',
+        'Salida': '➖ Disminuye el stock (ej: venta, préstamo)',
+        'Ajuste': '🔧 Establece un valor exacto (corrección)',
+        'Transferencia': '↔️ Mueve entre sucursales (disminuye stock)',
+        'Devolución': '↩️ Regresa al inventario (aumenta stock)'
+    };
+    
+    helpDiv.textContent = helpText[tipoSelect.value] || '';
+}
+
+// Validate stock on quantity change
+document.getElementById('cantidad').addEventListener('input', function() {
+    const libroSelect = document.getElementById('id_libro');
+    const formatoSelect = document.getElementById('formato');
+    const tipoSelect = document.getElementById('tipo_movimiento');
+    const cantidad = parseInt(this.value) || 0;
+    const warningDiv = document.getElementById('stock-warning');
+    
+    if (libroSelect.value && formatoSelect.value && tipoSelect.value) {
+        const selectedOption = libroSelect.options[libroSelect.selectedIndex];
+        const stockActual = parseInt(formatoSelect.value === 'Físico' ? 
+            selectedOption.getAttribute('data-stock-fisico') : 
+            selectedOption.getAttribute('data-stock-digital'));
+        
+        if ((tipoSelect.value === 'Salida' || tipoSelect.value === 'Transferencia') && cantidad > stockActual) {
+            warningDiv.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ¡Advertencia! Stock insuficiente. Disponible: ${stockActual}`;
+        } else {
+            warningDiv.innerHTML = '';
+        }
+    }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateStockInfo();
+});
+</script>
+{% endblock %}

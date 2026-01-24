@@ -1,0 +1,956 @@
+{% extends "base.html" %}
+
+{% block title %}Movimientos de Inventario{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('main.index') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Movimientos de Inventario</h1>
+                <p class="subtitle">Administra el inventario de tu librería</p>
+            </div>
+        </div>
+        <a href="{{ url_for('inventarios.nuevo') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Movimiento
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-container">
+        <div class="filter-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+            <span>Filtros</span>
+        </div>
+        
+        <form method="GET" action="{{ url_for('inventarios.listar') }}" id="filterForm">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label>Buscar</label>
+                    <div class="search-box">
+                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" 
+                               class="filter-input" 
+                               name="busqueda" 
+                               id="searchInput"
+                               placeholder="Título, ISBN, referencia..."
+                               value="{{ busqueda_actual }}">
+                    </div>
+                </div>
+                
+                <div class="filter-item">
+                    <label>Sucursal</label>
+                    <select class="filter-select" name="sucursal" id="sucursalFilter">
+                        <option value="">Todas</option>
+                        {% for sucursal in todas_sucursales %}
+                            <option value="{{ sucursal.id_sucursal }}" 
+                                    {% if sucursal_actual == sucursal.id_sucursal|string %}selected{% endif %}>
+                                {{ sucursal.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>Tipo</label>
+                    <select class="filter-select" name="tipo_movimiento" id="tipoFilter">
+                        <option value="">Todos</option>
+                        {% for tipo in tipos_movimiento_disponibles %}
+                            <option value="{{ tipo }}" 
+                                    {% if tipo_movimiento_actual == tipo %}selected{% endif %}>
+                                {{ tipo }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>Formato</label>
+                    <select class="filter-select" name="formato" id="formatoFilter">
+                        <option value="">Todos</option>
+                        {% for formato in formatos_disponibles %}
+                            <option value="{{ formato }}" 
+                                    {% if formato_actual == formato %}selected{% endif %}>
+                                {{ formato }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>Fecha Desde</label>
+                    <input type="date" 
+                           class="filter-input" 
+                           name="fecha_desde"
+                           id="fechaDesdeFilter"
+                           value="{{ fecha_desde_actual }}">
+                </div>
+                
+                <div class="filter-item">
+                    <label>Fecha Hasta</label>
+                    <input type="date" 
+                           class="filter-input" 
+                           name="fecha_hasta"
+                           id="fechaHastaFilter"
+                           value="{{ fecha_hasta_actual }}">
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="button" class="btn btn-primary" id="applyFiltersBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Buscar
+                </button>
+                <button type="button" class="btn btn-secondary" id="clearFiltersBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Limpiar
+                </button>
+                <a href="{{ url_for('inventarios.reporte') }}" class="btn btn-info">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    Reporte por Sucursal
+                </a>
+                <select id="rowsPerPage" class="filter-select rows-select">
+                    <option value="10">10 por página</option>
+                    <option value="25" selected>25 por página</option>
+                    <option value="50">50 por página</option>
+                    <option value="100">100 por página</option>
+                    <option value="all">Mostrar todos</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Info -->
+    {% if movimientos %}
+        <div class="filter-stats">
+            <span id="statsText">{{ movimientos|length }} movimientos encontrados</span>
+            <span id="totalVisible" style="display:none;">{{ movimientos|length }}</span>
+        </div>
+
+        <!-- Table -->
+        <div class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Libro</th>
+                        <th>Sucursal</th>
+                        <th>Tipo</th>
+                        <th>Formato</th>
+                        <th>Cantidad</th>
+                        <th>Stock</th>
+                        <th>Referencia</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for mov in movimientos %}
+                    <tr data-search="{{ (mov.Libros_.titulo + ' ' + (mov.Libros_.isbn or '') + ' ' + (mov.referencia or ''))|lower }}"
+                        data-sucursal="{{ mov.Sucursales_.id_sucursal }}"
+                        data-tipo="{{ mov.tipo_movimiento }}"
+                        data-formato="{{ mov.formato }}"
+                        data-fecha="{{ mov.fecha_movimiento.strftime('%Y-%m-%d') }}">
+                        <td><span class="badge badge-id">#{{ mov.id_inventario }}</span></td>
+                        <td class="date-cell">
+                            <div class="date-wrapper">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span>{{ mov.fecha_movimiento.strftime('%d/%m/%Y %H:%M') }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('libros.ver', id=mov.Libros_.id_libro) }}" class="libro-link">
+                                {{ mov.Libros_.titulo|truncate(40) }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="sucursal-badge">{{ mov.Sucursales_.nombre }}</span>
+                        </td>
+                        <td>
+                            {% if mov.tipo_movimiento == 'Entrada' %}
+                                <span class="badge badge-success">{{ mov.tipo_movimiento }}</span>
+                            {% elif mov.tipo_movimiento == 'Salida' %}
+                                <span class="badge badge-danger">{{ mov.tipo_movimiento }}</span>
+                            {% elif mov.tipo_movimiento == 'Ajuste' %}
+                                <span class="badge badge-warning">{{ mov.tipo_movimiento }}</span>
+                            {% elif mov.tipo_movimiento == 'Devolución' %}
+                                <span class="badge badge-info">{{ mov.tipo_movimiento }}</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ mov.tipo_movimiento }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="formato-badge">{{ mov.formato }}</span></td>
+                        <td class="cantidad-cell">
+                            {% if mov.tipo_movimiento in ['Entrada', 'Devolución'] %}
+                                <span class="cantidad-positive">+{{ mov.cantidad }}</span>
+                            {% elif mov.tipo_movimiento in ['Salida', 'Transferencia'] %}
+                                <span class="cantidad-negative">-{{ mov.cantidad }}</span>
+                            {% else %}
+                                <span class="cantidad-neutral">{{ mov.cantidad }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="stock-change">
+                                <span class="stock-old">{{ mov.stock_anterior }}</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                                <span class="stock-new">{{ mov.stock_nuevo }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if mov.referencia %}
+                                <span class="badge badge-ref">{{ mov.referencia }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <a href="{{ url_for('inventarios.ver', id=mov.id_inventario) }}" 
+                                   class="action-btn view"
+                                   title="Ver detalles">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div id="noResults" class="no-results">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <p>No se encontraron movimientos de inventario con los filtros aplicados</p>
+            </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="paginationContainer" class="pagination-container">
+            <div class="pagination-info">
+                Mostrando <span id="pageRange"></span> de <span id="totalVisibleSpan"></span> registros
+            </div>
+            <div class="pagination-controls">
+                <button class="pagination-btn" id="firstBtn" onclick="goToPage(1)" title="Primera página">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="11 17 6 12 11 7"></polyline>
+                        <polyline points="18 17 13 12 18 7"></polyline>
+                    </svg>
+                </button>
+                <button class="pagination-btn" id="prevBtn" onclick="goToPage(currentPage - 1)" title="Página anterior">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <div id="pageNumbers" class="page-numbers"></div>
+                <button class="pagination-btn" id="nextBtn" onclick="goToPage(currentPage + 1)" title="Página siguiente">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+                <button class="pagination-btn" id="lastBtn" onclick="goToPage(totalPages)" title="Última página">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+                <div class="jump-to-page">
+                    <span>Ir a:</span>
+                    <input type="number" id="jumpPageInput" min="1" value="1">
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="no-results show">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <p>No se encontraron movimientos de inventario con los filtros aplicados</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Filters */
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.filter-header { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #4a5568; margin-bottom: 1.25rem; }
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.filter-item label { display: block; font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem; }
+.search-box { position: relative; }
+.search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.filter-input { width: 100%; padding: 0.65rem 0.75rem; padding-left: 2.5rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; transition: border 0.2s; }
+.filter-input:focus { outline: none; border-color: #667eea; }
+.filter-select { width: 100%; padding: 0.65rem 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; background: white; cursor: pointer; transition: border 0.2s; }
+.filter-select:focus { outline: none; border-color: #667eea; }
+.filter-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.rows-select { min-width: 150px; font-weight: 500; }
+
+.filter-stats { color: #718096; font-size: 0.9rem; margin-bottom: 1rem; font-weight: 600; }
+.filter-stats span { color: #667eea; }
+
+/* Table */
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
+.data-table td { padding: 0.875rem 1rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+/* Loading State */
+.table-loading {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+/* Date Cell */
+.date-cell { color: #4a5568; }
+.date-wrapper { display: flex; align-items: center; gap: 0.5rem; }
+.date-wrapper svg { color: #a0aec0; flex-shrink: 0; }
+
+/* Links and Labels */
+.libro-link { color: #667eea; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+.libro-link:hover { color: #764ba2; text-decoration: underline; }
+.sucursal-badge { color: #4a5568; font-weight: 500; }
+.formato-badge { background: #f7fafc; padding: 0.35rem 0.75rem; border-radius: 8px; color: #4a5568; font-weight: 500; font-size: 0.85rem; }
+
+/* Badges */
+.badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+.badge-id { background: #e0f2fe; color: #0284c7; }
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+.badge-secondary { background: #f3f4f6; color: #4b5563; }
+.badge-ref { background: #f3e8ff; color: #7c3aed; font-family: monospace; font-size: 0.8rem; }
+
+/* Quantity */
+.cantidad-cell { text-align: center; font-weight: 600; }
+.cantidad-positive { color: #059669; }
+.cantidad-negative { color: #dc2626; }
+.cantidad-neutral { color: #6b7280; }
+
+/* Stock Change */
+.stock-change { display: flex; align-items: center; gap: 0.5rem; }
+.stock-old { color: #9ca3af; font-size: 0.85rem; }
+.stock-new { color: #1a202c; font-weight: 600; }
+.stock-change svg { color: #a0aec0; flex-shrink: 0; }
+
+/* Actions */
+.actions { display: flex; gap: 0.5rem; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
+.action-btn.view { background: #e6f3ff; color: #0066cc; }
+.action-btn.view:hover { background: #0066cc; color: white; }
+
+/* Buttons */
+.btn { padding: 0.65rem 1.25rem; border: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-info { background: #0891b2; color: white; }
+.btn-info:hover { background: #0e7490; }
+
+/* No Results */
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; }
+.no-results.show { display: block; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results p { color: #718096; margin: 0; }
+
+.text-muted { color: #a0aec0; }
+
+/* Pagination Styles */
+.pagination-container { background: white; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.pagination-container.hidden { display: none; }
+.pagination-info { color: #718096; font-size: 0.9rem; }
+.pagination-info span { font-weight: 600; color: #667eea; }
+.pagination-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.pagination-btn { width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; }
+.pagination-btn:hover:not(:disabled) { border-color: #667eea; color: #667eea; background: #f0f4ff; }
+.pagination-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.page-number { min-width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; font-weight: 500; font-size: 0.9rem; padding: 0 0.5rem; }
+.page-number:hover { border-color: #667eea; color: #667eea; background: #f0f4ff; }
+.page-number.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-color: transparent; }
+.page-ellipsis { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #a0aec0; font-weight: 600; }
+
+/* Jump to Page */
+.jump-to-page {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 1rem;
+    color: #718096;
+    font-size: 0.9rem;
+    padding-left: 1rem;
+    border-left: 2px solid #e2e8f0;
+}
+
+.jump-to-page span {
+    font-weight: 500;
+}
+
+.jump-to-page input {
+    width: 60px;
+    padding: 0.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: border 0.2s;
+}
+
+.jump-to-page input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+}
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .filter-grid { grid-template-columns: 1fr; }
+    .filter-actions { flex-direction: column; }
+    .filter-actions .btn, .filter-actions .filter-select { width: 100%; justify-content: center; }
+    .data-table { display: block; overflow-x: auto; }
+    .pagination-container { flex-direction: column; gap: 1rem; }
+    .pagination-info { text-align: center; }
+    .pagination-controls { justify-content: center; }
+    .jump-to-page { margin-left: 0; padding-left: 0; border-left: none; padding-top: 0.5rem; border-top: 2px solid #e2e8f0; }
+}
+
+@media (max-width: 480px) {
+    .pagination-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .page-number {
+        min-width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+        padding: 0 0.25rem;
+    }
+    
+    .page-numbers {
+        gap: 0.15rem;
+    }
+    
+    .jump-to-page {font-size: 0.85rem;
+}
+.jump-to-page input {
+    width: 50px;
+    padding: 0.4rem;
+    font-size: 0.85rem;
+}
+}
+</style>
+<script>
+// DOM Elements
+const searchInput = document.getElementById('searchInput');
+const sucursalFilter = document.getElementById('sucursalFilter');
+const tipoFilter = document.getElementById('tipoFilter');
+const formatoFilter = document.getElementById('formatoFilter');
+const fechaDesdeFilter = document.getElementById('fechaDesdeFilter');
+const fechaHastaFilter = document.getElementById('fechaHastaFilter');
+const rowsPerPageSelect = document.getElementById('rowsPerPage');
+const tableBody = document.getElementById('tableBody');
+const noResults = document.getElementById('noResults');
+const statsText = document.getElementById('statsText');
+const totalVisible = document.getElementById('totalVisible');
+const paginationContainer = document.getElementById('paginationContainer');
+const pageRange = document.getElementById('pageRange');
+const totalVisibleSpan = document.getElementById('totalVisibleSpan');
+const pageNumbers = document.getElementById('pageNumbers');
+const filterForm = document.getElementById('filterForm');
+const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+const jumpPageInput = document.getElementById('jumpPageInput');
+
+// Pagination State - Initialize properly
+let allRows = [];
+let filteredRows = [];
+let currentPage = 1;
+let totalPages = 1;
+let rowsPerPage = 25;
+
+// Initialize rows array
+function initializeRows() {
+    if (tableBody) {
+        allRows = Array.from(tableBody.querySelectorAll('tr'));
+        filteredRows = [...allRows];
+    }
+}
+
+// Prevent form submission
+if (filterForm) {
+    filterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        applyFilters();
+    });
+}
+
+// Apply Filters Button
+if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', () => {
+        applyFilters();
+    });
+}
+
+// Clear Filters Button
+if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Clear all filter inputs
+        if (searchInput) searchInput.value = '';
+        if (sucursalFilter) sucursalFilter.value = '';
+        if (tipoFilter) tipoFilter.value = '';
+        if (formatoFilter) formatoFilter.value = '';
+        if (fechaDesdeFilter) fechaDesdeFilter.value = '';
+        if (fechaHastaFilter) fechaHastaFilter.value = '';
+        
+        // Reset to default rows per page
+        if (rowsPerPageSelect) rowsPerPageSelect.value = '25';
+        rowsPerPage = 25;
+        
+        // Reset current page
+        currentPage = 1;
+        
+        // Apply filters (which will show all rows)
+        applyFilters();
+        
+        // Clear URL parameters
+        window.history.replaceState({}, '', window.location.pathname);
+    });
+}
+
+// Apply Filters Function
+function applyFilters() {
+    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const sucursal = sucursalFilter ? sucursalFilter.value : '';
+    const tipo = tipoFilter ? tipoFilter.value : '';
+    const formato = formatoFilter ? formatoFilter.value : '';
+    const fechaDesde = fechaDesdeFilter ? fechaDesdeFilter.value : '';
+    const fechaHasta = fechaHastaFilter ? fechaHastaFilter.value : '';
+    
+    filteredRows = allRows.filter(row => {
+        const matchSearch = !search || (row.dataset.search && row.dataset.search.includes(search));
+        const matchSucursal = !sucursal || row.dataset.sucursal === sucursal;
+        const matchTipo = !tipo || row.dataset.tipo === tipo;
+        const matchFormato = !formato || row.dataset.formato === formato;
+        
+        let matchFechaDesde = true;
+        let matchFechaHasta = true;
+        
+        if (fechaDesde && row.dataset.fecha) {
+            matchFechaDesde = row.dataset.fecha >= fechaDesde;
+        }
+        
+        if (fechaHasta && row.dataset.fecha) {
+            matchFechaHasta = row.dataset.fecha <= fechaHasta;
+        }
+        
+        return matchSearch && matchSucursal && matchTipo && matchFormato && matchFechaDesde && matchFechaHasta;
+    });
+    
+    currentPage = 1;
+    updatePagination();
+    updateURLParams();
+}
+
+// Update Pagination
+function updatePagination() {
+    if (tableBody) {
+        tableBody.classList.add('table-loading');
+    }
+    
+    const visibleCount = filteredRows.length;
+    
+    // Hide all rows first
+    allRows.forEach(row => {
+        if (row && row.style) {
+            row.style.display = 'none';
+        }
+    });
+
+    // Show no results if needed
+    if (noResults) {
+        if (visibleCount === 0) {
+            noResults.classList.add('show');
+        } else {
+            noResults.classList.remove('show');
+        }
+    }
+
+    // Update stats
+    if (statsText) {
+        statsText.textContent = `${visibleCount} de ${allRows.length} movimientos`;
+    }
+    if (totalVisible) {
+        totalVisible.textContent = visibleCount;
+    }
+    if (totalVisibleSpan) {
+        totalVisibleSpan.textContent = visibleCount;
+    }
+
+    // Handle "show all" option
+    if (rowsPerPageSelect && rowsPerPageSelect.value === 'all') {
+        // Show all filtered rows
+        filteredRows.forEach(row => {
+            if (row && row.style) {
+                row.style.display = '';
+            }
+        });
+        
+        if (paginationContainer) {
+            paginationContainer.classList.add('hidden');
+        }
+        
+        if (tableBody) {
+            setTimeout(() => {
+                tableBody.classList.remove('table-loading');
+            }, 100);
+        }
+        return;
+    }
+
+    // Calculate pagination
+    rowsPerPage = rowsPerPageSelect ? parseInt(rowsPerPageSelect.value) : 25;
+    totalPages = Math.max(1, Math.ceil(visibleCount / rowsPerPage));
+
+    // Show/hide pagination
+    if (paginationContainer) {
+        if (totalPages <= 1) {
+            paginationContainer.classList.add('hidden');
+        } else {
+            paginationContainer.classList.remove('hidden');
+        }
+    }
+
+    if (visibleCount > 0) {
+        // Ensure current page is valid
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+        if (currentPage < 1) {
+            currentPage = 1;
+        }
+        
+        // Calculate range
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = Math.min(start + rowsPerPage, visibleCount);
+        
+        // Show rows for current page
+        filteredRows.slice(start, end).forEach(row => {
+            if (row && row.style) {
+                row.style.display = '';
+            }
+        });
+        
+        // Update page info
+        if (pageRange) {
+            pageRange.textContent = `${start + 1}-${end}`;
+        }
+        
+        // Update jump to page input
+        if (jumpPageInput) {
+            jumpPageInput.max = totalPages;
+            jumpPageInput.value = currentPage;
+        }
+        
+        // Update page numbers
+        renderPageNumbers();
+        
+        // Update button states
+        const firstBtn = document.getElementById('firstBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const lastBtn = document.getElementById('lastBtn');
+        
+        if (firstBtn) firstBtn.disabled = currentPage === 1;
+        if (prevBtn) prevBtn.disabled = currentPage === 1;
+        if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+        if (lastBtn) lastBtn.disabled = currentPage === totalPages;
+    }
+    
+    // Remove loading state
+    if (tableBody) {
+        setTimeout(() => {
+            tableBody.classList.remove('table-loading');
+        }, 100);
+    }
+}
+
+// Render Page Numbers
+function renderPageNumbers() {
+    if (!pageNumbers) return;
+    
+    pageNumbers.innerHTML = '';
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    // First page
+    if (startPage > 1) {
+        pageNumbers.appendChild(createPageButton(1));
+        if (startPage > 2) {
+            pageNumbers.appendChild(createEllipsis());
+        }
+    }
+
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.appendChild(createPageButton(i));
+    }
+
+    // Last page
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            pageNumbers.appendChild(createEllipsis());
+        }
+        pageNumbers.appendChild(createPageButton(totalPages));
+    }
+}
+
+// Create Page Button
+function createPageButton(page) {
+    const btn = document.createElement('button');
+    btn.className = 'page-number';
+    btn.textContent = page;
+    btn.onclick = () => goToPage(page);
+    if (page === currentPage) {
+        btn.classList.add('active');
+    }
+    return btn;
+}
+
+// Create Ellipsis
+function createEllipsis() {
+    const span = document.createElement('span');
+    span.className = 'page-ellipsis';
+    span.textContent = '...';
+    return span;
+}
+
+// Go to Page
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    updatePagination();
+    updateURLParams();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Update URL Parameters
+function updateURLParams() {
+    const params = new URLSearchParams();
+    
+    if (searchInput && searchInput.value) params.set('busqueda', searchInput.value);
+    if (sucursalFilter && sucursalFilter.value) params.set('sucursal', sucursalFilter.value);
+    if (tipoFilter && tipoFilter.value) params.set('tipo_movimiento', tipoFilter.value);
+    if (formatoFilter && formatoFilter.value) params.set('formato', formatoFilter.value);
+    if (fechaDesdeFilter && fechaDesdeFilter.value) params.set('fecha_desde', fechaDesdeFilter.value);
+    if (fechaHastaFilter && fechaHastaFilter.value) params.set('fecha_hasta', fechaHastaFilter.value);
+    if (currentPage > 1) params.set('page', currentPage);
+    if (rowsPerPageSelect && rowsPerPageSelect.value !== '25') params.set('per_page', rowsPerPageSelect.value);
+    
+    const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState({}, '', newURL);
+}
+
+// Initialize from URL
+function initFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const page = parseInt(params.get('page')) || 1;
+    const perPage = params.get('per_page');
+    
+    if (perPage && rowsPerPageSelect) {
+        rowsPerPageSelect.value = perPage;
+        if (perPage !== 'all') {
+            rowsPerPage = parseInt(perPage);
+        }
+    }
+    
+    currentPage = page;
+}
+
+// Event Listeners
+if (searchInput) {
+    searchInput.addEventListener('input', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+}
+
+if (sucursalFilter) {
+    sucursalFilter.addEventListener('change', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+}
+
+if (tipoFilter) {
+    tipoFilter.addEventListener('change', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+}
+
+if (formatoFilter) {
+    formatoFilter.addEventListener('change', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+}
+
+if (fechaDesdeFilter) {
+    fechaDesdeFilter.addEventListener('change', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+}
+
+if (fechaHastaFilter) {
+    fechaHastaFilter.addEventListener('change', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+}
+
+if (rowsPerPageSelect) {
+    rowsPerPageSelect.addEventListener('change', () => {
+        currentPage = 1;
+        updatePagination();
+        updateURLParams();
+    });
+}
+
+// Jump to Page Input
+if (jumpPageInput) {
+    jumpPageInput.addEventListener('change', (e) => {
+        const page = parseInt(e.target.value);
+        if (page >= 1 && page <= totalPages) {
+            goToPage(page);
+        } else {
+            e.target.value = currentPage;
+        }
+    });
+    
+    jumpPageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const page = parseInt(e.target.value);
+            if (page >= 1 && page <= totalPages) {
+                goToPage(page);
+            } else {
+                e.target.value = currentPage;
+            }
+        }
+    });
+}
+
+// Keyboard Navigation
+document.addEventListener('keydown', (e) => {
+    // Don't trigger if user is typing in an input or select
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
+    
+    if (e.key === 'ArrowLeft' && currentPage > 1) {
+        e.preventDefault();
+        goToPage(currentPage - 1);
+    } else if (e.key === 'ArrowRight' && currentPage < totalPages) {
+        e.preventDefault();
+        goToPage(currentPage + 1);
+    }
+});
+
+// Initialize everything when DOM is ready
+function initialize() {
+    initializeRows();
+    
+    if (allRows.length > 0) {
+        initFromURL();
+        updatePagination();
+    } else {
+        // No data, hide pagination
+        if (paginationContainer) {
+            paginationContainer.classList.add('hidden');
+        }
+        if (noResults) {
+            noResults.classList.add('show');
+        }
+    }
+}
+
+// Run initialization
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+</script>
+{% endblock %}

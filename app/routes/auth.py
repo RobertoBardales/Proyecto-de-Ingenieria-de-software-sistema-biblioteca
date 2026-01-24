@@ -2,92 +2,16 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
-from models import Clientes
+from models import Clientes, Empleados
 from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 import re
-import hashlib
+
+# Import shared password functions
+from utils import hash_password, verify_password
 
 auth = Blueprint('auth', __name__)
-
-def hash_password(password):
-    """
-    Hash de contraseña completamente aleatorio y único:
-    1. Genera una sal aleatoria única de 32 bytes
-    2. HMAC con pepper + sal
-    3. Bcrypt
-    4. Almacena: sal_aleatoria + hash (todo en hex)
-    Resultado: Cada hash comienza diferente
-    """
-    import hmac
-    import secrets
-    from bcrypt import hashpw, gensalt
-    
-    # Obtener pepper desde configuración
-    try:
-        pepper = current_app.config.get('PEPPER_SECRET', '')
-    except RuntimeError:
-        from config import Config
-        pepper = Config.PEPPER_SECRET
-    
-    # Generar sal aleatoria única de 32 bytes
-    random_salt = secrets.token_bytes(32)
-    
-    # HMAC con pepper + sal aleatoria
-    hmac_hash = hmac.new(
-        (pepper + random_salt.hex()).encode('utf-8'),
-        password.encode('utf-8'),
-        hashlib.sha256
-    ).digest()
-    
-    # Bcrypt sobre el HMAC
-    bcrypt_hash = hashpw(hmac_hash, gensalt(rounds=12))
-    
-    # Combinar: sal_aleatoria + bcrypt_hash, todo en hexadecimal
-    # La sal aleatoria va primero (64 caracteres hex = 32 bytes)
-    final_hash = random_salt.hex() + bcrypt_hash.hex()
-    
-    return final_hash
-
-def verify_password(password, stored_hash):
-    """
-    Verificar contraseña con el mismo proceso usado en hash_password
-    """
-    try:
-        import hmac
-        from bcrypt import checkpw
-        
-        # Obtener pepper desde configuración
-        try:
-            pepper = current_app.config.get('PEPPER_SECRET', '')
-        except RuntimeError:
-            from config import Config
-            pepper = Config.PEPPER_SECRET
-        
-        # Extraer la sal aleatoria (primeros 64 caracteres hex = 32 bytes)
-        random_salt_hex = stored_hash[:64]
-        bcrypt_hash_hex = stored_hash[64:]
-        
-        # Convertir de hex a bytes
-        random_salt = bytes.fromhex(random_salt_hex)
-        bcrypt_hash = bytes.fromhex(bcrypt_hash_hex)
-        
-        # Recrear el HMAC con la misma sal aleatoria
-        hmac_hash = hmac.new(
-            (pepper + random_salt_hex).encode('utf-8'),
-            password.encode('utf-8'),
-            hashlib.sha256
-        ).digest()
-        
-        # Verificar con bcrypt
-        return checkpw(hmac_hash, bcrypt_hash)
-        
-    except Exception as e:
-        print(f"Error verificando contraseña: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return False
 
 def validar_solo_letras(texto, campo_nombre):
     """Validar que el campo solo contenga letras y espacios con reglas estrictas"""
@@ -233,43 +157,63 @@ def login():
         return redirect(url_for('main.index'))
     
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
+        email_or_username = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         
-        if not email or not password:
+        if not email_or_username or not password:
             flash('Por favor completa todos los campos.', 'error')
             return render_template('login.html')
         
-        # Buscar usuario por email (case-insensitive)
+        # Try to find user in both Clientes and Empleados
+        usuario = None
+        
+        # First, try Clientes by email
         usuario = db.session.query(Clientes).filter(
-            func.lower(Clientes.email) == email
+            func.lower(Clientes.email) == email_or_username
         ).first()
+        
+        # If not found, try Empleados by email or username
+        if not usuario:
+            usuario = db.session.query(Empleados).filter(
+                (func.lower(Empleados.email) == email_or_username) |
+                (func.lower(Empleados.usuario) == email_or_username)
+            ).first()
         
         # Verificar si existe y la contraseña es correcta
         if usuario and verify_password(password, usuario.password_hash):
-            # Verificar estado del usuario
-            if hasattr(usuario, 'Estado_Usuarios') and usuario.Estado_Usuarios:
-                estado = usuario.Estado_Usuarios
-                
-                # Verificar si el estado permite login
-                if not estado.permite_login:
-                    flash(f'Tu cuenta está {estado.nombre}. No puedes acceder al sistema.', 'error')
-                    return render_template('login.html')
-                
-                # Si el estado es "Pendiente cambio de contraseña" (id_estado == 4)
-                if usuario.id_estado == 4:
-                    flash('Debes cambiar tu contraseña antes de continuar.', 'warning')
+            # Check if it's a Cliente with Estado_Usuarios
+            if isinstance(usuario, Clientes):
+                if hasattr(usuario, 'Estado_Usuarios') and usuario.Estado_Usuarios:
+                    estado = usuario.Estado_Usuarios
+                    
+                    # Verificar si el estado permite login
+                    if not estado.permite_login:
+                        flash(f'Tu cuenta está {estado.nombre}. No puedes acceder al sistema.', 'error')
+                        return render_template('login.html')
+                    
+                    # Si el estado es "Pendiente cambio de contraseña" (id_estado == 4)
+                    if usuario.id_estado == 4:
+                        flash('Debes cambiar tu contraseña antes de continuar.', 'warning')
+                        return render_template('login.html')
+            
+            # Check if it's an Empleado with activo status
+            elif isinstance(usuario, Empleados):
+                if not usuario.activo:
+                    flash('Tu cuenta de empleado está desactivada. Contacta al administrador.', 'error')
                     return render_template('login.html')
             
             # Login exitoso
             login_user(usuario)
-            flash(f'¡Bienvenido, {usuario.nombres}!', 'success')
+            
+            # Get display name based on user type
+            nombre = usuario.nombres if hasattr(usuario, 'nombres') else usuario.usuario
+            flash(f'¡Bienvenido, {nombre}!', 'success')
             
             # Redirect to next page if exists, otherwise to index
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('main.index'))
         else:
-            flash('Email o contraseña incorrectos.', 'error')
+            flash('Email/Usuario o contraseña incorrectos.', 'error')
     
     return render_template('login.html')
 
@@ -331,7 +275,7 @@ def registrar():
             nuevo_id = get_next_id()
             
             # Hash de la contraseña con método mejorado
-            password_hash = hash_password(password)
+            password_hash_value = hash_password(password)
             
             # Crear nuevo cliente
             nuevo_cliente = Clientes(
@@ -339,7 +283,7 @@ def registrar():
                 nombres=nombres.title(),
                 apellidos=apellidos.title(),
                 email=email,
-                password_hash=password_hash,
+                password_hash=password_hash_value,
                 telefono=telefono if telefono else 'No especificado',
                 direccion='No especificada',
                 tipo_usuario='cliente',
@@ -365,7 +309,7 @@ def registrar():
 @auth.route('/logout')
 @login_required
 def logout():
-    nombre = current_user.nombres
+    nombre = current_user.nombres if hasattr(current_user, 'nombres') else current_user.usuario
     logout_user()
     flash(f'Hasta pronto, {nombre}. Has cerrado sesión.', 'info')
     return redirect(url_for('main.index'))

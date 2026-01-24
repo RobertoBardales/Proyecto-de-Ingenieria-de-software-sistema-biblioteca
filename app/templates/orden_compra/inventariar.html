@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Inventariar Recepción #{{ recepcion.id_recepcion }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('orden_compra.listar') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver al Listado
+            </a>
+            <div>
+                <h1>Inventariar Recepción #{{ recepcion.id_recepcion }}</h1>
+                <p class="subtitle">Agregar productos recibidos al inventario del sistema</p>
+            </div>
+        </div>
+        <a href="{{ url_for('orden_compra.ver', id=recepcion.id_orden) }}" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Ver Orden
+        </a>
+    </div>
+
+    <!-- Reception Summary -->
+    <div class="info-card">
+        <div class="info-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <h3>Resumen de la Recepción</h3>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Orden de Compra</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <strong>{{ recepcion.Orden_Compra_.numero_orden }}</strong>
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Editorial</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21h18"></path>
+                        <path d="M5 21V7l8-4v18"></path>
+                        <path d="M19 21V11l-6-4"></path>
+                    </svg>
+                    {{ recepcion.Orden_Compra_.Editoriales_.nombre }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Fecha de Recepción</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ recepcion.fecha_recepcion.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Empleado Receptor</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    {{ recepcion.Empleados_.nombres }} {{ recepcion.Empleados_.apellidos }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Sucursal Destino</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <strong>{{ recepcion.Orden_Compra_.Sucursales_.nombre }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Summary Alert -->
+    {% if productos_malos > 0 %}
+    <div class="warning-alert">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div>
+            <strong>Atención: Productos No Inventariados</strong>
+            <p>
+                <strong>{{ productos_malos }}</strong> producto(s) marcado(s) como "Dañado" o "Defectuoso" 
+                <strong>NO se agregarán</strong> al inventario. Solo los productos en buen estado actualizarán el stock.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Products to be Inventoried -->
+    <div class="table-card">
+        <div class="table-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <h3>Productos a Inventariar</h3>
+        </div>
+        
+        {% set ns = namespace(total_buenos=0, total_malos=0) %}
+        
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Libro</th>
+                        <th>Formato</th>
+                        <th>Cantidad Recibida</th>
+                        <th>Estado</th>
+                        <th>Stock Actual</th>
+                        <th>Stock Después</th>
+                        <th>Se Inventariará</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detalle in recepcion.Detalle_Recepcion_Compra %}
+                        {% if detalle.cantidad_recibida > 0 %}
+                            {% set libro = detalle.Detalle_Orden_Compra_.Libros_ %}
+                            {% set formato = detalle.Detalle_Orden_Compra_.formato %}
+                            {% set stock_actual = libro.stock_fisico if formato == 'Físico' else libro.stock_digital %}
+                            {% set es_bueno = detalle.estado_producto == 'Bueno' %}
+                            
+                            {% if es_bueno %}
+                                {% set ns.total_buenos = ns.total_buenos + detalle.cantidad_recibida %}
+                                {% set stock_nuevo = stock_actual + detalle.cantidad_recibida %}
+                            {% else %}
+                                {% set ns.total_malos = ns.total_malos + detalle.cantidad_recibida %}
+                                {% set stock_nuevo = stock_actual %}
+                            {% endif %}
+                            
+                            <tr class="{% if not es_bueno %}row-excluded{% endif %}">
+                                <td>
+                                    <div class="libro-cell">
+                                        <strong>{{ libro.titulo }}</strong>
+                                        <small>ISBN: {{ libro.isbn }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-info">{{ formato }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <strong class="{% if es_bueno %}text-success{% else %}text-danger{% endif %}">
+                                        {{ detalle.cantidad_recibida }}
+                                    </strong>
+                                </td>
+                                <td>
+                                    {% if es_bueno %}
+                                        <span class="badge badge-success">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            {{ detalle.estado_producto }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            {{ detalle.estado_producto }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="stock-current">{{ stock_actual }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% if es_bueno %}
+                                        <span class="stock-new">{{ stock_nuevo }}</span>
+                                        <span class="stock-change">+{{ detalle.cantidad_recibida }}</span>
+                                    {% else %}
+                                        <span class="stock-unchanged">{{ stock_nuevo }}</span>
+                                        <span class="stock-no-change">(sin cambio)</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if es_bueno %}
+                                        <span class="badge badge-yes">SÍ</span>
+                                    {% else %}
+                                        <span class="badge badge-no">NO</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Productos en buen estado (se inventariarán):</strong></td>
+                        <td class="text-center"><strong class="text-success">{{ ns.total_buenos }}</strong></td>
+                        <td colspan="4"></td>
+                    </tr>
+                    {% if ns.total_malos > 0 %}
+                    <tr>
+                        <td colspan="2"><strong>Productos dañados/defectuosos (NO se inventariarán):</strong></td>
+                        <td class="text-center"><strong class="text-danger">{{ ns.total_malos }}</strong></td>
+                        <td colspan="4"></td>
+                    </tr>
+                    {% endif %}
+                    <tr class="total-row">
+                        <td colspan="2"><strong>Total de unidades recibidas:</strong></td>
+                        <td class="text-center"><strong>{{ ns.total_buenos + ns.total_malos }}</strong></td>
+                        <td colspan="4"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Information Card -->
+    <div class="info-box">
+        <div class="info-box-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <h4>Información Importante</h4>
+        </div>
+        <ul>
+            <li>Se crearán <strong>{{ ns.total_buenos }}</strong> movimiento(s) de inventario tipo "Entrada"</li>
+            <li>El stock de cada libro en buen estado se actualizará automáticamente</li>
+            <li>La referencia del movimiento será: <strong>REC-{{ recepcion.id_recepcion }}</strong></li>
+            <li>Solo se inventariarán productos en estado "Bueno"</li>
+            {% if ns.total_malos > 0 %}
+            <li><strong>{{ ns.total_malos }}</strong> producto(s) dañado(s)/defectuoso(s) NO afectarán el inventario</li>
+            {% endif %}
+            <li>Esta acción no se puede deshacer</li>
+        </ul>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="form-actions-center">
+        <form method="POST" onsubmit="return confirm('¿Estás seguro de que deseas inventariar estos productos?\n\n✓ {{ ns.total_buenos }} producto(s) se agregarán al inventario{% if ns.total_malos > 0 %}\n✗ {{ ns.total_malos }} producto(s) dañados NO se agregarán{% endif %}\n\nEsta acción actualizará el stock en el sistema.');">
+            <button type="submit" class="btn btn-primary btn-large" {% if ns.total_buenos == 0 %}disabled title="No hay productos en buen estado para inventariar"{% endif %}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Ver en Inventario {% if ns.total_buenos > 0 %}({{ ns.total_buenos }} productos){% endif %}
+            </button>
+        </form>
+        
+        <a href="{{ url_for('orden_compra.ver', id=recepcion.id_orden) }}" class="btn btn-secondary btn-large">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Cancelar
+        </a>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Info Card */
+.info-card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    margin-bottom: 1.5rem;
+}
+.info-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-bottom: 1.5rem; 
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.info-header svg { color: #667eea; }
+.info-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+.info-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 1.25rem; 
+}
+.info-item label { 
+    display: block; 
+    font-size: 0.85rem; 
+    font-weight: 600; 
+    color: #718096; 
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-value { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    padding: 0.75rem; 
+    background: #f7fafc; 
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.info-value svg { color: #667eea; flex-shrink: 0; }
+
+/* Alerts */
+.warning-alert { 
+    display: flex; 
+    gap: 0.75rem; 
+    padding: 1rem 1.25rem; 
+    border-radius: 12px; 
+    margin-bottom: 1.5rem; 
+    align-items: start;
+    background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%);
+    border-left: 4px solid #ffc107;
+}
+.warning-alert svg { color: #856404; flex-shrink: 0; }
+.warning-alert div { color: #856404; line-height: 1.6; }
+.warning-alert strong { display: block; margin-bottom: 0.5rem; }
+.warning-alert p { margin: 0; }
+
+/* Table Card */
+.table-card { 
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    overflow: hidden; 
+    margin-bottom: 1.5rem;
+}
+.table-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    padding: 1.5rem; 
+    border-bottom: 2px solid #e2e8f0;
+}
+.table-header svg { color: #667eea; }
+.table-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+.table-responsive { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.85rem; }
+.data-table td { padding: 0.75rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+.data-table tfoot { background: #f7fafc; font-weight: 600; }
+.data-table tfoot .total-row { background: #e2e8f0; }
+
+.row-excluded { background: #fff5f5; opacity: 0.8; }
+
+.libro-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+.libro-cell strong { color: #1a202c; }
+.libro-cell small { color: #718096; font-size: 0.85rem; }
+
+.text-center { text-align: center; }
+.text-success { color: #28a745; font-weight: 600; }
+.text-danger { color: #dc3545; font-weight: 600; }
+
+/* Badges */
+.badge { 
+    padding: 0.35rem 0.75rem; 
+    border-radius: 12px; 
+    font-size: 0.85rem; 
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.badge-info { background: #e6f3ff; color: #0066cc; }
+.badge-success { background: #d4f4dd; color: #1e7e34; }
+.badge-danger { background: #ffe0e0; color: #c41e3a; }
+.badge-yes { background: #d4f4dd; color: #1e7e34; padding: 0.4rem 1rem; font-weight: 600; }
+.badge-no { background: #ffe0e0; color: #c41e3a; padding: 0.4rem 1rem; font-weight: 600; }
+
+/* Stock Display */
+.stock-current { color: #718096; font-size: 0.95em; }
+.stock-new { color: #28a745; font-weight: 700; font-size: 1.1em; }
+.stock-unchanged { color: #718096; font-size: 1.05em; }
+.stock-change { color: #28a745; margin-left: 0.5rem; font-size: 0.9em; font-weight: 600; }
+.stock-no-change { color: #a0aec0; margin-left: 0.5rem; font-size: 0.85em; font-style: italic; }
+
+/* Info Box */
+.info-box { 
+    background: linear-gradient(135deg, #e6f3ff 0%, #f0f4ff 100%); 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    border-left: 4px solid #667eea;
+    margin-bottom: 1.5rem;
+}
+.info-box-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-bottom: 1rem; 
+    color: #667eea; 
+}
+.info-box-header h4 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+}
+.info-box ul { 
+    margin: 0; 
+    padding-left: 1.5rem; 
+    color: #4a5568; 
+}
+.info-box li { 
+    margin-bottom: 0.5rem; 
+    line-height: 1.6; 
+}
+.info-box li:last-child { 
+    margin-bottom: 0; 
+}
+
+/* Buttons */
+.btn { 
+    padding: 0.75rem 1.5rem; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    text-decoration: none; 
+    transition: all 0.2s; 
+    font-size: 0.95rem; 
+}
+.btn-large { 
+    padding: 1rem 2rem; 
+    font-size: 1rem; 
+}
+.btn-primary { 
+    background: linear-gradient(135deg, #667eea, #764ba2); 
+    color: white; 
+}
+.btn-primary:hover:not(:disabled) { 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3); 
+}
+.btn-primary:disabled { 
+    opacity: 0.5; 
+    cursor: not-allowed; 
+}
+.btn-secondary { 
+    background: #e2e8f0; 
+    color: #4a5568; 
+}
+.btn-secondary:hover { 
+    background: #cbd5e0; 
+}
+
+.form-actions-center { 
+    display: flex; 
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem; 
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 1rem; 
+    }
+    .header-left { 
+        flex-direction: column; 
+        align-items: flex-start; 
+    }
+    .info-grid { 
+        grid-template-columns: 1fr; 
+    }
+    .data-table { 
+        font-size: 0.85rem; 
+    }
+    .data-table th, .data-table td { 
+        padding: 0.5rem; 
+    }
+    .form-actions-center { 
+        flex-direction: column; 
+    }
+    .btn-large { 
+        width: 100%; 
+        justify-content: center; 
+    }
+}
+</style>
+{% endblock %}

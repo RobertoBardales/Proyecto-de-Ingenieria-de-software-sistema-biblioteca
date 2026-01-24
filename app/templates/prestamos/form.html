@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Préstamo{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-container">
+        <div class="form-header">
+            <a href="{{ url_for('prestamos.listar') }}" class="back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <h1>📚 Nuevo Préstamo</h1>
+            <p>Registra un nuevo préstamo de libros</p>
+        </div>
+
+        <form method="POST" id="prestamoForm" class="form-content">
+            <!-- Cliente Selection -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Información del Cliente
+                </h2>
+
+                <div class="form-group">
+                    <label for="id_cliente">Cliente <span class="required">*</span></label>
+                    <select id="id_cliente" name="id_cliente" class="form-input" required>
+                        <option value="">Seleccionar cliente...</option>
+                        {% for cliente in clientes %}
+                        <option value="{{ cliente.id_cliente }}">
+                            {{ cliente.nombres }} {{ cliente.apellidos }} - {{ cliente.email }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Selecciona el cliente que realizará el préstamo</small>
+                </div>
+            </div>
+
+            <!-- Books Selection -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    Selección de Libros
+                </h2>
+
+                <div class="search-box">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" 
+                           id="bookSearch" 
+                           placeholder="Buscar libros por título, ISBN o autor..." 
+                           class="search-input">
+                </div>
+
+                <div class="books-grid" id="booksGrid">
+                    {% for libro in libros %}
+                    <label class="book-select-card" data-title="{{ libro.titulo|lower }}" data-isbn="{{ libro.isbn|lower }}">
+                        <input type="checkbox" name="libros" value="{{ libro.id_libro }}">
+                        <span class="checkbox-custom"></span>
+                        
+                        <div class="book-cover-small">
+                            {% if libro.portada %}
+                            <img src="{{ libro.portada }}" alt="{{ libro.titulo }}">
+                            {% else %}
+                            <div class="cover-placeholder-sm">
+                                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                </svg>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="book-select-info">
+                            <h4 class="book-select-title">{{ libro.titulo }}</h4>
+                            <p class="book-select-meta">ISBN: {{ libro.isbn }}</p>
+                            <p class="book-select-meta">Stock: {{ libro.stock_fisico }} disponibles</p>
+                            <span class="book-select-price">L {{ "%.2f"|format(libro.precio_prestamo) }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <div id="selectedCount" class="selected-count">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span id="countText">0 libros seleccionados</span>
+                </div>
+            </div>
+
+            <!-- Loan Duration -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Duración del Préstamo
+                </h2>
+
+                <div class="form-group">
+                    <label for="dias_prestamo">Días de préstamo <span class="required">*</span></label>
+                    <select id="dias_prestamo" name="dias_prestamo" class="form-input" required>
+                        <option value="7">7 días (1 semana)</option>
+                        <option value="14" selected>14 días (2 semanas)</option>
+                        <option value="21">21 días (3 semanas)</option>
+                        <option value="30">30 días (1 mes)</option>
+                    </select>
+                    <small class="form-hint">La multa por retraso es de L 5.00 por día</small>
+                </div>
+
+                <div class="date-preview" id="datePreview">
+                    <div class="date-preview-item">
+                        <span class="date-label">Fecha de préstamo:</span>
+                        <span class="date-value" id="startDate">-</span>
+                    </div>
+                    <div class="date-preview-item">
+                        <span class="date-label">Fecha de devolución:</span>
+                        <span class="date-value" id="returnDate">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observations -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    Observaciones
+                </h2>
+
+                <div class="form-group">
+                    <label for="observaciones">Notas adicionales</label>
+                    <textarea id="observaciones" 
+                              name="observaciones" 
+                              class="form-textarea" 
+                              rows="4"
+                              placeholder="Condiciones especiales, recordatorios, estado de los libros..."></textarea>
+                    <small class="form-hint">Opcional: Información adicional sobre el préstamo</small>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <a href="{{ url_for('prestamos.listar') }}" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Crear Préstamo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-wrapper {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.form-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
+}
+
+.back-link {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.back-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.form-header h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.form-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.05rem;
+}
+
+.form-content {
+    padding: 2.5rem;
+}
+
+.form-section {
+    margin-bottom: 3rem;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1.5rem 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--dark);
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.required {
+    color: var(--danger);
+}
+
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 0.875rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.form-hint {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+/* Search Box */
+.search-box {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+}
+
+.search-input {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Books Grid */
+.books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.book-select-card {
+    display: grid;
+    grid-template-columns: auto 60px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--light);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-items: center;
+}
+
+.book-select-card:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+    transform: translateY(-2px);
+}
+
+.book-select-card input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-custom {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.book-select-card input[type="checkbox"]:checked ~ .checkbox-custom {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.book-select-card input[type="checkbox"]:checked ~ .checkbox-custom::after {
+    content: '✓';
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.book-select-card input[type="checkbox"]:checked {
+    & ~ * {
+        opacity: 1;
+    }
+}
+
+.book-cover-small {
+    width: 60px;
+    height: 90px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.book-cover-small img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cover-placeholder-sm {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #f7fafc, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+}
+
+.book-select-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.book-select-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+}
+
+.book-select-meta {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.book-select-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 0.25rem;
+}
+
+.selected-count {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+    border: 2px solid rgba(99, 102, 241, 0.2);
+    border-radius: 12px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* Date Preview */
+.date-preview {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+
+.date-preview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.date-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--border);
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: var(--light);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: var(--border);
+}
+
+@media (max-width: 768px) {
+    .form-header {
+        padding: 1.5rem;
+    }
+    
+    .back-link {
+        position: static;
+        display: inline-flex;
+        margin-bottom: 1rem;
+    }
+    
+    .form-content {
+        padding: 1.5rem;
+    }
+    
+    .books-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .date-preview {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('prestamoForm');
+    const bookSearch = document.getElementById('bookSearch');
+    const booksGrid = document.getElementById('booksGrid');
+    const countText = document.getElementById('countText');
+    const diasPrestamo = document.getElementById('dias_prestamo');
+    const startDate = document.getElementById('startDate');
+    const returnDate = document.getElementById('returnDate');
+    
+    // Update selected count
+    function updateSelectedCount() {
+        const checked = booksGrid.querySelectorAll('input[type="checkbox"]:checked').length;
+        countText.textContent = `${checked} libro${checked !== 1 ? 's' : ''} seleccionado${checked !== 1 ? 's' : ''}`;
+    }
+    
+    // Book search
+    bookSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const cards = booksGrid.querySelectorAll('.book-select-card');
+        
+        cards.forEach(card => {
+            const title = card.dataset.title;
+            const isbn = card.dataset.isbn;
+            
+            if (title.includes(searchTerm) || isbn.includes(searchTerm)) {
+                card.style.display = 'grid';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+    
+    // Update count on checkbox change
+    booksGrid.addEventListener('change', updateSelectedCount);
+    
+    // Update dates preview
+    function updateDates() {
+        const dias = parseInt(diasPrestamo.value);
+        const today = new Date();
+        const returnDay = new Date(today);
+        returnDay.setDate(today.getDate() + dias);
+        
+        startDate.textContent = today.toLocaleDateString('es-HN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        
+        returnDate.textContent = returnDay.toLocaleDateString('es-HN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
+    
+    diasPrestamo.addEventListener('change', updateDates);
+    updateDates();
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const selectedBooks = booksGrid.querySelectorAll('input[type="checkbox"]:checked').length;
+        
+        if (selectedBooks === 0) {
+            e.preventDefault();
+            alert('⚠️ Debes seleccionar al menos un libro para el préstamo');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

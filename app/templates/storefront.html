@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}Biblioteca - Inicio{% endblock %}
+
+{% block content %}
+<div class="storefront-container">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">¡Bienvenido de vuelta, <span>{{ current_user.nombres }}</span>!</h1>
+                <p class="hero-subtitle">Explora nuestra colección, gestiona tus préstamos y conecta con otros lectores</p>
+            </div>
+            <div class="hero-image">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#grad1)" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.6,90,-16.3,88.5,-0.9C87,14.6,81.4,29.2,73.2,42.3C65,55.4,54.2,67,41.1,73.8C28,80.6,14,82.6,-0.9,84.3C-15.8,86,-31.6,87.4,-45.3,81.2C-59,75,-70.6,61.2,-77.8,45.7C-85,30.2,-87.8,15.1,-86.9,0.5C-86,-14.1,-81.4,-28.2,-74.3,-41.5C-67.2,-54.8,-57.6,-67.3,-45.2,-75.3C-32.8,-83.3,-16.4,-86.8,-0.5,-86C15.4,-85.2,30.7,-83.6,44.7,-76.4Z" transform="translate(100 100)" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{{ url_for('libros.listar') }}" class="action-card featured">
+            <div class="action-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+            </div>
+            <div class="action-content">
+                <h3>Explorar Catálogo</h3>
+                <p>Descubre nuestra colección completa</p>
+            </div>
+            <svg class="action-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </a>
+
+        <a href="{{ url_for('biblioteca_personal.mi_biblioteca') }}" class="action-card">
+            <div class="action-icon" style="background: linear-gradient(135deg, #d946ef, #c026d3);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+            </div>
+            <div class="action-content">
+                <h3>Mi Biblioteca</h3>
+                <p>Tus libros guardados</p>
+            </div>
+            <svg class="action-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </a>
+
+        <a href="{{ url_for('prestamos.listar') }}" class="action-card">
+            <div class="action-icon" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                </svg>
+            </div>
+            <div class="action-content">
+                <h3>Mis Préstamos</h3>
+                <p>Gestiona tus préstamos activos</p>
+            </div>
+            <svg class="action-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </a>
+
+        <a href="{{ url_for('temas_foros.listar') }}" class="action-card">
+            <div class="action-icon" style="background: linear-gradient(135deg, #f43f5e, #e11d48);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                </svg>
+            </div>
+            <div class="action-content">
+                <h3>Foros</h3>
+                <p>Únete a la comunidad</p>
+            </div>
+            <svg class="action-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </a>
+    </div>
+
+    <!-- Services Section -->
+    <div class="content-section services-section">
+        <div class="section-header">
+            <h2>Servicios</h2>
+        </div>
+        <div class="services-grid">
+            <a href="{{ url_for('tickets.listar_tickets') }}" class="service-card">
+                <div class="service-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                </div>
+                <h4>Tickets</h4>
+                <p>Soporte y ayuda</p>
+            </a>
+
+            <a href="{{ url_for('devoluciones.listar') }}" class="service-card">
+                <div class="service-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="1 4 1 10 7 10"></polyline>
+                        <polyline points="23 20 23 14 17 14"></polyline>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                    </svg>
+                </div>
+                <h4>Devoluciones</h4>
+                <p>Gestiona devoluciones</p>
+            </a>
+
+            <a href="{{ url_for('ventas.carrito') }}" class="service-card">
+                <div class="service-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                </div>
+                <h4>Carrito</h4>
+                <p>Compra libros</p>
+            </a>
+
+            <a href="{{ url_for('notificaciones.listar') }}" class="service-card">
+                <div class="service-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </div>
+                <h4>Notificaciones</h4>
+                <p>Mantente al día</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Admin Access (conditional) -->
+    {% if current_user.is_admin or current_user.rol == 'empleado' %}
+    <div class="admin-access">
+        <div class="admin-banner">
+            <div class="admin-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+            </div>
+            <div class="admin-content">
+                <h3>Panel de Administración</h3>
+                <p>Accede a las herramientas de gestión</p>
+            </div>
+            <a href="{{ url_for('main.admin_dashboard') }}" class="admin-button">
+                Ir al Dashboard
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .storefront-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem 2rem;
+    }
+
+    /* Hero Section */
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 24px;
+        padding: 3rem 2.5rem;
+        margin-bottom: 2.5rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 2rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero-text {
+        flex: 1;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .hero-title span {
+        color: #fbbf24;
+    }
+
+    .hero-subtitle {
+        font-size: 1.125rem;
+        opacity: 0.95;
+        max-width: 500px;
+    }
+
+    .hero-image {
+        width: 200px;
+        height: 200px;
+        opacity: 0.15;
+        position: absolute;
+        right: -50px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .action-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        text-decoration: none;
+        color: inherit;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+
+    .action-card.featured {
+        border-color: #6366f1;
+        background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    }
+
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        border-color: #6366f1;
+    }
+
+    .action-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-content {
+        flex: 1;
+    }
+
+    .action-content h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+
+    .action-content p {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .action-arrow {
+        stroke: #94a3b8;
+        transition: all 0.3s;
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    .action-card:hover .action-arrow {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    /* Services Section */
+    .services-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 2rem;
+    }
+
+    .content-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    /* Services Grid */
+    .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .service-card {
+        padding: 1.5rem;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 2px solid transparent;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+    .service-card:hover {
+        background: white;
+        border-color: #6366f1;
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(99, 102, 241, 0.1);
+    }
+
+    .service-icon {
+        width: 48px;
+        height: 48px;
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .service-icon svg {
+        stroke: #6366f1;
+    }
+
+    .service-card h4 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+
+    .service-card p {
+        font-size: 0.825rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    /* Admin Access */
+    .admin-access {
+        margin-top: 2rem;
+    }
+
+    .admin-banner {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 16px;
+        padding: 1.75rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        color: white;
+    }
+
+    .admin-icon {
+        width: 52px;
+        height: 52px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .admin-content {
+        flex: 1;
+    }
+
+    .admin-content h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .admin-content p {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .admin-button {
+        background: white;
+        color: #1e293b;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+        white-space: nowrap;
+    }
+
+    .admin-button:hover {
+        background: #f8fafc;
+        transform: translateX(4px);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 968px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .services-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .admin-banner {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .hero-section {
+            padding: 2rem 1.5rem;
+        }
+
+        .hero-title {
+            font-size: 1.75rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+        }
+
+        .hero-image {
+            display: none;
+        }
+
+        .action-card {
+            padding: 1.25rem;
+        }
+
+        .services-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,1465 @@
+{% extends "base.html" %}
+
+{% block title %}{{ libro.titulo }}{% endblock %}
+
+{% block content %}
+<div class="book-detail-container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+        <a href="{{ url_for('main.index') }}">Inicio</a>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <a href="{{ url_for('libros.listar') }}">Catálogo</a>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <span>{{ libro.titulo[:50] }}{% if libro.titulo|length > 50 %}...{% endif %}</span>
+    </nav>
+
+    <div class="book-detail-layout">
+        <!-- Book Cover Section -->
+        <aside class="book-cover-section">
+            <div class="cover-container">
+                {% if libro.portada %}
+                <img src="{{ libro.portada }}" alt="{{ libro.titulo }}" class="book-cover-image">
+                {% else %}
+                <div class="cover-placeholder-large">
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                </div>
+                {% endif %}
+            </div>
+
+             <div class="inventory-actions" style="margin-top: 1rem;">
+                <a href="{{ url_for('inventarios.nuevo', libro_id=libro.id_libro) }}" 
+                   class="btn btn-primary btn-block mb-2">
+                    <i class="bi bi-plus-circle"></i> Nuevo Movimiento
+                </a>
+                <a href="{{ url_for('inventarios.historial_libro', libro_id=libro.id_libro) }}" 
+                   class="btn btn-info btn-block">
+                    <i class="bi bi-clock-history"></i> Ver Historial
+                </a>
+            </div>
+
+            <!-- Stock and Availability -->
+            <div class="availability-card">
+                <h3>Disponibilidad</h3>
+                
+                <div class="stock-info">
+                    <div class="stock-item">
+                        <span class="stock-label">📦 Stock Físico</span>
+                        <span class="stock-value {{ 'available' if libro.stock_fisico > 0 else 'unavailable' }}">
+                            {{ libro.stock_fisico }} unidades
+                        </span>
+                    </div>
+                    <div class="stock-item">
+                        <span class="stock-label">💾 Stock Digital</span>
+                        <span class="stock-value {{ 'available' if libro.stock_digital > 0 else 'unavailable' }}">
+                            {{ libro.stock_digital }} unidades
+                        </span>
+                    </div>
+                </div>
+
+                {% if libro.disp_venta or libro.disp_prestamo %}
+                <div class="availability-badges">
+                    {% if libro.disp_venta %}
+                    <span class="avail-badge sale">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        Disponible para venta
+                    </span>
+                    {% endif %}
+                    {% if libro.disp_prestamo %}
+                    <span class="avail-badge loan">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        Disponible para préstamo
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Prices -->
+                <div class="price-section">
+                    {% if libro.disp_venta %}
+                    <div class="price-card">
+                        <span class="price-label">Precio de Venta</span>
+                        <span class="price-amount">L {{ "%.2f"|format(libro.precio_venta) }}</span>
+                    </div>
+                    {% endif %}
+                    {% if libro.disp_prestamo %}
+                    <div class="price-card">
+                        <span class="price-label">Precio de Préstamo</span>
+                        <span class="price-amount">L {{ "%.2f"|format(libro.precio_prestamo) }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- User Actions -->
+                {% if current_user.is_authenticated and current_user.tipo_usuario == 'cliente' %}
+                <div class="user-actions">
+                    {% if libro.disp_prestamo and libro.stock_fisico > 0 %}
+                    <button onclick="agregarAlCarrito({{ libro.id_libro }}, '{{ libro.titulo | replace("'", "\\'") }}')" class="btn-add-to-cart">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        Agregar al Carrito
+                    </button>
+                    {% elif libro.disp_prestamo %}
+                    <div class="out-of-stock-msg">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Sin stock disponible
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif current_user.is_authenticated %}
+                <div class="info-message">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    Solo los clientes pueden solicitar préstamos
+                </div>
+                {% else %}
+                <div class="info-message">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <a href="{{ url_for('auth.login') }}">Inicia sesión</a> para solicitar préstamos
+                </div>
+                {% endif %}
+
+                <!-- Admin Actions -->
+                {% if current_user.is_authenticated and current_user.tipo_usuario == 'admin' %}
+                <div class="admin-actions">
+                    <a href="{{ url_for('libros.editar', id=libro.id_libro) }}" class="btn-edit">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Editar
+                    </a>
+                    <form action="{{ url_for('libros.eliminar', id=libro.id_libro) }}" method="POST" style="display: inline;" onsubmit="return confirm('¿Estás seguro de eliminar este libro? Esta acción marcará el libro como no disponible.');">
+                        <button type="submit" class="btn-delete">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Eliminar
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Book Information -->
+        <main class="book-info-section">
+            <div class="book-header">
+                <h1 class="book-title">{{ libro.titulo }}</h1>
+                
+                <div class="book-meta-header">
+                    <!-- Authors -->
+                    <div class="meta-group">
+                        <span class="meta-icon">✍️</span>
+                        <div>
+                            <span class="meta-label">Autor(es)</span>
+                            <div class="meta-value">
+                                {% for autor in autores %}
+                                <span>{{ autor.nombres }} {{ autor.apellidos }}</span>
+                                {% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Editorial -->
+                    {% if editorial %}
+                    <div class="meta-group">
+                        <span class="meta-icon">🏢</span>
+                        <div>
+                            <span class="meta-label">Editorial</span>
+                            <div class="meta-value">{{ editorial.nombre }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div class="details-section">
+                <h2>Detalles del Libro</h2>
+                
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">ISBN</span>
+                        <span class="detail-value">{{ libro.isbn }}</span>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Formato</span>
+                        <span class="detail-value">{{ libro.formato }}</span>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Número de Páginas</span>
+                        <span class="detail-value">{{ libro.num_pag }}</span>
+                    </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">Categorías</span>
+                        <div class="detail-categories">
+                            {% for cat in categorias %}
+                            <span class="category-pill">{{ cat.nombre }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if libro.descripcion %}
+            <div class="description-section">
+                <h2>Descripción</h2>
+                <div class="description-content">
+                    {{ libro.descripcion | replace('\n', '<br>') | safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Observations (only for admin) -->
+            {% if current_user.is_authenticated and current_user.tipo_usuario == 'admin' and libro.observaciones %}
+            <div class="observations-section">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    Observaciones (Solo Admin)
+                </h2>
+                <div class="observations-content">
+                    {{ libro.observaciones | replace('\n', '<br>') | safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reviews Section -->
+            <div class="reviews-section">
+                <div class="reviews-header">
+                    <div class="rating-summary">
+                        <div class="rating-display">
+                            <span class="rating-number">{{ "%.1f"|format(calificacion_promedio) }}</span>
+                            <div class="stars-large">
+                                {% for i in range(1, 6) %}
+                                <span class="star {{ 'filled' if i <= calificacion_promedio|round else '' }}">★</span>
+                                {% endfor %}
+                            </div>
+                            <span class="rating-count">{{ total_resenas }} reseña{{ 's' if total_resenas != 1 else '' }}</span>
+                        </div>
+                    </div>
+
+                    {% if current_user.is_authenticated and current_user.tipo_usuario == 'cliente' and not usuario_ya_reseno %}
+                    <button onclick="showReviewModal()" class="btn-write-review">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                        Escribir Reseña
+                    </button>
+                    {% elif current_user.is_authenticated and current_user.tipo_usuario == 'cliente' and usuario_ya_reseno %}
+                    <span class="already-reviewed">✓ Ya has dejado una reseña</span>
+                    {% endif %}
+                </div>
+
+                <!-- Reviews List -->
+                {% if resenas %}
+                <div class="reviews-list">
+                    {% for resena, cliente in resenas %}
+                    <article class="review-card">
+                        <div class="review-header">
+                            <div class="reviewer-info">
+                                <div class="reviewer-avatar">
+                                    {{ cliente.nombres[0] }}{{ cliente.apellidos[0] }}
+                                </div>
+                                <div>
+                                    <h4 class="reviewer-name">{{ cliente.nombres }} {{ cliente.apellidos }}</h4>
+                                    <div class="review-stars">
+                                        {% for i in range(1, 6) %}
+                                        <span class="star {{ 'filled' if i <= resena.calificacion else '' }}">★</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="review-meta">
+                                <span class="review-date">{{ resena.fecha_resena.strftime('%d/%m/%Y') }}</span>
+                                
+                                {% if current_user.is_authenticated and current_user.tipo_usuario == 'cliente' and current_user.id_cliente == resena.id_cliente %}
+                                <button onclick="deleteReview({{ resena.id_resena }})" class="btn-delete-review" title="Eliminar mi reseña">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                                {% endif %}
+
+                                {% if current_user.is_authenticated and current_user.tipo_usuario == 'admin' %}
+                                <button onclick="toggleReviewVisibility({{ resena.id_resena }})" class="btn-toggle-review" title="{{ 'Ocultar reseña' if resena.visible else 'Mostrar reseña' }}">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        {% if resena.visible %}
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                        {% else %}
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                                        {% endif %}
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="review-content">
+                            <h3 class="review-title">{{ resena.titulo }}</h3>
+                            {% if resena.comentario %}
+                            <p class="review-text">{{ resena.comentario }}</p>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-reviews">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    <h3>No hay reseñas todavía</h3>
+                    <p>Sé el primero en dejar una reseña para este libro</p>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div id="reviewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Escribir Reseña</h2>
+            <button onclick="closeReviewModal()" class="modal-close">&times;</button>
+        </div>
+
+        <form id="reviewForm" onsubmit="submitReview(event)">
+            <div class="modal-body">
+                <!-- Star Rating -->
+                <div class="form-group">
+                    <label>Calificación *</label>
+                    <div class="star-rating-input">
+                        <input type="radio" name="calificacion" value="5" id="star5" required>
+                        <label for="star5">★</label>
+                        <input type="radio" name="calificacion" value="4" id="star4">
+                        <label for="star4">★</label>
+                        <input type="radio" name="calificacion" value="3" id="star3">
+                        <label for="star3">★</label>
+                        <input type="radio" name="calificacion" value="2" id="star2">
+                        <label for="star2">★</label>
+                        <input type="radio" name="calificacion" value="1" id="star1">
+                        <label for="star1">★</label>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <div class="form-group">
+                    <label for="titulo">Título de tu reseña *</label>
+                    <input type="text" id="titulo" name="titulo" class="form-input" 
+                           placeholder="Resume tu experiencia en pocas palabras" 
+                           required minlength="5" maxlength="200">
+                </div>
+
+                <!-- Comment -->
+                <div class="form-group">
+                    <label for="comentario">Comentario (opcional)</label>
+                    <textarea id="comentario" name="comentario" class="form-input" rows="5"
+                              placeholder="Comparte más detalles sobre lo que te gustó o no del libro..."
+                              minlength="10"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="closeReviewModal()" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Publicar Reseña</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+:root {
+    --primary: #6366f1;
+    --secondary: #ec4899;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --dark: #1e293b;
+    --text: #334155;
+    --text-light: #64748b;
+    --light: #f8fafc;
+    --border: #e2e8f0;
+}
+
+.book-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    font-size: 0.9rem;
+}
+
+.breadcrumb a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb span {
+    color: var(--text-light);
+}
+
+.breadcrumb svg {
+    color: var(--border);
+}
+
+.book-detail-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 2rem;
+}
+
+/* Cover Section */
+.book-cover-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.cover-container {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.book-cover-image {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.cover-placeholder-large {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: linear-gradient(135deg, #f7fafc, #e2e8f0);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+}
+
+.availability-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.availability-card h3 {
+    margin: 0 0 1.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.stock-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stock-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--light);
+    border-radius: 8px;
+}
+
+.stock-label {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.stock-value {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.stock-value.available {
+    color: var(--success);
+}
+
+.stock-value.unavailable {
+    color: var(--danger);
+}
+
+.availability-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.avail-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.avail-badge.sale {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+}
+
+.avail-badge.loan {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1e3a8a;
+}
+
+.price-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.price-card {
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(236, 72, 153, 0.05));
+    border: 2px solid rgba(99, 102, 241, 0.15);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.price-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.price-amount {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.user-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-add-to-cart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-add-to-cart:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.out-of-stock-msg,
+.info-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.info-message {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+}
+
+.info-message a {
+    color: var(--primary);
+    text-decoration: underline;
+    font-weight: 700;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border);
+}
+
+.btn-edit,
+.btn-delete {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    border: none;
+}
+
+.btn-edit {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+}
+
+.btn-edit:hover {
+    background: rgba(245, 158, 11, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Book Information */
+.book-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.book-header {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.book-title {
+    margin: 0 0 1.5rem 0;
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.3;
+}
+
+.book-meta-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.meta-group {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.meta-icon {
+    font-size: 1.5rem;
+}
+
+.meta-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.meta-value {
+    font-size: 1.05rem;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.details-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.details-section h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.detail-value {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.detail-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.category-pill {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+    color: var(--primary);
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.description-section,
+.observations-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.description-section h2,
+.observations-section h2 {
+    margin: 0 0 1.25rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.description-content,
+.observations-content {
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 1.05rem;
+}
+
+.observations-section {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(245, 158, 11, 0.02));
+    border: 2px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Reviews Section */
+.reviews-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    margin-top: 0;
+}
+
+.reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 2rem;
+}
+
+.rating-summary {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.rating-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rating-number {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.stars-large {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.stars-large .star {
+    font-size: 1.5rem;
+    color: #ddd;
+}
+
+.stars-large .star.filled {
+    color: #fbbf24;
+}
+
+.rating-count {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.btn-write-review {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-write-review:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
+.already-reviewed {
+    padding: 0.875rem 1.75rem;
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+/* Reviews List */
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.review-card {
+    padding: 1.5rem;
+    background: var(--light);
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    transition: all 0.3s;
+}
+
+.review-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.reviewer-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.reviewer-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.reviewer-name {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.review-stars {
+    display: flex;
+    gap: 0.125rem;
+}
+
+.review-stars .star {
+    font-size: 1rem;
+    color: #ddd;
+}
+
+.review-stars .star.filled {
+    color: #fbbf24;
+}
+
+.review-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.review-date {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.btn-delete-review,
+.btn-toggle-review {
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-delete-review:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.btn-toggle-review:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+}
+
+.review-content {
+    margin-top: 1rem;
+}
+
+.review-title {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.review-text {
+    margin: 0;
+    color: var(--text);
+    line-height: 1.7;
+}
+
+.no-reviews {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.no-reviews svg {
+    color: var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.no-reviews h3 {
+    color: var(--dark);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.no-reviews p {
+    color: var(--text-light);
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--text-light);
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    color: var(--danger);
+    transform: scale(1.2);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+textarea.form-input {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Star Rating Input */
+.star-rating-input {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+.star-rating-input input {
+    display: none;
+}
+
+.star-rating-input label {
+    font-size: 2.5rem;
+    color: #ddd;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.star-rating-input label:hover,
+.star-rating-input label:hover ~ label,
+.star-rating-input input:checked ~ label {
+    color: #fbbf24;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary {
+    background: var(--light);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: var(--border);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+    .book-detail-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .book-cover-section {
+        order: 1;
+    }
+    
+    .book-info-section {
+        order: 2;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reviews-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .btn-write-review,
+    .already-reviewed {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 640px) {
+    .book-title {
+        font-size: 1.75rem;
+    }
+    
+    .rating-number {
+        font-size: 2rem;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+    
+    .modal-body,
+    .modal-footer {
+        padding: 1.5rem;
+    }
+}
+</style>
+
+<script>
+async function agregarAlCarrito(libroId, libroTitulo) {
+    try {
+        const response = await fetch(`/prestamos/carrito/agregar/${libroId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            updateCartCount(data.cart_count);
+            
+            // Offer to go to cart
+            setTimeout(() => {
+                if (confirm('Libro agregado al carrito. ¿Deseas ir al carrito ahora?')) {
+                    window.location.href = '/prestamos/carrito';
+                }
+            }, 500);
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al agregar al carrito', 'error');
+    }
+}
+
+function updateCartCount(count) {
+    const cartBadge = document.querySelector('.cart-count');
+    if (cartBadge) {
+        cartBadge.textContent = count;
+        cartBadge.style.display = count > 0 ? 'flex' : 'none';
+        
+        cartBadge.style.animation = 'bounce 0.5s';
+        setTimeout(() => {
+            cartBadge.style.animation = '';
+        }, 500);
+    }
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s;
+        font-weight: 600;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Review Modal Functions
+function showReviewModal() {
+    document.getElementById('reviewModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeReviewModal() {
+    document.getElementById('reviewModal').classList.remove('active');
+    document.getElementById('reviewForm').reset();
+    document.body.style.overflow = '';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('reviewModal');
+    if (event.target === modal) {
+        closeReviewModal();
+    }
+});
+
+// Submit Review
+async function submitReview(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch(`/resenas/libro/{{ libro.id_libro }}/crear`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            closeReviewModal();
+            
+            // Reload page to show new review
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al enviar la reseña', 'error');
+    }
+}
+
+// Delete Review
+async function deleteReview(resenaId) {
+    if (!confirm('¿Estás seguro de eliminar tu reseña?')) return;
+    
+    try {
+        const response = await fetch(`/resenas/eliminar/${resenaId}`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al eliminar la reseña', 'error');
+    }
+}
+
+// Toggle Review Visibility (Admin only)
+async function toggleReviewVisibility(resenaId) {
+    try {
+        const response = await fetch(`/resenas/toggle-visibility/${resenaId}`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al cambiar visibilidad', 'error');
+    }
+}
+</script>
+{% endblock %}

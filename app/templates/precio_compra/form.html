@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if precio else 'Nuevo' }} Precio de Compra - Sistema Biblioteca{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('precio_compra.listar') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>{{ 'Editar' if precio else 'Nuevo' }} Precio de Compra</h1>
+                <p class="subtitle">Configure el precio de compra para la editorial</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <div class="form-card">
+            <form method="POST" id="precioForm">
+                {% if precio %}
+                    <!-- EDIT MODE: Show book and publisher as read-only -->
+                    <div class="readonly-section">
+                        <div class="readonly-group">
+                            <label>Libro</label>
+                            <div class="readonly-value">
+                                <div class="libro-display">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                    </svg>
+                                    <div>
+                                        <strong>{{ precio.Libros_.titulo }}</strong>
+                                        <small>ISBN: {{ precio.Libros_.isbn }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="readonly-group">
+                            <label>Editorial</label>
+                            <div class="readonly-value">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 21h18"></path>
+                                    <path d="M5 21V7l8-4v18"></path>
+                                    <path d="M19 21V11l-6-4"></path>
+                                </svg>
+                                {{ precio.Editoriales_.nombre }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="precioCompraInput">
+                            Precio de Compra 
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-with-prefix">
+                            <span class="input-prefix">L</span>
+                            <input type="number" step="0.01" name="precio_compra" 
+                                   class="form-input with-prefix" id="precioCompraInput"
+                                   value="{{ '%.2f'|format(precio.precio_compra) }}" 
+                                   required min="0.01">
+                        </div>
+                        <small class="form-help">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            Este es el precio al que compra el libro a la editorial
+                        </small>
+                        <input type="hidden" id="precioVenta" value="{{ precio.Libros_.precio_venta }}">
+                    </div>
+
+                {% else %}
+                    <!-- CREATE MODE: Select publisher first, then books -->
+                    <div class="info-alert">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <div>
+                            <strong>Instrucciones:</strong> Primero seleccione la editorial, luego podrá elegir entre los libros que pertenecen a esa editorial.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_editorial">
+                            Editorial 
+                            <span class="required">*</span>
+                        </label>
+                        <select name="id_editorial" id="id_editorial" class="form-select" required>
+                            <option value="">-- Seleccione una editorial primero --</option>
+                            {% for editorial in editoriales %}
+                                <option value="{{ editorial.id_editorial }}">
+                                    {{ editorial.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-help">Seleccione la editorial proveedora</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_libro">
+                            Libro 
+                            <span class="required">*</span>
+                        </label>
+                        <select name="id_libro" id="id_libro" class="form-select" required disabled>
+                            <option value="">-- Primero seleccione una editorial --</option>
+                        </select>
+                        <div class="loading-books">
+                            <div class="spinner"></div>
+                            Cargando libros...
+                        </div>
+                        <small class="form-help">Solo se muestran libros de la editorial seleccionada</small>
+                    </div>
+
+                    <!-- Book info display when selected -->
+                    <div id="libroInfo" class="info-badge d-none">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        <strong>Precio de Venta del Libro:</strong> 
+                        <span id="precioVentaDisplay">L 0.00</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="precioCompraInput">
+                            Precio de Compra a Editorial 
+                            <span class="required">*</span>
+                        </label>
+                        <div class="input-with-prefix">
+                            <span class="input-prefix">L</span>
+                            <input type="number" step="0.01" name="precio_compra" 
+                                   class="form-input with-prefix" id="precioCompraInput"
+                                   placeholder="0.00" required min="0.01">
+                        </div>
+                        <div class="suggested-price">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            Sugerido (50% del precio de venta): <strong id="precioSugerido">L 0.00</strong>
+                            <button type="button" class="btn-link" id="usarSugerido" disabled>Usar este precio</button>
+                        </div>
+                        <input type="hidden" id="precioVenta" value="0">
+                    </div>
+                {% endif %}
+
+                <!-- Margin Preview (common for both modes) -->
+                <div id="marginPreview" class="margin-preview d-none">
+                    <div class="margin-grid">
+                        <div class="margin-card">
+                            <small>Precio Venta</small>
+                            <strong class="price-venta" id="displayVenta">L 0.00</strong>
+                        </div>
+                        <div class="margin-card">
+                            <small>Precio Compra</small>
+                            <strong class="price-compra" id="displayCompra">L 0.00</strong>
+                        </div>
+                        <div class="margin-card margin-result" id="marginBox">
+                            <small>Margen de Ganancia</small>
+                            <strong id="displayMargen">0%</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                    <textarea name="observaciones" id="observaciones" 
+                              class="form-textarea" rows="3" 
+                              placeholder="Notas adicionales sobre este precio (descuentos especiales, condiciones, etc.)...">{{ precio.observaciones if precio else '' }}</textarea>
+                </div>
+
+                <div class="warning-alert">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div>
+                        <strong>Importante:</strong> Solo puede existir un precio activo por combinación libro-editorial.
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="{{ url_for('precio_compra.listar') }}" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" {% if not precio %}disabled{% endif %}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        {{ 'Actualizar' if precio else 'Guardar' }} Precio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Form Container */
+.form-container { max-width: 800px; margin: 0 auto; }
+.form-card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* Readonly Section */
+.readonly-section { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #e2e8f0; }
+.readonly-group label { display: block; font-weight: 600; color: #4a5568; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.readonly-value { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 0.75rem; }
+.libro-display { display: flex; align-items: center; gap: 0.75rem; }
+.libro-display svg { color: #667eea; flex-shrink: 0; }
+.libro-display div { display: flex; flex-direction: column; }
+.libro-display strong { color: #1a202c; font-size: 0.95rem; }
+.libro-display small { color: #718096; font-size: 0.85rem; margin-top: 0.25rem; }
+.readonly-value svg { color: #667eea; flex-shrink: 0; }
+
+/* Form Groups */
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; font-weight: 600; color: #4a5568; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.required { color: #dc3545; margin-left: 0.25rem; }
+
+/* Inputs */
+.form-input, .form-select, .form-textarea { 
+    width: 100%; 
+    padding: 0.75rem; 
+    border: 2px solid #e2e8f0; 
+    border-radius: 8px; 
+    font-size: 0.95rem; 
+    transition: border 0.2s;
+    font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { 
+    outline: none; 
+    border-color: #667eea; 
+}
+.form-select { cursor: pointer; background: white; }
+.form-select:disabled { background: #f7fafc; cursor: not-allowed; opacity: 0.6; }
+.form-textarea { resize: vertical; min-height: 100px; }
+
+/* Input with Prefix */
+.input-with-prefix { position: relative; }
+.input-prefix { 
+    position: absolute; 
+    left: 1rem; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    font-weight: 600; 
+    color: #667eea; 
+    pointer-events: none;
+}
+.form-input.with-prefix { padding-left: 2.5rem; }
+
+/* Form Help */
+.form-help { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.35rem; 
+    color: #718096; 
+    font-size: 0.85rem; 
+    margin-top: 0.5rem; 
+}
+.form-help svg { color: #a0aec0; flex-shrink: 0; }
+
+/* Alerts */
+.info-alert, .warning-alert { 
+    display: flex; 
+    gap: 0.75rem; 
+    padding: 1rem; 
+    border-radius: 8px; 
+    margin-bottom: 1.5rem; 
+    align-items: start;
+}
+.info-alert { background: linear-gradient(135deg, #e6f3ff 0%, #f0f4ff 100%); border-left: 4px solid #667eea; }
+.info-alert svg { color: #667eea; flex-shrink: 0; }
+.info-alert div { color: #4a5568; line-height: 1.6; }
+.warning-alert { background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%); border-left: 4px solid #ffc107; }
+.warning-alert svg { color: #856404; flex-shrink: 0; }
+.warning-alert div { color: #856404; line-height: 1.6; }
+
+/* Info Badge */
+.info-badge { 
+    background: linear-gradient(135deg, #d4f4dd 0%, #e6f9ea 100%); 
+    padding: 1rem; 
+    border-radius: 8px; 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #28a745;
+}
+.info-badge svg { color: #1e7e34; flex-shrink: 0; }
+.info-badge strong { color: #1e7e34; }
+
+/* Suggested Price */
+.suggested-price { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-top: 0.5rem; 
+    padding: 0.75rem; 
+    background: #f7fafc; 
+    border-radius: 6px; 
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+.suggested-price svg { color: #667eea; flex-shrink: 0; }
+.suggested-price strong { color: #667eea; }
+
+/* Loading Books */
+.loading-books { 
+    display: none; 
+    align-items: center; 
+    gap: 0.75rem; 
+    padding: 1rem; 
+    background: #f7fafc; 
+    border-radius: 8px; 
+    margin-top: 0.5rem;
+    color: #667eea;
+}
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Margin Preview */
+.margin-preview { 
+    background: linear-gradient(135deg, #f7fafc 0%, #e2e8f0 100%); 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    margin-bottom: 1.5rem; 
+}
+.margin-grid { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 1rem; 
+}
+.margin-card { 
+    background: white; 
+    border: 2px solid #e2e8f0; 
+    border-radius: 8px; 
+    padding: 1rem; 
+    text-align: center; 
+}
+.margin-card small { 
+    display: block; 
+    color: #718096; 
+    font-size: 0.85rem; 
+    margin-bottom: 0.5rem; 
+}
+.margin-card strong { 
+    display: block; 
+    font-size: 1.25rem; 
+    font-weight: 700; 
+}
+.price-venta { color: #17a2b8; }
+.price-compra { color: #28a745; }
+.margin-result { border: 2px solid #e2e8f0; }
+.margin-result.success { background: #d4f4dd; border-color: #28a745; }
+.margin-result.success strong { color: #1e7e34; }
+.margin-result.warning { background: #fff3cd; border-color: #ffc107; }
+.margin-result.warning strong { color: #856404; }
+.margin-result.danger { background: #ffe0e0; border-color: #dc3545; }
+.margin-result.danger strong { color: #c41e3a; }
+
+/* Buttons */
+.btn { 
+    padding: 0.75rem 1.5rem; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    text-decoration: none; 
+    transition: all 0.2s; 
+    font-size: 0.95rem; 
+}
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-link { 
+    background: none; 
+    border: none; 
+    color: #667eea; 
+    font-weight: 600; 
+    cursor: pointer; 
+    text-decoration: none; 
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+}
+.btn-link:hover:not(:disabled) { text-decoration: underline; }
+.btn-link:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Form Actions */
+.form-actions { 
+    display: flex; 
+    justify-content: space-between; 
+    padding-top: 1.5rem; 
+    margin-top: 1.5rem; 
+    border-top: 2px solid #e2e8f0; 
+}
+
+/* Utility */
+.d-none { display: none !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; }
+    .readonly-section { grid-template-columns: 1fr; }
+    .margin-grid { grid-template-columns: 1fr; }
+    .form-actions { flex-direction: column-reverse; gap: 0.75rem; }
+    .form-actions .btn { width: 100%; justify-content: center; }
+}
+</style>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editorialSelect = document.getElementById('id_editorial');
+    const libroSelect = document.getElementById('id_libro');
+    const libroInfo = document.getElementById('libroInfo');
+    const precioVentaInput = document.getElementById('precioVenta');
+    const precioVentaDisplay = document.getElementById('precioVentaDisplay');
+    const precioCompraInput = document.getElementById('precioCompraInput');
+    const precioSugeridoSpan = document.getElementById('precioSugerido');
+    const usarSugeridoBtn = document.getElementById('usarSugerido');
+    const marginPreview = document.getElementById('marginPreview');
+    const loadingBooks = document.querySelector('.loading-books');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Calculate and display margin
+    function actualizarMargen() {
+        const precioVenta = parseFloat(precioVentaInput.value) || 0;
+        const precioCompra = parseFloat(precioCompraInput.value) || 0;
+
+        if (precioVenta > 0 && precioCompra > 0) {
+            const margen = ((precioVenta - precioCompra) / precioVenta * 100);
+            
+            document.getElementById('displayVenta').textContent = `L ${precioVenta.toFixed(2)}`;
+            document.getElementById('displayCompra').textContent = `L ${precioCompra.toFixed(2)}`;
+            document.getElementById('displayMargen').textContent = `${margen.toFixed(1)}%`;
+
+            const marginBox = document.getElementById('marginBox');
+            marginBox.className = 'margin-card margin-result';
+            
+            if (margen >= 50) {
+                marginBox.classList.add('success');
+            } else if (margen >= 30) {
+                marginBox.classList.add('warning');
+            } else {
+                marginBox.classList.add('danger');
+            }
+
+            marginPreview.classList.remove('d-none');
+        } else {
+            marginPreview.classList.add('d-none');
+        }
+    }
+
+    // Load books when editorial is selected (CREATE mode)
+    if (editorialSelect) {
+        editorialSelect.addEventListener('change', async function() {
+            const editorialId = this.value;
+            
+            // Reset libro select
+            libroSelect.innerHTML = '<option value="">-- Seleccione un libro --</option>';
+            libroSelect.disabled = true;
+            precioVentaInput.value = 0;
+            if (precioVentaDisplay) precioVentaDisplay.textContent = 'L 0.00';
+            if (libroInfo) libroInfo.classList.add('d-none');
+            precioCompraInput.value = '';
+            if (precioSugeridoSpan) precioSugeridoSpan.textContent = 'L 0.00';
+            if (usarSugeridoBtn) usarSugeridoBtn.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+            marginPreview.classList.add('d-none');
+            
+            if (!editorialId) {
+                return;
+            }
+            
+            // Show loading
+            if (loadingBooks) loadingBooks.style.display = 'flex';
+            
+            try {
+                const response = await fetch(`/precios-compra/api/libros-editorial/${editorialId}`);
+                const libros = await response.json();
+                
+                if (loadingBooks) loadingBooks.style.display = 'none';
+                
+                if (libros.length === 0) {
+                    libroSelect.innerHTML = '<option value="">No hay libros para esta editorial</option>';
+                    alert('⚠️ Esta editorial no tiene libros asociados. Asegúrese de asociar libros a la editorial primero.');
+                    return;
+                }
+                
+                libros.forEach(libro => {
+                    const option = document.createElement('option');
+                    option.value = libro.id_libro;
+                    option.textContent = `${libro.titulo} (ISBN: ${libro.isbn})`;
+                    option.dataset.precioVenta = libro.precio_venta;
+                    libroSelect.appendChild(option);
+                });
+                
+                libroSelect.disabled = false;
+                
+            } catch (error) {
+                console.error('Error al cargar libros:', error);
+                if (loadingBooks) loadingBooks.style.display = 'none';
+                alert('Error al cargar los libros de la editorial');
+            }
+        });
+    }
+
+    // Update price when book is selected (CREATE mode)
+    if (libroSelect) {
+        libroSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const precioVenta = parseFloat(selectedOption.dataset.precioVenta) || 0;
+            
+            precioVentaInput.value = precioVenta;
+            
+            if (precioVentaDisplay && libroInfo) {
+                precioVentaDisplay.textContent = `L ${precioVenta.toFixed(2)}`;
+                libroInfo.classList.remove('d-none');
+            }
+            
+            const precioSugerido = precioVenta * 0.5;
+            if (precioSugeridoSpan) {
+                precioSugeridoSpan.textContent = `L ${precioSugerido.toFixed(2)}`;
+            }
+            
+            if (usarSugeridoBtn) {
+                usarSugeridoBtn.disabled = false;
+            }
+            
+            if (submitBtn && this.value) {
+                submitBtn.disabled = false;
+            }
+            
+            actualizarMargen();
+        });
+    }
+
+    // Use suggested price button
+    if (usarSugeridoBtn) {
+        usarSugeridoBtn.addEventListener('click', function() {
+            const precioVenta = parseFloat(precioVentaInput.value) || 0;
+            const precioSugerido = precioVenta * 0.5;
+            precioCompraInput.value = precioSugerido.toFixed(2);
+            actualizarMargen();
+        });
+    }
+
+    // Update margin when purchase price changes
+    if (precioCompraInput) {
+        precioCompraInput.addEventListener('input', actualizarMargen);
+    }
+
+    // Initial calculation (for EDIT mode)
+    actualizarMargen();
+});
+</script>
+{% endblock %}
+{% endblock %}

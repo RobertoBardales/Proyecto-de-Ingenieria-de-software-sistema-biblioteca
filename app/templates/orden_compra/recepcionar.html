@@ -1,0 +1,636 @@
+{% extends "base.html" %}
+
+{% block title %}Recepcionar Orden {{ orden.numero_orden }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('orden_compra.ver', id=orden.id_orden) }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Recepcionar Productos</h1>
+                <p class="subtitle">Orden {{ orden.numero_orden }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="info-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div>
+            <strong>Importante:</strong>
+            <ul>
+                <li>La suma de "Recibido" + "Rechazado" no puede exceder el "Pendiente"</li>
+                <li>Los productos rechazados o dañados/defectuosos <strong>requieren observaciones</strong></li>
+                <li>Solo los productos marcados como "Bueno" se agregarán al inventario</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Order Info Card -->
+    <div class="info-card">
+        <div class="info-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <h3>Información de la Orden</h3>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Editorial</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21h18"></path>
+                        <path d="M5 21V7l8-4v18"></path>
+                        <path d="M19 21V11l-6-4"></path>
+                    </svg>
+                    {{ orden.Editoriales_.nombre }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Sucursal Destino</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {{ orden.Sucursales_.nombre }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Total de la Orden</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    <strong class="total-amount">L {{ "{:,.2f}".format(orden.total) }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('orden_compra.recepcionar', id=orden.id_orden) }}" id="formRecepcion">
+        
+        <!-- Reception Data Card -->
+        <div class="form-card">
+            <div class="form-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <h3>Datos de Recepción</h3>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="numero_guia">Número de Guía de Envío</label>
+                    <input type="text" name="numero_guia" id="numero_guia" class="form-input" placeholder="Ej: GUIA-2024-12345">
+                </div>
+
+                <div class="form-group">
+                    <label for="estado_recepcion">
+                        Estado de Recepción 
+                        <span class="required">*</span>
+                    </label>
+                    <select name="estado_recepcion" id="estado_recepcion" class="form-select" required>
+                        {% for estado in estados_recepcion %}
+                            <option value="{{ estado }}" {% if estado == 'Aceptado' %}selected{% endif %}>{{ estado }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="observaciones_recepcion">Observaciones Generales</label>
+                <textarea name="observaciones_recepcion" id="observaciones_recepcion" class="form-textarea" rows="3" 
+                          placeholder="Comentarios generales sobre la recepción (estado del paquete, tiempo de entrega, etc.)"></textarea>
+            </div>
+        </div>
+
+        <!-- Products Table Card -->
+        <div class="table-card">
+            <div class="table-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <h3>Detalle de Productos Recibidos</h3>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Libro</th>
+                            <th style="width: 8%;">Formato</th>
+                            <th style="width: 8%;">Ordenado</th>
+                            <th style="width: 8%;" class="col-recibido">Ya Recibido</th>
+                            <th style="width: 8%;" class="col-pendiente">Pendiente</th>
+                            <th style="width: 10%;">Recibido Ahora</th>
+                            <th style="width: 10%;">Rechazado Ahora</th>
+                            <th style="width: 10%;">Estado *</th>
+                            <th style="width: 23%;">Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in orden.Detalle_Orden_Compra %}
+                        {% set pendiente = detalle.cantidad_ordenada - detalle.cantidad_recibida %}
+                        {% if pendiente > 0 %}
+                        <tr data-linea="{{ loop.index0 }}" data-pendiente="{{ pendiente }}">
+                            <td>
+                                <div class="libro-cell">
+                                    <strong>{{ detalle.Libros_.titulo }}</strong>
+                                    <small>ISBN: {{ detalle.Libros_.isbn }}</small>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-info">{{ detalle.formato }}</span></td>
+                            <td class="text-center">{{ detalle.cantidad_ordenada }}</td>
+                            <td class="text-center text-success">{{ detalle.cantidad_recibida }}</td>
+                            <td class="text-center text-primary">{{ pendiente }}</td>
+                            <td>
+                                <input type="hidden" name="detalle_id[]" value="{{ detalle.id_detalle_orden }}">
+                                <input type="number" 
+                                       name="cantidad_recibida[]" 
+                                       class="form-input-small cant-recibida"
+                                       min="0" 
+                                       max="{{ pendiente }}" 
+                                       value="0"
+                                       data-linea="{{ loop.index0 }}"
+                                       oninput="validarLinea({{ loop.index0 }}, {{ pendiente }})">
+                            </td>
+                            <td>
+                                <input type="number" 
+                                       name="cantidad_rechazada[]" 
+                                       class="form-input-small cant-rechazada"
+                                       min="0" 
+                                       max="{{ pendiente }}" 
+                                       value="0"
+                                       data-linea="{{ loop.index0 }}"
+                                       oninput="validarLinea({{ loop.index0 }}, {{ pendiente }})">
+                            </td>
+                            <td>
+                                <select name="estado_producto[]" class="form-select-small estado-producto" data-linea="{{ loop.index0 }}" onchange="validarLinea({{ loop.index0 }}, {{ pendiente }})">
+                                    {% for estado in estados_producto %}
+                                        <option value="{{ estado }}" {% if estado == 'Bueno' %}selected{% endif %}>{{ estado }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" 
+                                       name="observaciones_detalle[]" 
+                                       class="form-input-small observaciones"
+                                       data-linea="{{ loop.index0 }}"
+                                       placeholder="Requerido para rechazos o daños"
+                                       oninput="validarLinea({{ loop.index0 }}, {{ pendiente }})">
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="warning-box" id="warningTotal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <div id="warningMessage"></div>
+            </div>
+        </div>
+
+        <div class="form-actions-center">
+            <button type="submit" id="btnSubmit" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Registrar Recepción
+            </button>
+            <a href="{{ url_for('orden_compra.ver', id=orden.id_orden) }}" class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Alerts */
+.info-alert { 
+    display: flex; 
+    gap: 0.75rem; 
+    padding: 1rem 1.25rem; 
+    border-radius: 12px; 
+    margin-bottom: 1.5rem; 
+    align-items: start;
+    background: linear-gradient(135deg, #e6f3ff 0%, #f0f4ff 100%);
+    border-left: 4px solid #667eea;
+}
+.info-alert svg { color: #667eea; flex-shrink: 0; margin-top: 0.25rem; }
+.info-alert div { color: #4a5568; line-height: 1.6; }
+.info-alert strong { display: block; margin-bottom: 0.5rem; color: #667eea; }
+.info-alert ul { margin: 0.5rem 0 0 1.25rem; padding: 0; }
+.info-alert li { margin-bottom: 0.35rem; }
+
+/* Info Card */
+.info-card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    margin-bottom: 1.5rem;
+}
+.info-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-bottom: 1.5rem; 
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.info-header svg { color: #667eea; }
+.info-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+.info-grid { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 1.25rem; 
+}
+.info-item label { 
+    display: block; 
+    font-size: 0.85rem; 
+    font-weight: 600; 
+    color: #718096; 
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-value { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    padding: 0.75rem; 
+    background: #f7fafc; 
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.info-value svg { color: #667eea; flex-shrink: 0; }
+.total-amount { 
+    font-size: 1.15rem; 
+    color: #667eea; 
+}
+
+/* Form Card */
+.form-card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    margin-bottom: 1.5rem;
+}
+.form-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-bottom: 1.5rem; 
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.form-header svg { color: #667eea; }
+.form-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+/* Form Elements */
+.form-row { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 1rem; 
+    margin-bottom: 1rem;
+}
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { 
+    display: block; 
+    font-weight: 600; 
+    color: #4a5568; 
+    font-size: 0.9rem; 
+    margin-bottom: 0.5rem; 
+}
+.required { color: #dc3545; margin-left: 0.25rem; }
+
+.form-input, .form-select, .form-textarea { 
+    width: 100%; 
+    padding: 0.75rem; 
+    border: 2px solid #e2e8f0; 
+    border-radius: 8px; 
+    font-size: 0.95rem; 
+    transition: border 0.2s;
+    font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { 
+    outline: none; 
+    border-color: #667eea; 
+}
+.form-select { cursor: pointer; background: white; }
+.form-textarea { resize: vertical; }
+
+.form-input-small, .form-select-small { 
+    width: 100%; 
+    padding: 0.5rem; 
+    border: 2px solid #e2e8f0; 
+    border-radius: 6px; 
+    font-size: 0.9rem; 
+    transition: border 0.2s;
+}
+.form-input-small:focus, .form-select-small:focus { 
+    outline: none; 
+    border-color: #667eea; 
+}
+.form-select-small { cursor: pointer; background: white; }
+
+/* Table Card */
+.table-card { 
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    overflow: hidden; 
+    margin-bottom: 1.5rem;
+}
+.table-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    padding: 1.5rem; 
+    border-bottom: 2px solid #e2e8f0;
+}
+.table-header svg { color: #667eea; }
+.table-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+.table-responsive { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.85rem; }
+.data-table td { padding: 0.75rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.col-recibido { color: #d4f4dd !important; }
+.col-pendiente { color: #e6f3ff !important; }
+
+.libro-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+.libro-cell strong { color: #1a202c; }
+.libro-cell small { color: #718096; font-size: 0.85rem; }
+
+.text-center { text-align: center; }
+.text-success { color: #28a745; font-weight: 600; }
+.text-primary { color: #667eea; font-weight: 600; font-size: 1.05em; }
+
+/* Validation States */
+.validation-error { 
+    border-color: #dc3545 !important; 
+    background: #fff5f5 !important; 
+}
+.row-error { background: #fff5f5 !important; }
+
+/* Badges */
+.badge { 
+    padding: 0.35rem 0.75rem; 
+    border-radius: 12px; 
+    font-size: 0.85rem; 
+    font-weight: 500;
+    display: inline-block;
+}
+.badge-info { background: #e6f3ff; color: #0066cc; }
+
+/* Warning Box */
+.warning-box { 
+    display: none;
+    gap: 0.75rem; 
+    padding: 1rem 1.25rem; 
+    margin: 1.5rem;
+    border-radius: 8px; 
+    background: linear-gradient(135deg, #ffe0e0 0%, #fff0f0 100%);
+    border-left: 4px solid #dc3545;
+    align-items: start;
+}
+.warning-box.show { display: flex; }
+.warning-box svg { color: #dc3545; flex-shrink: 0; margin-top: 0.1rem; }
+.warning-box div { color: #c41e3a; line-height: 1.6; }
+
+/* Buttons */
+.btn { 
+    padding: 0.75rem 1.5rem; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    text-decoration: none; 
+    transition: all 0.2s; 
+    font-size: 0.95rem; 
+}
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+
+.form-actions-center { 
+    display: flex; 
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem; 
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-left { flex-direction: column; align-items: flex-start; }
+    .info-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.5rem; }
+    .form-actions-center { flex-direction: column; }
+}
+</style>
+
+<script>
+function validarLinea(lineaIndex, pendiente) {
+    const row = document.querySelector(`tr[data-linea="${lineaIndex}"]`);
+    if (!row) return true;
+    
+    const cantRecibida = parseInt(row.querySelector('.cant-recibida').value) || 0;
+    const cantRechazada = parseInt(row.querySelector('.cant-rechazada').value) || 0;
+    const total = cantRecibida + cantRechazada;
+    const estado = row.querySelector('.estado-producto').value;
+    const observaciones = row.querySelector('.observaciones').value.trim();
+    
+    // Clear previous errors for this row
+    row.classList.remove('row-error');
+    row.querySelector('.cant-recibida').classList.remove('validation-error');
+    row.querySelector('.cant-rechazada').classList.remove('validation-error');
+    row.querySelector('.observaciones').classList.remove('validation-error');
+    
+    let errorEnLinea = false;
+    let mensajeError = '';
+    
+    // Validación 1: No exceder pendiente
+    if (total > pendiente) {
+        row.classList.add('row-error');
+        row.querySelector('.cant-recibida').classList.add('validation-error');
+        row.querySelector('.cant-rechazada').classList.add('validation-error');
+        errorEnLinea = true;
+        mensajeError = `"${row.cells[0].textContent.trim()}" excede el pendiente (Total: ${total}, Pendiente: ${pendiente})`;
+    }
+    
+    // Validación 2: Observaciones requeridas SOLO si hay movimiento
+    // Y el movimiento incluye rechazo O productos dañados/defectuosos
+    if (total > 0) {  // Solo validar si hay algún movimiento en esta línea
+        const requiereObservaciones = cantRechazada > 0 || estado === 'Dañado' || estado === 'Defectuoso';
+        
+        if (requiereObservaciones && observaciones.length < 5) {
+            row.querySelector('.observaciones').classList.add('validation-error');
+            errorEnLinea = true;
+            
+            if (mensajeError) mensajeError += ' | ';
+            
+            if (cantRechazada > 0) {
+                mensajeError += `"${row.cells[0].textContent.trim()}" requiere observaciones (productos rechazados)`;
+            } else {
+                mensajeError += `"${row.cells[0].textContent.trim()}" requiere observaciones (productos ${estado.toLowerCase()}s)`;
+            }
+        }
+    }
+    
+    // Actualizar mensaje de error global
+    validarFormularioCompleto();
+    
+    return !errorEnLinea;
+}
+
+function validarFormularioCompleto() {
+    const todasLasLineas = document.querySelectorAll('tr[data-linea]');
+    const warning = document.getElementById('warningTotal');
+    const warningMsg = document.getElementById('warningMessage');
+    const btnSubmit = document.getElementById('btnSubmit');
+    
+    let errores = [];
+    let hayMovimiento = false;
+    
+    todasLasLineas.forEach(row => {
+        const cRecibida = parseInt(row.querySelector('.cant-recibida').value) || 0;
+        const cRechazada = parseInt(row.querySelector('.cant-rechazada').value) || 0;
+        const pend = parseInt(row.dataset.pendiente);
+        const totalLinea = cRecibida + cRechazada;
+        const estado = row.querySelector('.estado-producto').value;
+        const obs = row.querySelector('.observaciones').value.trim();
+        
+        if (totalLinea > 0) {
+            hayMovimiento = true;
+            
+            // Error: Excede pendiente
+            if (totalLinea > pend) {
+                errores.push(`Línea "${row.cells[0].textContent.trim()}" excede el pendiente`);
+            }
+            
+            // Error: Falta observaciones
+            const requiereObs = cRechazada > 0 || estado === 'Dañado' || estado === 'Defectuoso';
+            if (requiereObs && obs.length < 5) {
+                errores.push(`Línea "${row.cells[0].textContent.trim()}" requiere observaciones`);
+            }
+        }
+    });
+    
+    // Mostrar errores
+    if (errores.length > 0) {
+        warningMsg.innerHTML = errores.join('<br>');
+        warning.classList.add('show');
+        btnSubmit.disabled = true;
+        return false;
+    } else {
+        warning.classList.remove('show');
+        btnSubmit.disabled = false;
+        return true;
+    }
+}
+
+// Validar formulario al enviar
+document.getElementById('formRecepcion').addEventListener('submit', function(e) {
+    const lineas = document.querySelectorAll('tr[data-linea]');
+    let hayMovimiento = false;
+    
+    lineas.forEach(row => {
+        const cantRecibida = parseInt(row.querySelector('.cant-recibida').value) || 0;
+        const cantRechazada = parseInt(row.querySelector('.cant-rechazada').value) || 0;
+        
+        if (cantRecibida > 0 || cantRechazada > 0) {
+            hayMovimiento = true;
+        }
+    });
+    
+    if (!hayMovimiento) {
+        e.preventDefault();
+        alert('❌ Debe recepcionar o rechazar al menos un producto');
+        return false;
+    }
+    
+    if (!validarFormularioCompleto()) {
+        e.preventDefault();
+        alert('❌ Por favor corrija los errores de validación antes de continuar');
+        return false;
+    }
+    
+    // Confirmar antes de enviar
+    return confirm('¿Está seguro de registrar esta recepción?\n\nEsta acción crearáun registro de recepción y actualizará el estado de la orden.');
+});
+// Validación inicial al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+validarFormularioCompleto();
+});
+</script>
+{% endblock %}

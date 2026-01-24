@@ -5,7 +5,7 @@ from models import MensajesForos, TemasForos
 from app import db
 from datetime import datetime
 
-bp = Blueprint('mensajes_foros', __name__, url_prefix='/mensajes_foros')
+bp = Blueprint('mensajes_foros', __name__, url_prefix='/mensajes-foros')
 
 def get_next_id():
     """Obtiene el siguiente ID disponible para MensajesForos"""
@@ -21,6 +21,11 @@ def nuevo():
     try:
         id_tema = int(request.form.get('id_tema'))
         contenido = request.form.get('contenido', '').strip()
+        
+        # Clean excessive spaces while preserving line breaks
+        lines = contenido.split('\n')
+        cleaned_lines = [' '.join(line.split()) for line in lines]
+        contenido = '\n'.join(cleaned_lines)
         
         # Validar que el tema existe
         tema = db.session.get(TemasForos, id_tema)
@@ -61,6 +66,54 @@ def nuevo():
     except Exception as e:
         db.session.rollback()
         flash(f'Error al publicar respuesta: {str(e)}', 'error')
+    
+    return redirect(url_for('temas_foros.ver', id=id_tema))
+
+@bp.route('/editar/<int:id>', methods=['POST'])
+@login_required
+def editar(id):
+    """Edita un mensaje existente (solo autor o admin)"""
+    try:
+        mensaje = db.session.get(MensajesForos, id)
+        
+        if not mensaje or not mensaje.visible:
+            flash('Mensaje no encontrado', 'error')
+            return redirect(url_for('temas_foros.listar'))
+        
+        # Verificar permisos
+        if mensaje.id_cliente != current_user.id_cliente and current_user.tipo_usuario != 'admin':
+            flash('No tienes permisos para editar este mensaje', 'error')
+            return redirect(url_for('temas_foros.ver', id=mensaje.id_tema))
+        
+        contenido = request.form.get('contenido', '').strip()
+        
+        # Clean excessive spaces while preserving line breaks
+        lines = contenido.split('\n')
+        cleaned_lines = [' '.join(line.split()) for line in lines]
+        contenido = '\n'.join(cleaned_lines)
+        
+        # Validar contenido
+        if len(contenido) < 5:
+            flash('La respuesta debe tener al menos 5 caracteres', 'error')
+            return redirect(url_for('temas_foros.ver', id=mensaje.id_tema))
+        
+        if len(contenido) > 2000:
+            flash('La respuesta no puede exceder 2000 caracteres', 'error')
+            return redirect(url_for('temas_foros.ver', id=mensaje.id_tema))
+        
+        id_tema = mensaje.id_tema
+        
+        # Actualizar mensaje
+        mensaje.contenido = contenido
+        mensaje.fecha_edicion = datetime.now()
+        
+        db.session.commit()
+        
+        flash('✅ Mensaje actualizado exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al editar mensaje: {str(e)}', 'error')
     
     return redirect(url_for('temas_foros.ver', id=id_tema))
 

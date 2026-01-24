@@ -3,362 +3,735 @@
 {% block title %}Foros de Discusión{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="page-header">
-        <div>
-            <h1>💬 Foros de Discusión</h1>
-            <p class="subtitle">Comparte opiniones, recomendaciones y discute sobre libros</p>
+<div class="forum-container">
+    <!-- Hero Section -->
+    <div class="forum-hero">
+        <div class="hero-content">
+            <h1>💬 Comunidad de Lectores</h1>
+            <p>Comparte tus opiniones, descubre nuevos libros y conecta con otros lectores</p>
         </div>
-        <a href="{{ url_for('temas_foros.nuevo') }}" class="btn btn-primary">
-            ➕ Nuevo Tema
+        <a href="{{ url_for('temas_foros.nuevo') }}" class="btn-create-topic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Crear Tema
         </a>
     </div>
 
-    <!-- Filtros y búsqueda -->
-    <div class="filters-container">
-        <form method="GET" class="filters-form">
-            <div class="filter-group">
-                <!-- Búsqueda -->
-                <input type="text" 
-                       name="busqueda" 
-                       placeholder="🔍 Buscar temas..." 
-                       class="form-input"
-                       value="{{ busqueda_actual }}">
-                
-                <!-- Categoría -->
-                <select name="categoria" class="form-input">
-                    <option value="">📂 Todas las categorías</option>
+    <div class="forum-layout">
+        <!-- Sidebar -->
+        <aside class="forum-sidebar">
+            <!-- Quick Stats -->
+            <div class="sidebar-card stats-card">
+                <h3>📊 Estadísticas</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Temas activos</span>
+                    <span class="stat-value">{{ temas|length }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Respuestas totales</span>
+                    <span class="stat-value">{{ mensajes_count.values()|sum }}</span>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="sidebar-card">
+                <h3>📂 Categorías</h3>
+                <div class="category-list">
+                    <a href="{{ url_for('temas_foros.listar', orden=orden_actual) }}" 
+                       class="category-item {{ 'active' if not categoria_actual else '' }}">
+                        <span class="category-icon">📚</span>
+                        <span>Todas</span>
+                    </a>
                     {% for cat in categorias %}
-                    <option value="{{ cat }}" {{ 'selected' if cat == categoria_actual else '' }}>
-                        {{ cat }}
-                    </option>
+                    <a href="{{ url_for('temas_foros.listar', categoria=cat, orden=orden_actual) }}" 
+                       class="category-item {{ 'active' if categoria_actual == cat else '' }}">
+                        <span class="category-icon">
+                            {% if cat == 'General' %}💬
+                            {% elif cat == 'Recomendaciones' %}⭐
+                            {% elif cat == 'Reseñas' %}📝
+                            {% elif cat == 'Debates' %}🗣️
+                            {% elif cat == 'Ayuda' %}❓
+                            {% else %}📌{% endif %}
+                        </span>
+                        <span>{{ cat }}</span>
+                    </a>
                     {% endfor %}
-                </select>
-                
-                <!-- Orden -->
-                <select name="orden" class="form-input">
-                    <option value="reciente" {{ 'selected' if orden_actual == 'reciente' else '' }}>
-                        🕐 Más recientes
-                    </option>
-                    <option value="popular" {{ 'selected' if orden_actual == 'popular' else '' }}>
-                        🔥 Más vistos
-                    </option>
-                    <option value="destacado" {{ 'selected' if orden_actual == 'destacado' else '' }}>
-                        ⭐ Destacados
-                    </option>
-                </select>
-                
-                <button type="submit" class="btn btn-secondary">Filtrar</button>
-                
-                {% if categoria_actual or busqueda_actual %}
-                <a href="{{ url_for('temas_foros.listar') }}" class="btn btn-secondary">
-                    ✕ Limpiar
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="sidebar-card">
+                <h3>🔗 Enlaces Rápidos</h3>
+                <a href="{{ url_for('temas_foros.mis_temas') }}" class="quick-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Mis Temas
                 </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="forum-main">
+            <!-- Filters Bar -->
+            <div class="filters-bar">
+                <form method="GET" class="search-form" id="searchForm">
+                    <!-- Preserve current filters -->
+                    {% if categoria_actual %}
+                    <input type="hidden" name="categoria" value="{{ categoria_actual }}">
+                    {% endif %}
+                    
+                    <div class="search-input-wrapper">
+                        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" 
+                               name="busqueda" 
+                               placeholder="Buscar temas..." 
+                               class="search-input"
+                               value="{{ busqueda_actual }}">
+                    </div>
+                    
+                    <select name="orden" class="filter-select" onchange="this.form.submit()">
+                        <option value="reciente" {{ 'selected' if orden_actual == 'reciente' else '' }}>
+                            🕐 Recientes
+                        </option>
+                        <option value="popular" {{ 'selected' if orden_actual == 'popular' else '' }}>
+                            🔥 Populares
+                        </option>
+                        <option value="destacado" {{ 'selected' if orden_actual == 'destacado' else '' }}>
+                            ⭐ Destacados
+                        </option>
+                    </select>
+                    
+                    <button type="submit" class="btn-search">Buscar</button>
+                    
+                    {% if categoria_actual or busqueda_actual or orden_actual != 'destacado' %}
+                    <a href="{{ url_for('temas_foros.listar') }}" class="btn-clear">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Limpiar
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Active Filters Display -->
+            {% if categoria_actual or busqueda_actual %}
+            <div class="active-filters">
+                <span class="filter-label">Filtros activos:</span>
+                {% if categoria_actual %}
+                <span class="filter-tag">
+                    📂 {{ categoria_actual }}
+                    <a href="{{ url_for('temas_foros.listar', busqueda=busqueda_actual, orden=orden_actual) }}" class="filter-remove">×</a>
+                </span>
+                {% endif %}
+                {% if busqueda_actual %}
+                <span class="filter-tag">
+                    🔍 "{{ busqueda_actual }}"
+                    <a href="{{ url_for('temas_foros.listar', categoria=categoria_actual, orden=orden_actual) }}" class="filter-remove">×</a>
+                </span>
                 {% endif %}
             </div>
-        </form>
-        
-        <!-- Link a "Mis Temas" -->
-        <a href="{{ url_for('temas_foros.mis_temas') }}" class="btn-link">
-            📝 Mis Temas
-        </a>
-    </div>
+            {% endif %}
 
-    <!-- Lista de temas -->
-    <div class="temas-lista">
-        {% if temas %}
-            {% for tema, creador in temas %}
-            <div class="tema-card">
-                <!-- Header del tema -->
-                <div class="tema-header">
-                    <div class="tema-badges">
-                        <span class="badge badge-categoria">{{ tema.categoria_foro }}</span>
-                        {% if tema.destacado %}
-                        <span class="badge badge-destacado">⭐ Destacado</span>
-                        {% endif %}
-                    </div>
-                    <span class="tema-vistas">👁️ {{ tema.vistas or 0 }} vistas</span>
-                </div>
-                
-                <!-- Título y descripción -->
-                <a href="{{ url_for('temas_foros.ver', id=tema.id_tema) }}" class="tema-titulo">
-                    {{ tema.titulo }}
-                </a>
-                <p class="tema-descripcion">
-                    {{ tema.descripcion[:200] }}{% if tema.descripcion|length > 200 %}...{% endif %}
-                </p>
-                
-                <!-- Footer del tema -->
-                <div class="tema-footer">
-                    <div class="tema-autor">
-                        <div class="avatar-small">{{ creador.nombres[0] }}{{ creador.apellidos[0] }}</div>
-                        <div>
-                            <span class="autor-nombre">{{ creador.nombres }} {{ creador.apellidos }}</span>
-                            <span class="tema-fecha">{{ tema.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</span>
+            <!-- Topics List -->
+            <div class="topics-list">
+                {% if temas %}
+                    {% for tema, creador in temas %}
+                    <article class="topic-card">
+                        <div class="topic-votes">
+                            <div class="vote-count">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M7 10l5-5 5 5M7 14l5 5 5-5"></path>
+                                </svg>
+                                <span>{{ mensajes_count.get(tema.id_tema, 0) }}</span>
+                            </div>
+                            <span class="vote-label">respuestas</span>
                         </div>
+
+                        <div class="topic-content">
+                            <div class="topic-header">
+                                <div class="topic-badges">
+                                    <span class="badge badge-category">{{ tema.categoria_foro }}</span>
+                                    {% if tema.destacado %}
+                                    <span class="badge badge-pinned">📌 Destacado</span>
+                                    {% endif %}
+                                </div>
+                                <span class="topic-views">👁️ {{ tema.vistas or 0 }}</span>
+                            </div>
+
+                            <a href="{{ url_for('temas_foros.ver', id=tema.id_tema) }}" class="topic-title">
+                                {{ tema.titulo }}
+                            </a>
+
+                            <p class="topic-excerpt">
+                                {{ tema.descripcion[:180] }}{% if tema.descripcion|length > 180 %}...{% endif %}
+                            </p>
+
+                            <div class="topic-meta">
+                                <div class="author-info">
+                                    <div class="author-avatar">{{ creador.nombres[0] }}{{ creador.apellidos[0] }}</div>
+                                    <div class="author-details">
+                                        <span class="author-name">{{ creador.nombres }} {{ creador.apellidos }}</span>
+                                        <span class="topic-time">{{ tema.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <h3>No se encontraron temas</h3>
+                        <p>{{ 'Intenta con otros filtros' if categoria_actual or busqueda_actual else 'Sé el primero en crear un tema de discusión' }}</p>
+                        <a href="{{ url_for('temas_foros.nuevo') }}" class="btn-primary">
+                            Crear Primer Tema
+                        </a>
                     </div>
-                    <div class="tema-stats">
-                        <span class="stat">💬 {{ mensajes_count.get(tema.id_tema, 0) }} respuestas</span>
-                    </div>
-                </div>
+                {% endif %}
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <h3>No hay temas en el foro</h3>
-                <p>Sé el primero en crear un tema de discusión</p>
-                <a href="{{ url_for('temas_foros.nuevo') }}" class="btn btn-primary" style="margin-top: 1rem;">
-                    ➕ Crear Primer Tema
-                </a>
-            </div>
-        {% endif %}
+        </main>
     </div>
 </div>
 
 <style>
-.container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+.forum-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
 
-.page-header {
+.forum-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
 
-.page-header h1 {
+.hero-content h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.hero-content p {
     margin: 0;
-    font-size: 1.75rem;
-    color: #1a202c;
+    opacity: 0.9;
+    font-size: 1.1rem;
 }
 
-.subtitle {
-    color: #718096;
-    font-size: 0.9rem;
-    margin-top: 0.25rem;
+.btn-create-topic {
+    background: white;
+    color: #667eea;
+    padding: 0.875rem 1.75rem;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.filters-container {
+.btn-create-topic:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.forum-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+}
+
+/* Sidebar */
+.forum-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebar-card {
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-.filters-form {
-    margin-bottom: 1rem;
+.sidebar-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a202c;
 }
 
-.filter-group {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto auto;
-    gap: 0.75rem;
+.stats-card {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
 }
 
-.form-input {
-    padding: 0.75rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-flex;
+.stat-item {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-.btn-primary {
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #667eea;
+}
+
+.category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: #4a5568;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.category-item:hover {
+    background: #f7fafc;
+    color: #667eea;
+}
+
+.category-item.active {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
 }
 
-.btn-primary:hover {
+.category-icon {
+    font-size: 1.25rem;
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: #4a5568;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.quick-link:hover {
+    background: #f7fafc;
+    color: #667eea;
+}
+
+/* Main Content */
+.forum-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.filters-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-form {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+.filter-select {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-search {
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-search:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102,126,234,0.3);
 }
 
-.btn-secondary {
-    background: #e2e8f0;
-    color: #4a5568;
-}
-
-.btn-secondary:hover {
-    background: #cbd5e0;
-}
-
-.btn-link {
-    color: #667eea;
+.btn-clear {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.25rem;
+    background: #fee;
+    color: #c53030;
+    border-radius: 10px;
     text-decoration: none;
     font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-clear:hover {
+    background: #fdd;
+}
+
+/* Active Filters */
+.active-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #4a5568;
     font-size: 0.9rem;
 }
 
-.btn-link:hover {
-    text-decoration: underline;
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: linear-gradient(135deg, #e6f3ff, #cce7ff);
+    color: #0066cc;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
-.temas-lista {
+.filter-remove {
+    color: #0066cc;
+    text-decoration: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: all 0.2s;
+}
+
+.filter-remove:hover {
+    color: #c53030;
+    transform: scale(1.2);
+}
+
+/* Topics List */
+.topics-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.tema-card {
+.topic-card {
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    gap: 1.5rem;
+    transition: all 0.3s;
+    border: 2px solid transparent;
 }
 
-.tema-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.topic-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 8px 24px rgba(102,126,234,0.15);
     transform: translateY(-2px);
 }
 
-.tema-header {
+.topic-votes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    min-width: 60px;
+}
+
+.vote-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.vote-count svg {
+    color: #a0aec0;
+}
+
+.vote-count span {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.vote-label {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    text-align: center;
+}
+
+.topic-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.topic-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.75rem;
 }
 
-.tema-badges {
+.topic-badges {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .badge {
-    padding: 0.35rem 0.75rem;
-    border-radius: 12px;
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
-.badge-categoria {
-    background: #e6f3ff;
+.badge-category {
+    background: linear-gradient(135deg, #e6f3ff, #cce7ff);
     color: #0066cc;
 }
 
-.badge-destacado {
-    background: linear-gradient(135deg, #ffd700, #ffed4e);
+.badge-pinned {
+    background: linear-gradient(135deg, #fff9e6, #ffed4e);
     color: #856404;
 }
 
-.tema-vistas {
+.topic-views {
     color: #a0aec0;
     font-size: 0.85rem;
+    font-weight: 500;
 }
 
-.tema-titulo {
+.topic-title {
     font-size: 1.25rem;
     font-weight: 700;
     color: #1a202c;
     text-decoration: none;
     display: block;
     margin-bottom: 0.5rem;
+    line-height: 1.4;
 }
 
-.tema-titulo:hover {
+.topic-title:hover {
     color: #667eea;
 }
 
-.tema-descripcion {
-    color: #4a5568;
+.topic-excerpt {
+    color: #718096;
     line-height: 1.6;
     margin-bottom: 1rem;
 }
 
-.tema-footer {
+.topic-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 1rem;
-    border-top: 1px solid #e2e8f0;
 }
 
-.tema-autor {
+.author-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
-.avatar-small {
-    width: 36px;
-    height: 36px;
+.author-avatar {
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 0.8rem;
+    font-weight: 700;
+    font-size: 0.9rem;
 }
 
-.autor-nombre {
+.author-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.author-name {
     font-weight: 600;
     color: #2d3748;
     font-size: 0.9rem;
 }
 
-.tema-fecha {
-    color: #a0aec0;
+.topic-time {
     font-size: 0.8rem;
-    display: block;
-}
-
-.tema-stats {
-    display: flex;
-    gap: 1rem;
-}
-
-.stat {
-    color: #718096;
-    font-size: 0.9rem;
+    color: #a0aec0;
 }
 
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    color: #a0aec0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .empty-state svg {
-    margin: 0 auto 1rem;
-    opacity: 0.3;
+    color: #cbd5e0;
+    margin-bottom: 1.5rem;
 }
 
 .empty-state h3 {
-    color: #718096;
+    color: #2d3748;
+    font-size: 1.5rem;
     margin-bottom: 0.5rem;
 }
 
-@media (max-width: 768px) {
-    .filter-group {
+.empty-state p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+.btn-primary {
+    display: inline-block;
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102,126,234,0.3);
+}
+
+@media (max-width: 1024px) {
+    .forum-layout {
         grid-template-columns: 1fr;
     }
     
-    .tema-footer {
+    .forum-sidebar {
+        order: 2;
+    }
+    
+    .forum-hero {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+        gap: 1.5rem;
+        text-align: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-form {
+        flex-direction: column;
+    }
+    
+    .btn-search, .btn-clear {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .topic-card {
+        flex-direction: column;
+    }
+    
+    .topic-votes {
+        flex-direction: row;
+        justify-content: center;
+    }
+    
+    .vote-label {
+        display: none;
     }
 }
 </style>

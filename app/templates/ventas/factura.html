@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+
+{% block title %}Factura {{ venta.numero_factura }}{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .container { max-width: 100% !important; }
+        .factura-container { 
+            box-shadow: none !important;
+            border: 1px solid #000 !important;
+        }
+        body { background: white; }
+    }
+    
+    .factura-container {
+        background: white;
+        padding: 30px;
+        max-width: 800px;
+        margin: 20px auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .factura-header {
+        border-bottom: 3px solid #000;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .header-top {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .logo-container {
+        flex-shrink: 0;
+    }
+    
+    .logo-container svg {
+        width: 60px;
+        height: 60px;
+        filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
+    }
+    
+    .brand-name {
+        font-size: 28px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #6366f1, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -0.02em;
+    }
+    
+    .header-content {
+        flex: 1;
+    }
+    
+    .factura-title {
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .empresa-info {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    
+    .factura-numero {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        background: #f8f9fa;
+        padding: 10px;
+        border: 2px solid #000;
+        margin: 15px 0;
+    }
+    
+    .info-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .info-box {
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    
+    .info-box h5 {
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+    
+    .info-row {
+        display: flex;
+        margin-bottom: 5px;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        min-width: 120px;
+    }
+    
+    .tabla-detalles {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+    }
+    
+    .tabla-detalles th,
+    .tabla-detalles td {
+        border: 1px solid #000;
+        padding: 8px;
+        text-align: left;
+    }
+    
+    .tabla-detalles th {
+        background: #f8f9fa;
+        font-weight: bold;
+    }
+    
+    .tabla-detalles td.text-right {
+        text-align: right;
+    }
+    
+    .totales-section {
+        margin-top: 20px;
+        margin-left: auto;
+        width: 350px;
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .total-row.total-final {
+        background: #f8f9fa;
+        border: 2px solid #000;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    
+    .sar-info {
+        border: 2px solid #000;
+        padding: 15px;
+        margin: 20px 0;
+        background: #f8f9fa;
+    }
+    
+    .sar-info h5 {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .footer-info {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #000;
+        text-align: center;
+        font-size: 12px;
+    }
+    
+    .payment-details {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+    }
+
+    .payment-details p {
+        margin: 5px 0;
+        font-size: 14px;
+    }
+    
+    /* Pagination Navigation */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        padding: 10px;
+    }
+    
+    .pagination-btn {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 5px 12px;
+        font-size: 11px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: all 0.2s;
+        font-weight: 600;
+        color: #666;
+    }
+    
+    .pagination-btn:hover:not(:disabled) {
+        background: #6366f1;
+        color: white;
+        border-color: #6366f1;
+    }
+    
+    .pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    
+    .pagination-btn.active {
+        background: #6366f1;
+        color: white;
+        border-color: #6366f1;
+    }
+    
+    .pagination-info-text {
+        font-size: 11px;
+        color: #666;
+        font-weight: 600;
+        padding: 0 8px;
+    }
+
+    @media print {
+        .alert {
+            border: 2px solid #000 !important;
+            background: #f0f9ff !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .brand-name {
+            color: #6366f1 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .pagination-container {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Botones de acción -->
+    <div class="no-print mb-3">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+        <a href="{{ url_for('ventas.ver', id=venta.id_venta) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    {% set items_per_page = 10 %}
+    {% set total_items = detalles|length %}
+    {% set total_pages = ((total_items - 1) // items_per_page) + 1 if total_items > 0 else 1 %}
+    
+    <!-- Contenedor de la factura -->
+    <div class="factura-container">
+        
+        <!-- Header -->
+        <div class="factura-header">
+            <!-- Logo and Brand Name -->
+            <div class="header-top">
+                <div class="logo-container">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="url(#logoGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="url(#logoGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="brand-name">Biblioteca Romava</div>
+            </div>
+            
+            <!-- Header Content -->
+            <div class="header-content">
+                <div class="factura-title">FACTURA</div>
+                
+                <div class="empresa-info">
+                    <h4><strong>{{ sucursal.nombre }}</strong></h4>
+                    {% if factura_sar %}
+                    <p><strong>RTN:</strong> {{ factura_sar.rtn_empresa }}</p>
+                    {% endif %}
+                    <p>{{ sucursal.direccion }}</p>
+                    <p>{{ sucursal.ciudad }}, {{ sucursal.departamento }}</p>
+                    <p><strong>Teléfono:</strong> {{ sucursal.telefono }} | <strong>Email:</strong> {{ sucursal.email }}</p>
+                </div>
+                
+                <div class="factura-numero">
+                    FACTURA No. {{ venta.numero_factura }}
+                </div>
+            </div>
+        </div>
+
+        <div id="pageContent">
+            <!-- Content will be loaded here by JavaScript -->
+        </div>
+
+        <!-- Pagination Navigation -->
+        {% if total_pages > 1 %}
+        <div class="pagination-container no-print">
+            <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)">◄ Anterior</button>
+            <span class="pagination-info-text" id="pageInfo">Página 1 de {{ total_pages }}</span>
+            <button class="pagination-btn" id="nextBtn" onclick="changePage(1)">Siguiente ►</button>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    const totalPages = {{ total_pages }};
+    let currentPage = 1;
+    
+    const pages = [
+        {% for page_num in range(total_pages) %}
+        {% set start_index = page_num * items_per_page %}
+        {% set end_index = [start_index + items_per_page, total_items]|min %}
+        {
+            content: `
+                {% if page_num == 0 %}
+                <!-- Información SAR - Solo en la primera página -->
+                {% if factura_sar %}
+                <div class="sar-info">
+                    <h5>INFORMACIÓN SAR (Sistema de Administración de Rentas)</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Número de CAI Autorizado:</strong></p>
+                            <p style="font-size: 14px; letter-spacing: 1px;">{{ factura_sar.cai }}</p>
+                            
+                            <p class="mt-3"><strong>Rango de Facturación Autorizado:</strong></p>
+                            <p>Desde: 000-001-01-00000001</p>
+                            <p>Hasta: {{ factura_sar.rango_final }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Fecha de Emisión del CAI:</strong></p>
+                            <p>{{ factura_sar.fecha_emision.strftime('%d de %B de %Y') }}</p>
+                            
+                            <p class="mt-3"><strong>Fecha de Vencimiento del CAI:</strong></p>
+                            <p>{{ factura_sar.rango_inicial.strftime('%d de %B de %Y') }}</p>
+                            
+                            <p class="mt-3"><strong>Fecha de Emisión de Factura:</strong></p>
+                            <p>{{ venta.fecha_venta.strftime('%d de %B de %Y a las %H:%M') }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <strong>Nota:</strong> Factura emitida sin parámetros SAR configurados.
+                </div>
+                {% endif %}
+
+                <!-- Información Cliente y Venta - Solo en la primera página -->
+                <div class="info-section">
+                    <!-- Datos del Cliente -->
+                    <div class="info-box">
+                        <h5>DATOS DEL CLIENTE</h5>
+                        <div class="info-row">
+                            <span class="info-label">Nombre:</span>
+                            <span>{{ cliente.nombres }} {{ cliente.apellidos }}</span>
+                        </div>
+                        
+                        {% set rtn_cliente = cliente.Clientes_Documento | selectattr('id_tipo_documento', 'equalto', 2) | first %}
+                        <div class="info-row">
+                            <span class="info-label">RTN:</span>
+                            <span>{{ rtn_cliente.valor_documento if rtn_cliente else '9999999999999' }}</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Dirección:</span>
+                            <span>{{ cliente.direccion }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Teléfono:</span>
+                            <span>{{ cliente.telefono }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span>{{ cliente.email }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Datos de la Venta -->
+                    <div class="info-box">
+                        <h5>DATOS DE LA VENTA</h5>
+                        <div class="info-row">
+                            <span class="info-label">Fecha:</span>
+                            <span>{{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Método de Pago:</span>
+                            <span>{{ metodo_pago.nombre }}</span>
+                        </div>
+                        
+                        <!-- Detalles de Pago Mixto -->
+                        {% if venta.metodo_mixto_tarjeta_ultimos4 and venta.metodo_mixto_efectivo %}
+                        <div class="info-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+                            <span class="info-label">💵 Efectivo:</span>
+                            <span><strong>L {{ "{:,.2f}".format(venta.metodo_mixto_efectivo) }}</strong></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">💳 Tarjeta:</span>
+                            <span><strong>L {{ "{:,.2f}".format(venta.total - venta.metodo_mixto_efectivo) }}</strong></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Últimos 4 dígitos:</span>
+                            <span>****{{ venta.metodo_mixto_tarjeta_ultimos4 }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="info-row">
+                            <span class="info-label">Atendido por:</span>
+                            <span>{{ empleado.nombres }} {{ empleado.apellidos }}</span>
+                        </div>
+                        
+                        {% if venta.exonerado %}
+                        <div class="info-row">
+                            <span class="info-label">Exonerado:</span>
+                            <span class="badge badge-warning">SÍ</span>
+                        </div>
+                        {% if venta.numero_reg_exoneracion %}
+                        <div class="info-row">
+                            <span class="info-label">No. Registro:</span>
+                            <span>{{ venta.numero_reg_exoneracion }}</span>
+                        </div>
+                        {% endif %}
+                        {% if venta.numero_reg_sag %}
+                        <div class="info-row">
+                            <span class="info-label">No. SAG:</span>
+                            <span>{{ venta.numero_reg_sag }}</span>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tabla de Detalles -->
+                <table class="tabla-detalles">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Cant.</th>
+                            <th style="width: 50%;">Descripción</th>
+                            <th style="width: 20%;" class="text-right">Precio Unit.</th>
+                            <th style="width: 20%;" class="text-right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle, libro in detalles[start_index:end_index] %}
+                        <tr>
+                            <td class="text-center">{{ detalle.cantidad }}</td>
+                            <td>
+                                <strong>{{ libro.titulo }}</strong><br>
+                                <small>ISBN: {{ libro.isbn }}</small>
+                            </td>
+                            <td class="text-right">L {{ "{:,.2f}".format(detalle.precio_unitario) }}</td>
+                            <td class="text-right">L {{ "{:,.2f}".format(detalle.subtotal) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if page_num == total_pages - 1 %}
+                <!-- Sección de Totales - Solo en la última página -->
+                <div class="totales-section">
+                    <div class="total-row">
+                        <span><strong>Subtotal:</strong></span>
+                        <span>L {{ "{:,.2f}".format(venta.subtotal) }}</span>
+                    </div>
+                    
+                    {% if venta.descuento > 0 %}
+                    <div class="total-row">
+                        <span><strong>Descuento:</strong></span>
+                        <span>- L {{ "{:,.2f}".format(venta.descuento) }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if venta.exonerado %}
+                    <div class="total-row">
+                        <span><strong>Exonerado de ISV:</strong></span>
+                        <span>L {{ "{:,.2f}".format(venta.importe_exonerado) }}</span>
+                    </div>
+                    {% else %}
+                    <div class="total-row">
+                        <span><strong>ISV 15%:</strong></span>
+                        <span>L {{ "{:,.2f}".format(venta.isv_15) }}</span>
+                    </div>
+                    {% if venta.isv_18 > 0 %}
+                    <div class="total-row">
+                        <span><strong>ISV 18%:</strong></span>
+                        <span>L {{ "{:,.2f}".format(venta.isv_18) }}</span>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                    
+                    <div class="total-row total-final">
+                        <span>TOTAL A PAGAR:</span>
+                        <span>L {{ "{:,.2f}".format(venta.total) }}</span>
+                    </div>
+                </div>
+
+                <!-- Footer - Solo en la última página -->
+                <div class="footer-info">
+                    <p><strong>ORIGINAL: Cliente | COPIA: Archivo Contable</strong></p>
+                    <p>Gracias por su compra. Esta factura es válida solo con sello y firma autorizada.</p>
+                    {% if factura_sar %}
+                    <p><small>Factura generada bajo autorización SAR - CAI: {{ factura_sar.cai }}</small></p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            `
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    function loadPage(pageNum) {
+        const pageContent = document.getElementById('pageContent');
+        pageContent.innerHTML = pages[pageNum - 1].content;
+        
+        // Update page info
+        const pageInfo = document.getElementById('pageInfo');
+        if (pageInfo) {
+            pageInfo.textContent = `Página ${pageNum} de ${totalPages}`;
+        }
+        
+        // Update buttons
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        
+        if (prevBtn) {
+            prevBtn.disabled = pageNum === 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = pageNum === totalPages;
+        }
+    }
+    
+    function changePage(delta) {
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            loadPage(currentPage);
+        }
+    }
+    
+    // Load first page on start
+    loadPage(1);
+</script>
+
+{% endblock %}

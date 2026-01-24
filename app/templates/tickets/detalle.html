@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Ticket #{{ ticket.id_ticket }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: #1e293b;">Ticket #{{ ticket.id_ticket }}</h1>
+            <p style="margin: 0.5rem 0 0 0; color: #64748b;">{{ ticket.asunto }}</p>
+        </div>
+        <a href="{{ url_for('tickets.listar_tickets') }}" style="padding: 0.875rem 1.75rem; background: #f1f5f9; color: #334155; border: none; border-radius: 10px; font-weight: 600; text-decoration: none; transition: all 0.2s;"
+            onmouseover="this.style.background='#e2e8f0'"
+            onmouseout="this.style.background='#f1f5f9'"
+        >
+            ← Volver
+        </a>
+    </div>
+
+    <!-- Detalles del Ticket -->
+    <div style="background: white; border-radius: 14px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+            <div>
+                <p style="margin: 0 0 0.5rem 0; color: #64748b; font-weight: 600; font-size: 0.9rem;">ESTADO</p>
+                <p style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">
+                    <span style="display: inline-block; padding: 0.5rem 1rem; border-radius: 8px; color: white;
+                        {% if ticket.estado == 'Abierto' %}background: #3b82f6;
+                        {% elif ticket.estado == 'En Proceso' %}background: #f59e0b;
+                        {% elif ticket.estado == 'En Espera' %}background: #6b7280;
+                        {% elif ticket.estado == 'Resuelto' %}background: #10b981;
+                        {% elif ticket.estado == 'Cerrado' %}background: #1f2937;
+                        {% else %}background: #ef4444;{% endif %}
+                    ">
+                        {{ ticket.estado }}
+                    </span>
+                </p>
+            </div>
+
+            <div>
+                <p style="margin: 0 0 0.5rem 0; color: #64748b; font-weight: 600; font-size: 0.9rem;">PRIORIDAD</p>
+                <p style="margin: 0; font-size: 1.1rem; font-weight: 700;">
+                    <span style="display: inline-block; padding: 0.5rem 1rem; border-radius: 8px;
+                        {% if ticket.prioridad == 'Urgente' %}background: #fecaca; color: #7f1d1d;
+                        {% elif ticket.prioridad == 'Alta' %}background: #fef08a; color: #713f12;
+                        {% elif ticket.prioridad == 'Media' %}background: #bfdbfe; color: #1e3a8a;
+                        {% else %}background: #bbf7d0; color: #065f46;{% endif %}
+                    ">
+                        {{ ticket.prioridad }}
+                    </span>
+                </p>
+            </div>
+
+            <div>
+                <p style="margin: 0 0 0.5rem 0; color: #64748b; font-weight: 600; font-size: 0.9rem;">CREADO</p>
+                <p style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">{{ ticket.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</p>
+            </div>
+
+            <div>
+                <p style="margin: 0 0 0.5rem 0; color: #64748b; font-weight: 600; font-size: 0.9rem;">CLIENTE</p>
+                <p style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b;">{{ ticket.Clientes_.nombre_cliente }}</p>
+            </div>
+        </div>
+
+        <!-- Descripción -->
+        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0;">
+            <h3 style="margin: 0 0 1rem 0; font-size: 1rem; font-weight: 700; color: #1e293b;">Descripción</h3>
+            <p style="margin: 0; color: #475569; line-height: 1.6; white-space: pre-wrap;">{{ ticket.descripcion }}</p>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a href="{{ url_for('tickets.editar_ticket', id_ticket=ticket.id_ticket) }}" style="padding: 0.875rem 1.75rem; background: #fef3c7; color: #92400e; border: none; border-radius: 10px; font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer;"
+                onmouseover="this.style.background='#fde68a'"
+                onmouseout="this.style.background='#fef3c7'"
+            >
+                ✏️ Editar
+            </a>
+        </div>
+    </div>
+
+    <!-- Respuestas Existentes -->
+    <div style="background: white; border-radius: 14px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <h3 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 700; color: #1e293b;">Respuestas ({{ respuestas|length }})</h3>
+
+        {% if respuestas %}
+            {% for respuesta in respuestas %}
+            <div style="padding: 1.5rem; background: #f8fafc; border-radius: 10px; margin-bottom: 1rem; border-left: 4px solid #6366f1;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <p style="margin: 0; font-weight: 700; color: #1e293b;">
+                            {% if respuesta.id_empleado %}
+                                {{ respuesta.Empleados_.nombres }} 
+                                <span style="color: #6366f1; font-weight: 600; font-size: 0.85rem;">(Empleado)</span>
+                            {% else %}
+                                {{ respuesta.Clientes_.nombre_cliente }}
+                                <span style="color: #8b5cf6; font-weight: 600; font-size: 0.85rem;">(Cliente)</span>
+                            {% endif %}
+                        </p>
+                        <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.85rem;">{{ respuesta.fecha_respuesta.strftime('%d/%m/%Y %H:%M') }}</p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        {% if respuesta.es_solucion %}
+                        <span style="display: inline-block; padding: 0.4rem 0.75rem; background: #bbf7d0; color: #065f46; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">✓ Solución</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p style="margin: 0; color: #475569; line-height: 1.6; white-space: pre-wrap;">{{ respuesta.mensaje }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p style="margin: 0; color: #94a3b8; text-align: center; padding: 2rem;">No hay respuestas aún</p>
+        {% endif %}
+    </div>
+
+    <!-- Formulario para Agregar Respuesta -->
+    <div style="background: white; border-radius: 14px; padding: 2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <h3 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 700; color: #1e293b;">Agregar Respuesta</h3>
+
+        <form method="POST" action="{{ url_for('respuesta_tickets.crear_respuesta', id_ticket=ticket.id_ticket) }}">
+            <div style="margin-bottom: 1.75rem;">
+                <label for="mensaje" style="display: block; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    Tu Mensaje <span style="color: #ef4444;">*</span>
+                </label>
+                <textarea 
+                    id="mensaje" 
+                    name="mensaje" 
+                    rows="4"
+                    placeholder="Escribe tu respuesta aquí..."
+                    required
+                    style="width: 100%; padding: 0.875rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; transition: all 0.2s; font-family: inherit; resize: vertical; min-height: 120px;"
+                    onblur="this.style.borderColor='#e2e8f0'"
+                    onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.1)'"
+                ></textarea>
+                <small style="display: block; color: #64748b; margin-top: 0.5rem; font-size: 0.85rem;">Mínimo 3 caracteres</small>
+            </div>
+
+            {% if current_user.id_empleado or current_user.id_cliente %}
+            <div style="margin-bottom: 1.75rem;">
+                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 600; color: #1e293b;">
+                    <input type="checkbox" name="es_solucion" value="1" style="width: 18px; height: 18px; cursor: pointer;">
+                    <span>Marcar como solución</span>
+                </label>
+                <small style="display: block; color: #64748b; margin-top: 0.5rem; font-size: 0.85rem; margin-left: 2rem;">Esta respuesta resuelve el problema</small>
+            </div>
+            {% endif %}
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                <a href="{{ url_for('tickets.ver_ticket', id_ticket=ticket.id_ticket) }}" style="padding: 0.875rem 1.75rem; background: #f1f5f9; color: #334155; border: none; border-radius: 10px; font-weight: 600; text-decoration: none; transition: all 0.2s;"
+                    onmouseover="this.style.background='#e2e8f0'"
+                    onmouseout="this.style.background='#f1f5f9'"
+                >
+                    Cancelar
+                </a>
+                <button type="submit" style="padding: 0.875rem 1.75rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);"
+                    onmouseover="this.style.boxShadow='0 6px 20px rgba(99, 102, 241, 0.4)'; this.style.transform='translateY(-2px)'"
+                    onmouseout="this.style.boxShadow='0 4px 12px rgba(99, 102, 241, 0.3)'; this.style.transform='translateY(0)'"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Enviar Respuesta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

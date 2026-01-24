@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Orden de Compra{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .form-section h2 {
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .required {
+        color: red;
+    }
+    
+    #tablaLibros {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    #tablaLibros th {
+        background: #007bff;
+        color: white;
+        padding: 10px;
+        text-align: left;
+    }
+    
+    #tablaLibros td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    #tablaLibros tfoot td {
+        font-weight: bold;
+        background: #f8f9fa;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    
+    .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-warning {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        color: #856404;
+    }
+    
+    .alert-info {
+        background: #d1ecf1;
+        border: 1px solid #17a2b8;
+        color: #0c5460;
+    }
+    
+    .price-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .price-configured {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .price-default {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .price-none {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    
+    .loading-spinner {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .spinner-border {
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+        vertical-align: text-bottom;
+        border: 0.25em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spinner-border 0.75s linear infinite;
+    }
+    
+    @keyframes spinner-border {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Nueva Orden de Compra</h1>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Cargando...</span>
+            </div>
+            <p>Cargando precios...</p>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('orden_compra.nueva') }}" id="formOrden">
+        
+        <div class="form-section">
+            <h2>Información General</h2>
+            
+            <div class="alert alert-info">
+                <strong>Importante:</strong> Primero seleccione la editorial. Solo podrá ordenar libros que tengan precio de compra configurado para esa editorial.
+            </div>
+            
+            <div class="form-group">
+                <label>Editorial: <span class="required">*</span></label>
+                <select name="id_editorial" id="id_editorial" required>
+                    <option value="">Seleccione una editorial...</option>
+                    {% for editorial in editoriales %}
+                        <option value="{{ editorial.id_editorial }}">{{ editorial.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Sucursal Destino: <span class="required">*</span></label>
+                <select name="id_sucursal" required>
+                    <option value="">Seleccione una sucursal...</option>
+                    {% for sucursal in sucursales %}
+                        <option value="{{ sucursal.id_sucursal }}">{{ sucursal.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Fecha Entrega Estimada: <span class="required">*</span></label>
+                <input type="date" name="fecha_entrega_estimada" value="{{ fecha_estimada }}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Motivo: <span class="required">*</span></label>
+                <textarea name="motivo" rows="3" required placeholder="Razón de la compra (ej: Reposición de stock, nueva colección, pedido especial)..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Observaciones:</label>
+                <textarea name="observaciones" rows="3" placeholder="Observaciones adicionales (condiciones especiales, instrucciones de entrega, etc.)..."></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Libros a Ordenar</h2>
+            
+            <div id="editorialWarning" class="alert alert-warning" style="display: none;">
+                <strong>Atención:</strong> Debe seleccionar una editorial antes de agregar libros.
+            </div>
+            
+            <button type="button" class="btn btn-success" id="btnAgregarLinea" disabled>
+                + Agregar Libro
+            </button>
+
+            <table id="tablaLibros">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Libro</th>
+                        <th style="width: 10%;">Cantidad</th>
+                        <th style="width: 15%;">Precio Unit.</th>
+                        <th style="width: 10%;">Formato</th>
+                        <th style="width: 15%;">Subtotal</th>
+                        <th style="width: 10%;">Estado</th>
+                        <th style="width: 5%;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="lineasOrden">
+                    <!-- Lines will be added here dynamically -->
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4"><strong>Subtotal:</strong></td>
+                        <td id="subtotal_display">L 0.00</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4"><strong>ISV (15%):</strong></td>
+                        <td id="isv_display">L 0.00</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4"><strong>TOTAL:</strong></td>
+                        <td id="total_display"><strong>L 0.00</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="form-section">
+            <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>
+                Crear Orden de Compra
+            </button>
+            <a href="{{ url_for('orden_compra.listar') }}" class="btn btn-secondary">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+let lineaCounter = 0;
+let editorialSeleccionada = null;
+let librosDisponibles = [];
+
+const formatos = {{ formatos|tojson }};
+
+// Escuchar cambio de editorial
+document.getElementById('id_editorial').addEventListener('change', async function() {
+    editorialSeleccionada = this.value;
+    const btnAgregar = document.getElementById('btnAgregarLinea');
+    const warning = document.getElementById('editorialWarning');
+    
+    console.log('Editorial seleccionada:', editorialSeleccionada);
+    
+    // Limpiar líneas existentes
+    document.getElementById('lineasOrden').innerHTML = '';
+    lineaCounter = 0;
+    calcularTotales();
+    
+    if (!editorialSeleccionada) {
+        btnAgregar.disabled = true;
+        warning.style.display = 'block';
+        librosDisponibles = [];
+        return;
+    }
+    
+    warning.style.display = 'none';
+    
+    // Mostrar overlay de carga
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    try {
+        // Cargar libros de la editorial con sus precios
+        console.log('Cargando libros de editorial:', editorialSeleccionada);
+        const response = await fetch(`/ordenes-compra/api/libros-editorial/${editorialSeleccionada}`);
+        const libros = await response.json();
+        
+        console.log('Libros recibidos:', libros.length);
+        
+        // Cargar precios configurados para cada libro
+        librosDisponibles = [];
+        
+        for (const libro of libros) {
+            try {
+                const precioResponse = await fetch(`/ordenes-compra/api/precio-compra/${libro.id_libro}/${editorialSeleccionada}`);
+                const precioData = await precioResponse.json();
+                
+                librosDisponibles.push({
+                    ...libro,
+                    precio_compra: precioData.precio_compra,
+                    tiene_precio_personalizado: precioData.tiene_precio_personalizado
+                });
+            } catch (error) {
+                console.error(`Error cargando precio para libro ${libro.id_libro}:`, error);
+            }
+        }
+        
+        // Filtrar solo libros con precio configurado
+        const librosConPrecio = librosDisponibles.filter(l => l.precio_compra > 0);
+        
+        console.log('Libros con precio:', librosConPrecio.length);
+        
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+        if (librosConPrecio.length === 0) {
+            alert('⚠️ Esta editorial no tiene libros con precio de compra configurado.\n\nPor favor, configure los precios en el módulo "Precios de Compra" antes de crear una orden.');
+            btnAgregar.disabled = true;
+            return;
+        }
+        
+        btnAgregar.disabled = false;
+        console.log('Botón Agregar habilitado');
+        
+        // Mensaje informativo
+        const librosSinPrecio = librosDisponibles.length - librosConPrecio.length;
+        if (librosSinPrecio > 0) {
+            console.log(`Nota: ${librosSinPrecio} libro(s) no tienen precio configurado y no aparecerán en la lista.`);
+        }
+        
+    } catch (error) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        console.error('Error al cargar libros:', error);
+        alert('Error al cargar los libros de la editorial. Por favor, intente nuevamente.');
+        btnAgregar.disabled = true;
+    }
+});
+
+function agregarLinea() {
+    console.log('agregarLinea llamada');
+    console.log('Editorial seleccionada:', editorialSeleccionada);
+    
+    if (!editorialSeleccionada) {
+        alert('Primero debe seleccionar una editorial');
+        return;
+    }
+    
+    // Filtrar solo libros con precio
+    const librosConPrecio = librosDisponibles.filter(l => l.precio_compra > 0);
+    
+    console.log('Libros disponibles con precio:', librosConPrecio.length);
+    
+    if (librosConPrecio.length === 0) {
+        alert('No hay libros disponibles con precio configurado para esta editorial.');
+        return;
+    }
+    
+    const tbody = document.getElementById('lineasOrden');
+    const tr = document.createElement('tr');
+    tr.id = `linea_${lineaCounter}`;
+    
+    let librosOptions = '<option value="">Seleccione un libro...</option>';
+    librosConPrecio.forEach(libro => {
+    const precioTipo = libro.tiene_precio_personalizado ? 'Precio Configurado' : 'Precio Default (50%)';
+    librosOptions += `<option value="${libro.id_libro}"   
+                        data-precio="${libro.precio_compra}"
+                        data-tiene-precio="${libro.tiene_precio_personalizado}">
+                        ${libro.titulo} (ISBN: ${libro.isbn}) - L ${libro.precio_compra.toFixed(2)}
+                     </option>`;
+});
+    
+    let formatosOptions = '';
+    formatos.forEach(formato => {
+        formatosOptions += `<option value="${formato}">${formato}</option>`;
+    });
+    
+    const currentLineaId = lineaCounter;
+    
+    tr.innerHTML = `
+        <td>
+            <select name="libro_id[]" class="libro-select" required onchange="actualizarPrecioLinea(${currentLineaId})">
+                ${librosOptions}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="cantidad[]" min="1" value="1" required onchange="calcularTotales()">
+        </td>
+        <td>
+            <input type="number" name="precio_unitario[]" step="0.01" min="0.01" required readonly 
+                   style="background-color: #e9ecef;" id="precio_${currentLineaId}">
+        </td>
+        <td>
+            <select name="formato[]" required>
+                ${formatosOptions}
+            </select>
+        </td>
+        <td class="subtotal_linea">L 0.00</td>
+        <td>
+            <span class="price-badge price-none" id="estado_${currentLineaId}">Sin precio</span>
+        </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm" onclick="eliminarLinea(${currentLineaId})">
+                ✕
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(tr);
+    lineaCounter++;
+    
+    console.log('Línea agregada, total líneas:', lineaCounter);
+    
+    // Habilitar botón submit si hay al menos una línea
+    actualizarEstadoSubmit();
+}
+
+// Agregar event listener al botón
+document.getElementById('btnAgregarLinea').addEventListener('click', function(e) {
+    e.preventDefault();
+    console.log('Botón Agregar Libro clickeado');
+    agregarLinea();
+});
+
+function actualizarPrecioLinea(lineaId) {
+    console.log('Actualizando precio para línea:', lineaId);
+    const linea = document.getElementById(`linea_${lineaId}`);
+    if (!linea) return;
+    
+    const select = linea.querySelector('.libro-select');
+    const selectedOption = select.options[select.selectedIndex];
+    const precio = parseFloat(selectedOption.dataset.precio) || 0;
+    const tienePrecio = selectedOption.dataset.tienePrecio === 'true';
+    
+    const precioInput = document.getElementById(`precio_${lineaId}`);
+    const estadoBadge = document.getElementById(`estado_${lineaId}`);
+    
+    if (precio > 0) {
+        precioInput.value = precio.toFixed(2);
+        
+        if (tienePrecio) {
+            estadoBadge.className = 'price-badge price-configured';
+            estadoBadge.innerHTML = '✓ Configurado';
+        } else {
+            estadoBadge.className = 'price-badge price-default';
+            estadoBadge.innerHTML = '⚠ Default 50%';
+        }
+    } else {
+        precioInput.value = '';
+        estadoBadge.className = 'price-badge price-none';
+        estadoBadge.innerHTML = '✕ Sin precio';
+    }
+    
+    calcularTotales();
+}
+
+function eliminarLinea(id) {
+    const linea = document.getElementById(`linea_${id}`);
+    if (linea) {
+        if (confirm('¿Está seguro de eliminar esta línea?')) {
+            linea.remove();
+            calcularTotales();
+            actualizarEstadoSubmit();
+        }
+    }
+}
+
+function calcularTotales() {
+    const lineas = document.querySelectorAll('#lineasOrden tr');
+    let subtotal = 0;
+    
+    lineas.forEach(linea => {
+        const cantidad = parseFloat(linea.querySelector('input[name="cantidad[]"]')?.value || 0);
+        const precio = parseFloat(linea.querySelector('input[name="precio_unitario[]"]')?.value || 0);
+        const subtotalLinea = cantidad * precio;
+        
+        const subtotalCell = linea.querySelector('.subtotal_linea');
+        if (subtotalCell) {
+            subtotalCell.textContent = `L ${subtotalLinea.toFixed(2)}`;
+        }
+        
+        subtotal += subtotalLinea;
+    });
+    
+    const isv = subtotal * 0.15;
+    const total = subtotal + isv;
+    
+    document.getElementById('subtotal_display').textContent = `L ${subtotal.toFixed(2)}`;
+    document.getElementById('isv_display').textContent = `L ${isv.toFixed(2)}`;
+    document.getElementById('total_display').innerHTML = `<strong>L ${total.toFixed(2)}</strong>`;
+}
+
+function actualizarEstadoSubmit() {
+    const lineas = document.querySelectorAll('#lineasOrden tr');
+    const btnSubmit = document.getElementById('btnSubmit');
+    btnSubmit.disabled = lineas.length === 0;
+}
+
+// Validación antes de enviar
+document.getElementById('formOrden').addEventListener('submit', function(e) {
+    const lineas = document.querySelectorAll('#lineasOrden tr');
+    
+    if (lineas.length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos un libro a la orden.');
+        return false;
+    }
+    
+    // Verificar que todas las líneas tengan precio
+    let todasTienenPrecio = true;
+    lineas.forEach(linea => {
+        const precio = parseFloat(linea.querySelector('input[name="precio_unitario[]"]')?.value || 0);
+        if (precio <= 0) {
+            todasTienenPrecio = false;
+        }
+    });
+    
+    if (!todasTienenPrecio) {
+        e.preventDefault();
+        alert('Todas las líneas deben tener un precio válido.');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+
+{% endblock %}

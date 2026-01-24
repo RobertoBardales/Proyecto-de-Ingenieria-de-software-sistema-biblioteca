@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+
+{% block title %}Finalizar Compra{% endblock %}
+
+{% block content %}
+<div class="checkout-container">
+    <!-- Progress Steps -->
+    <div class="checkout-progress">
+        <div class="step completed">
+            <div class="step-circle">✓</div>
+            <span>Carrito</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step active">
+            <div class="step-circle">2</div>
+            <span>Pago</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+            <div class="step-circle">3</div>
+            <span>Confirmación</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('ventas.checkout') }}" id="checkoutForm">
+        <div class="checkout-grid">
+            <!-- Left: Forms -->
+            <div class="checkout-main">
+                
+                <!-- Customer Info -->
+                <div class="card">
+                    <h3 class="card-title">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+                        </svg>
+                        Información del Cliente
+                    </h3>
+                    <div class="info-grid">
+                        <div><strong>Nombre:</strong> {{ cliente.nombres }} {{ cliente.apellidos }}</div>
+                        <div><strong>Email:</strong> {{ cliente.email }}</div>
+                        <div><strong>Teléfono:</strong> {{ cliente.telefono }}</div>
+                        <div><strong>Dirección:</strong> {{ cliente.direccion }}</div>
+                    </div>
+                </div>
+
+                <!-- Sucursal Asignada (Read-Only Display) -->
+                <div class="card">
+                    <h3 class="card-title">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        </svg>
+                        Sucursal Asignada
+                    </h3>
+                    
+                    <div class="sucursal-info-box">
+                        <div class="sucursal-badge">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            </svg>
+                            <div class="sucursal-details">
+                                <div class="sucursal-name">{{ sucursal.nombre }}</div>
+                                <div class="sucursal-address">{{ sucursal.direccion }}</div>
+                                <div class="sucursal-contact">
+                                    <span>📞 {{ sucursal.telefono }}</span>
+                                    <span>✉️ {{ sucursal.email }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sucursal-note">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4M12 8h.01"></path>
+                            </svg>
+                            <span>Esta es la sucursal asignada a tu cuenta</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SAR Error Alert - NUEVO -->
+                {% if sar_error %}
+                <div class="card">
+                    <div class="alert-error">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                        <div>
+                            <h4>No se puede procesar la compra</h4>
+                            <p>{{ sar_error }}</p>
+                            <small>Por favor contacta al administrador para resolver este problema con la configuración de facturación.</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Payment Method -->
+                <div class="card">
+                    <h3 class="card-title">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="1" y="4" width="22" height="16" rx="2"/>
+                            <line x1="1" y1="10" x2="23" y2="10"/>
+                        </svg>
+                        Método de Pago
+                    </h3>
+                    <div class="payment-grid">
+                        {% for metodo in metodos_pago %}
+                        <label class="payment-option">
+                            <input type="radio" name="metodo_pago" value="{{ metodo.id_metodo_pago }}" 
+                                data-nombre="{{ metodo.nombre }}" required>
+                            <div class="payment-card">
+                                <div class="payment-name">{{ metodo.nombre }}</div>
+                                <div class="payment-desc">{{ metodo.descripcion }}</div>
+                                <div class="check-mark">✓</div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                     <!-- Campos adicionales para Método Mixto -->
+                    <div id="metodoMixtoFields" style="display: none; margin-top: 1rem;">
+                        <div class="mixto-header">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M12 2v20M2 12h20"/>
+                            </svg>
+                            <span>Detalles del Pago Mixto</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Últimos 4 dígitos de la tarjeta</label>
+                            <input type="text" id="tarjetaUltimos4" name="tarjeta_ultimos4" 
+                                class="form-input" placeholder="1234" 
+                                pattern="[0-9]{4}" maxlength="4">
+                            <small class="form-hint">Solo los últimos 4 dígitos</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Monto pagado en efectivo (L.)</label>
+                            <input type="number" id="montoEfectivo" name="monto_efectivo" 
+                                class="form-input" placeholder="0.00" 
+                                min="0" step="0.01">
+                            <small class="form-hint">El resto se cargará a la tarjeta</small>
+                        </div>
+                        
+                        <div class="mixto-summary" id="mixtoSummary" style="display: none;">
+                            <div class="mixto-row">
+                                <span>💵 Efectivo:</span>
+                                <span id="mixtoEfectivoDisplay">L. 0.00</span>
+                            </div>
+                            <div class="mixto-row">
+                                <span>💳 Tarjeta (****<span id="mixtoTarjetaDigitos"></span>):</span>
+                                <span id="mixtoTarjetaDisplay">L. 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discount Section -->
+                <div class="card">
+                    <h3 class="card-title">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01"/>
+                        </svg>
+                        Descuento (Opcional)
+                    </h3>
+                    
+                    <div class="discount-container">
+                        <div class="form-group">
+                            <label>Porcentaje de Descuento (%)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="discountPercentage" name="discount_percentage"
+                                    min="0" max="{{ descuento_maximo_porcentaje }}" 
+                                    step="0.1" value="0" class="form-input">
+                                <span class="input-suffix">%</span>
+                            </div>
+                            <div class="discount-limits">
+                                Máximo permitido: {{ descuento_maximo_porcentaje }}%
+                            </div>
+                        </div>
+
+                        <!-- Quick Preset Buttons -->
+                        <div class="discount-presets">
+                            <span class="preset-label">Descuentos rápidos:</span>
+                            <div class="preset-buttons">
+                                <button type="button" class="preset-btn" data-value="5">5%</button>
+                                <button type="button" class="preset-btn" data-value="10">10%</button>
+                                <button type="button" class="preset-btn" data-value="15">15%</button>
+                                <button type="button" class="preset-btn" data-value="20">20%</button>
+                            </div>
+                        </div>
+
+                        <!-- Display calculated discount amount -->
+                        <div class="discount-display">
+                            <div class="discount-info">
+                                <span>Descuento aplicado:</span>
+                                <span id="discountDisplayAmount" class="discount-amount">L. 0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Error/Warning Messages -->
+                        <div id="discountError" class="error-text"></div>
+                        <div id="discountWarning" class="warning-text"></div>
+                    </div>
+                </div>
+
+                <!-- Tax Exemption -->
+                <div class="card">
+                    <h3 class="card-title">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/>
+                        </svg>
+                        Exoneración de ISV (Opcional)
+                    </h3>
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="exonerado" name="exonerado" value="1">
+                        <span>Esta compra está exonerada de ISV</span>
+                    </label>
+                    <div id="exoneracionFields" style="display: none;">
+                        <div class="form-group">
+                            <label>Número de Registro de Exoneración</label>
+                            <input type="text" name="numero_reg_exoneracion" class="form-input" placeholder="EXO-2024-001">
+                        </div>
+                        <div class="form-group">
+                            <label>Número de Registro SAG</label>
+                            <input type="text" name="numero_reg_sag" class="form-input" placeholder="SAG-2024-001">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terms -->
+                <div class="card">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="terms" required>
+                        <span>Acepto los <a href="#" class="link">términos y condiciones</a></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Right: Summary -->
+            <div class="checkout-sidebar">
+                <div class="summary-card">
+                    <h3>Resumen del Pedido</h3>
+                    
+                    <div class="summary-items">
+                        {% for item in items %}
+                        <div class="summary-item">
+                            <div class="item-img">
+                                {% if item.libro.portada %}
+                                <img src="{{ item.libro.portada }}" alt="{{ item.libro.titulo }}">
+                                {% else %}
+                                <div class="no-img">📚</div>
+                                {% endif %}
+                            </div>
+                            <div class="item-info">
+                                <div class="item-title">{{ item.libro.titulo|truncate(35) }}</div>
+                                <div class="item-meta">
+                                    <span class="badge">{{ item.formato }}</span>
+                                    <span>x{{ item.cantidad }}</span>
+                                </div>
+                            </div>
+                            <div class="item-price">L. {{ "%.2f"|format(item.subtotal) }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="summary-totals">
+                        <div class="total-line">
+                            <span>Subtotal</span>
+                            <span id="subtotalAmount">L. {{ "%.2f"|format(subtotal) }}</span>
+                        </div>
+                        <div class="total-line" id="discountLine" style="display: none;">
+                            <span>Descuento</span>
+                            <span id="discountAmount" class="discount">- L. 0.00</span>
+                        </div>
+                        <div class="total-line">
+                            <span>ISV (15%)</span>
+                            <span id="isvAmount">L. {{ "%.2f"|format(isv) }}</span>
+                        </div>
+                        <div class="total-line total">
+                            <span>Total</span>
+                            <span id="totalAmount">L. {{ "%.2f"|format(total) }}</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="submitButton">
+                        Confirmar Compra
+                    </button>
+                    <a href="{{ url_for('ventas.carrito') }}" class="btn btn-secondary">
+                        Volver al Carrito
+                    </a>
+
+                    <div class="security">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        Pago 100% seguro
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const metodoMixtoFields = document.getElementById('metodoMixtoFields');
+const tarjetaInput = document.getElementById('tarjetaUltimos4');
+const efectivoInput = document.getElementById('montoEfectivo');
+const mixtoSummary = document.getElementById('mixtoSummary');
+const SUBTOTAL = {{ subtotal }};
+const ISV_RATE = 0.15;
+const MAX_DISCOUNT_PERCENT = {{ descuento_maximo_porcentaje }};
+const HAS_SAR_ERROR = {{ 'true' if sar_error else 'false' }};
+
+// Disable submit button if SAR error exists
+document.addEventListener('DOMContentLoaded', function() {
+    if (HAS_SAR_ERROR) {
+        const submitBtn = document.getElementById('submitButton');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.title = 'No se puede procesar la compra debido a problemas con SAR';
+            
+            // Also disable all form inputs
+            const allInputs = document.querySelectorAll('#checkoutForm input, #checkoutForm select, #checkoutForm textarea, #checkoutForm button[type="button"]');
+            allInputs.forEach(input => {
+                if (input.id !== 'submitButton') {
+                    input.disabled = true;
+                    input.style.opacity = '0.6';
+                }
+            });
+        }
+    }
+});
+
+// Update totals when discount changes
+function updateTotals() {
+    const discountPercent = parseFloat(document.getElementById('discountPercentage').value) || 0;
+    const exonerado = document.getElementById('exonerado').checked;
+    const errorDiv = document.getElementById('discountError');
+    const warningDiv = document.getElementById('discountWarning');
+    
+    // Clear previous messages
+    errorDiv.style.display = 'none';
+    warningDiv.style.display = 'none';
+    errorDiv.textContent = '';
+    warningDiv.textContent = '';
+    
+    // Validate discount percentage
+    if (discountPercent > MAX_DISCOUNT_PERCENT) {
+        errorDiv.textContent = `El descuento no puede exceder ${MAX_DISCOUNT_PERCENT}%`;
+        errorDiv.style.display = 'block';
+        document.getElementById('discountPercentage').value = MAX_DISCOUNT_PERCENT;
+        return updateTotals();
+    }
+    
+    if (discountPercent < 0) {
+        errorDiv.textContent = 'El descuento no puede ser negativo';
+        errorDiv.style.display = 'block';
+        document.getElementById('discountPercentage').value = 0;
+        return;
+    }
+    
+    // Calculate discount amount
+    const discountAmount = SUBTOTAL * (discountPercent / 100);
+    
+    // Show warning for high discounts
+    if (discountPercent > 15) {
+        warningDiv.textContent = `⚠️ Descuento alto aplicado (${discountPercent}%)`;
+        warningDiv.style.display = 'block';
+    }
+    
+    // Update discount display
+    document.getElementById('discountDisplayAmount').textContent = `L. ${discountAmount.toFixed(2)}`;
+    
+    // Show/hide discount line in summary
+    const discountLine = document.getElementById('discountLine');
+    if (discountAmount > 0) {
+        discountLine.style.display = 'flex';
+        document.getElementById('discountAmount').textContent = `- L. ${discountAmount.toFixed(2)}`;
+    } else {
+        discountLine.style.display = 'none';
+    }
+    
+    // Calculate totals
+    const subtotalAfterDiscount = SUBTOTAL - discountAmount;
+    const isv = exonerado ? 0 : subtotalAfterDiscount * ISV_RATE;
+    const total = subtotalAfterDiscount + isv;
+    
+    // Update display
+    document.getElementById('isvAmount').textContent = `L. ${isv.toFixed(2)}`;
+    document.getElementById('totalAmount').textContent = `L. ${total.toFixed(2)}`;
+}
+
+// Preset discount buttons
+document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const value = this.dataset.value;
+        document.getElementById('discountPercentage').value = value;
+        
+        // Visual feedback
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        updateTotals();
+    });
+});
+
+// Event listeners
+document.getElementById('discountPercentage').addEventListener('input', updateTotals);
+document.getElementById('exonerado').addEventListener('change', function() {
+    document.getElementById('exoneracionFields').style.display = this.checked ? 'block' : 'none';
+    updateTotals();
+});
+
+// Form validation
+document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    if (HAS_SAR_ERROR) {
+        e.preventDefault();
+        alert('No se puede procesar la compra debido a problemas con la configuración de facturación. Contacte al administrador.');
+        return;
+    }
+    
+    if (!document.querySelector('input[name="metodo_pago"]:checked')) {
+        e.preventDefault();
+        alert('Por favor selecciona un método de pago');
+        return;
+    }
+    if (!document.getElementById('terms').checked) {
+        e.preventDefault();
+        alert('Debes aceptar los términos y condiciones');
+        return;
+    }
+});
+
+// Payment method change handler
+document.querySelectorAll('input[name="metodo_pago"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const metodoPagoNombre = this.dataset.nombre;
+        
+        if (metodoPagoNombre && metodoPagoNombre.toLowerCase().includes('mixto')) {
+            metodoMixtoFields.style.display = 'block';
+            tarjetaInput.required = true;
+            efectivoInput.required = true;
+        } else {
+            metodoMixtoFields.style.display = 'none';
+            mixtoSummary.style.display = 'none';
+            tarjetaInput.required = false;
+            efectivoInput.required = false;
+            tarjetaInput.value = '';
+            efectivoInput.value = '';
+        }
+    });
+});
+
+// Update mixto summary
+function updateMixtoSummary() {
+    const tarjeta = tarjetaInput.value;
+    const efectivo = parseFloat(efectivoInput.value) || 0;
+    const totalText = document.getElementById('totalAmount').textContent;
+    const total = parseFloat(totalText.replace('L. ', '').replace(',', ''));
+    
+    if (tarjeta && tarjeta.length === 4 && efectivo > 0) {
+        const montoTarjeta = total - efectivo;
+        
+        if (montoTarjeta < 0) {
+            efectivoInput.setCustomValidity('El monto en efectivo no puede exceder el total');
+            mixtoSummary.style.display = 'none';
+            return;
+        } else {
+            efectivoInput.setCustomValidity('');
+        }
+        
+        document.getElementById('mixtoTarjetaDigitos').textContent = tarjeta;
+        document.getElementById('mixtoEfectivoDisplay').textContent = `L. ${efectivo.toFixed(2)}`;
+        document.getElementById('mixtoTarjetaDisplay').textContent = `L. ${montoTarjeta.toFixed(2)}`;
+        mixtoSummary.style.display = 'block';
+    } else {
+        mixtoSummary.style.display = 'none';
+    }
+}
+
+tarjetaInput.addEventListener('input', updateMixtoSummary);
+efectivoInput.addEventListener('input', updateMixtoSummary);
+
+// Additional validation for mixto on submit
+document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    const metodoPagoSelected = document.querySelector('input[name="metodo_pago"]:checked');
+    
+    if (metodoPagoSelected && metodoPagoSelected.dataset.nombre.toLowerCase().includes('mixto')) {
+        const tarjeta = tarjetaInput.value;
+        const efectivo = parseFloat(efectivoInput.value) || 0;
+        const total = parseFloat(document.getElementById('totalAmount').textContent.replace('L. ', '').replace(',', ''));
+        
+        if (!tarjeta || tarjeta.length !== 4) {
+            e.preventDefault();
+            alert('Ingresa los últimos 4 dígitos de la tarjeta');
+            return;
+        }
+        
+        if (efectivo <= 0) {
+            e.preventDefault();
+            alert('Ingresa un monto válido en efectivo');
+            return;
+        }
+        
+        if (efectivo >= total) {
+            e.preventDefault();
+            alert('El monto en efectivo debe ser menor al total (usa solo Efectivo como método de pago)');
+            return;
+        }
+    }
+});
+</script>
+
+<style>
+.checkout-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Progress */
+.checkout-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.step.completed .step-circle {
+    background: #10b981;
+    color: white;
+}
+
+.step.active .step-circle {
+    background: #667eea;
+    color: white;
+}
+
+.step span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.step.completed span,
+.step.active span {
+    color: #1e293b;
+}
+
+.step-line {
+    width: 60px;
+    height: 2px;
+    background: #e2e8f0;
+}
+
+/* Grid */
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Cards */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1.25rem 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.card-title svg {
+    color: #667eea;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    font-size: 0.875rem;
+}
+
+.info-grid div {
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.info-grid strong {
+    display: block;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+/* Sucursal Info */
+.sucursal-info-box {
+    background: #f0f4ff;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.sucursal-badge {
+    display: flex;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.sucursal-badge svg {
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.sucursal-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.sucursal-address {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.sucursal-contact {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.sucursal-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.sucursal-note svg {
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+/* SAR Error Alert - NUEVO */
+.alert-error {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #fee2e2;
+    border: 2px solid #ef4444;
+    border-radius: 8px;
+}
+
+.alert-error svg {
+    color: #dc2626;
+    flex-shrink: 0;
+}
+
+.alert-error h4 {
+    margin: 0 0 0.5rem 0;
+    color: #991b1b;
+    font-size: 1.1rem;
+}
+
+.alert-error p {
+    margin: 0 0 0.5rem 0;
+    color: #7f1d1d;
+    font-weight: 600;
+}
+
+.alert-error small {
+    color: #991b1b;
+    font-size: 0.85rem;
+}
+
+/* Payment */
+.payment-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.payment-option {
+    cursor: pointer;
+}
+
+.payment-option input {
+    display: none;
+}
+
+.payment-card {
+    position: relative;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.payment-option:hover .payment-card {
+    border-color: #cbd5e0;
+}
+
+.payment-option input:checked + .payment-card {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.payment-name {
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.payment-desc {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.check-mark {position: absolute;
+top: 1rem;
+right: 1rem;
+width: 24px;
+height: 24px;
+border-radius: 50%;
+background: #667eea;
+color: white;
+display: none;
+align-items: center;
+justify-content: center;
+font-size: 14px;
+}
+.payment-option input:checked + .payment-card .check-mark {
+display: flex;
+}
+/* Forms */
+.form-group {
+margin-top: 1rem;
+}
+.form-group label {
+display: block;
+font-size: 0.875rem;
+font-weight: 600;
+color: #475569;
+margin-bottom: 0.5rem;
+}
+.form-input, .form-select {
+width: 100%;
+padding: 0.75rem;
+border: 2px solid #e2e8f0;
+border-radius: 8px;
+font-size: 0.9375rem;
+background: white;
+}
+.form-input:focus, .form-select:focus {
+outline: none;
+border-color: #667eea;
+}
+.form-input:disabled {
+background: #f7fafc;
+cursor: not-allowed;
+opacity: 0.6;
+}
+.form-select {
+cursor: pointer;
+}
+.form-hint {
+font-size: 0.8125rem;
+color: #64748b;
+margin-top: 0.25rem;
+}
+/* Mixto Header */
+.mixto-header {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+padding: 0.75rem;
+background: #f0f4ff;
+border-radius: 8px;
+margin-bottom: 1rem;
+font-weight: 600;
+color: #667eea;
+}
+.mixto-summary {
+margin-top: 1rem;
+padding: 1rem;
+background: #f8fafc;
+border-radius: 8px;
+border: 2px solid #e2e8f0;
+}
+.mixto-row {
+display: flex;
+justify-content: space-between;
+padding: 0.5rem 0;
+font-size: 0.9375rem;
+}
+.mixto-row:not(:last-child) {
+border-bottom: 1px solid #e2e8f0;
+}
+.mixto-row span:last-child {
+font-weight: 700;
+color: #1e293b;
+}
+/* Discount Container */
+.discount-container {
+display: flex;
+flex-direction: column;
+gap: 1rem;
+}
+.input-wrapper {
+position: relative;
+display: flex;
+align-items: center;
+}
+.input-suffix {
+position: absolute;
+right: 1rem;
+font-weight: 600;
+color: #64748b;
+pointer-events: none;
+}
+.discount-limits {
+font-size: 0.75rem;
+color: #64748b;
+margin-top: 0.25rem;
+}
+.discount-presets {
+display: flex;
+flex-direction: column;
+gap: 0.5rem;
+}
+.preset-label {
+font-size: 0.875rem;
+font-weight: 600;
+color: #475569;
+}
+.preset-buttons {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 0.5rem;
+}
+.preset-btn {
+padding: 0.5rem;
+background: white;
+border: 2px solid #e2e8f0;
+border-radius: 6px;
+font-weight: 600;
+color: #475569;
+cursor: pointer;
+transition: all 0.2s;
+}
+.preset-btn:hover {
+border-color: #667eea;
+color: #667eea;
+}
+.preset-btn.active {
+background: #667eea;
+border-color: #667eea;
+color: white;
+}
+.preset-btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+.discount-display {
+padding: 1rem;
+background: #f0fdf4;
+border-radius: 8px;
+border: 2px solid #86efac;
+}
+.discount-info {
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-size: 0.875rem;
+}
+.discount-amount {
+font-weight: 700;
+color: #166534;
+font-size: 1rem;
+}
+.checkbox-group {
+display: flex;
+align-items: center;
+gap: 0.75rem;
+cursor: pointer;
+}
+.checkbox-group input {
+width: 18px;
+height: 18px;
+cursor: pointer;
+}
+.checkbox-group input:disabled {
+cursor: not-allowed;
+}
+.error-text, .warning-text {
+display: none;
+margin-top: 0.5rem;
+padding: 0.75rem;
+border-radius: 6px;
+font-size: 0.875rem;
+font-weight: 600;
+}
+.error-text {
+background: #fee2e2;
+color: #dc2626;
+}
+.warning-text {
+background: #fef3c7;
+color: #92400e;
+}
+.link {
+color: #667eea;
+text-decoration: none;
+font-weight: 600;
+}
+/* Summary */
+.checkout-sidebar {
+position: sticky;
+top: 2rem;
+}
+.summary-card {
+background: white;
+border-radius: 12px;
+padding: 1.5rem;
+box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.summary-card h3 {
+margin: 0 0 1.25rem 0;
+font-size: 1.125rem;
+font-weight: 700;
+padding-bottom: 1rem;
+border-bottom: 2px solid #f1f5f9;
+}
+.summary-items {
+max-height: 350px;
+overflow-y: auto;
+margin-bottom: 1.25rem;
+}
+.summary-item {
+display: flex;
+gap: 0.75rem;
+padding: 0.75rem 0;
+border-bottom: 1px solid #f1f5f9;
+}
+.item-img {
+width: 50px;
+height: 65px;
+flex-shrink: 0;
+border-radius: 6px;
+overflow: hidden;
+}
+.item-img img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+.no-img {
+width: 100%;
+height: 100%;
+background: #f1f5f9;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.5rem;
+}
+.item-info {
+flex: 1;
+min-width: 0;
+}
+.item-title {
+font-size: 0.875rem;
+font-weight: 600;
+color: #1e293b;
+margin-bottom: 0.5rem;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.item-meta {
+display: flex;
+gap: 0.5rem;
+align-items: center;
+font-size: 0.75rem;
+color: #64748b;
+}
+.badge {
+padding: 0.2rem 0.5rem;
+background: #e2e8f0;
+border-radius: 4px;
+font-weight: 600;
+}
+.item-price {
+font-weight: 700;
+color: #1e293b;
+}
+/* Totals */
+.summary-totals {
+padding: 1.25rem 0;
+border-top: 2px solid #f1f5f9;
+border-bottom: 2px solid #f1f5f9;
+margin-bottom: 1.25rem;
+}
+.total-line {
+display: flex;
+justify-content: space-between;
+margin-bottom: 0.75rem;
+font-size: 0.9375rem;
+}
+.total-line.total {
+margin-top: 0.75rem;
+padding-top: 0.75rem;
+border-top: 2px solid #e2e8f0;
+font-size: 1.25rem;
+font-weight: 700;
+}
+.discount {
+color: #10b981;
+font-weight: 600;
+}
+/* Buttons */
+.btn {
+width: 100%;
+padding: 0.875rem;
+border: none;
+border-radius: 8px;
+font-weight: 600;
+font-size: 0.9375rem;
+cursor: pointer;
+text-align: center;
+text-decoration: none;
+display: block;
+transition: all 0.2s;
+margin-bottom: 0.75rem;
+}
+.btn-primary {
+background: linear-gradient(135deg, #667eea, #764ba2);
+color: white;
+}
+.btn-primary:hover:not(:disabled) {
+transform: translateY(-2px);
+box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+.btn-primary:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+transform: none;
+}
+.btn-secondary {
+background: #e2e8f0;
+color: #475569;
+}
+.btn-secondary:hover {
+background: #cbd5e0;
+}
+.security {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
+padding: 0.75rem;
+background: #f0fdf4;
+border-radius: 8px;
+color: #166534;
+font-size: 0.875rem;
+font-weight: 600;
+}
+/* Responsive */
+@media (max-width: 1024px) {
+.checkout-grid {
+grid-template-columns: 1fr;
+}
+.checkout-sidebar {
+    position: static;
+    order: -1;
+}
+
+.info-grid {
+    grid-template-columns: 1fr;
+}
+}
+</style>
+{% endblock %}

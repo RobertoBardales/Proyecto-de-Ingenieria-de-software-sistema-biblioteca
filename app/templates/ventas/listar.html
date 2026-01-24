@@ -1,0 +1,1014 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Ventas{% endblock %}
+
+{% block content %}
+<div class="ventas-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="page-title">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    Gestión de Ventas
+                </h1>
+                <p class="page-subtitle">Administra y consulta todas las ventas realizadas</p>
+            </div>
+            {% if current_user.tipo_usuario == 'cliente' %}
+            <div class="header-actions">
+                <a href="{{ url_for('ventas.carrito') }}" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    Ver Carrito
+                </a>
+                <a href="{{ url_for('libros.listar') }}" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    Explorar Libros
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card" style="--card-color: #6366f1;">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ ventas_data|length }}</h3>
+                <p class="stat-label">Total Ventas</p>
+            </div>
+        </div>
+
+        <div class="stat-card" style="--card-color: #10b981;">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">
+                    {{ ventas_data|selectattr('estado.nombre', 'equalto', 'Completada')|list|length }}
+                </h3>
+                <p class="stat-label">Completadas</p>
+            </div>
+        </div>
+
+        <div class="stat-card" style="--card-color: #f59e0b;">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">
+                    {{ ventas_data|selectattr('estado.nombre', 'equalto', 'Pendiente de Pago')|list|length }}
+                </h3>
+                <p class="stat-label">Pendientes</p>
+            </div>
+        </div>
+
+        <div class="stat-card" style="--card-color: #8b5cf6;">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">
+                    L. {{ '{:,.2f}'.format(ventas_data|sum(attribute='venta.total')|default(0)) }}
+                </h3>
+                <p class="stat-label">Total Ingresos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3 class="filters-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filtros de Búsqueda
+            </h3>
+            <button type="button" class="btn-toggle-filters" onclick="toggleFilters()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+        </div>
+        
+        <form method="GET" action="{{ url_for('ventas.listar') }}" class="filters-form" id="filtersForm">
+            <div class="filters-grid">
+                <!-- Estado Filter -->
+                <div class="form-group">
+                    <label for="estado" class="form-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                        Estado
+                    </label>
+                    <select name="estado" id="estado" class="form-control">
+                        <option value="">Todos los estados</option>
+                        {% for estado in estados %}
+                        <option value="{{ estado.id_estado }}" 
+                                {% if estado_actual == estado.id_estado|string %}selected{% endif %}>
+                            {{ estado.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+                <!-- Cliente Filter (Admin/Empleado only) -->
+                <div class="form-group">
+                    <label for="cliente" class="form-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Cliente
+                    </label>
+                    <select name="cliente" id="cliente" class="form-control">
+                        <option value="">Todos los clientes</option>
+                        {% for cliente in clientes %}
+                        <option value="{{ cliente.id_cliente }}" 
+                                {% if cliente_actual == cliente.id_cliente|string %}selected{% endif %}>
+                            {{ cliente.apellidos }}, {{ cliente.nombres }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <!-- Fecha Desde -->
+                <div class="form-group">
+                    <label for="fecha_desde" class="form-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        Desde
+                    </label>
+                    <input type="date" 
+                           name="fecha_desde" 
+                           id="fecha_desde" 
+                           class="form-control" 
+                           value="{{ fecha_desde_actual }}">
+                </div>
+
+                <!-- Fecha Hasta -->
+                <div class="form-group">
+                    <label for="fecha_hasta" class="form-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        Hasta
+                    </label>
+                    <input type="date" 
+                           name="fecha_hasta" 
+                           id="fecha_hasta" 
+                           class="form-control" 
+                           value="{{ fecha_hasta_actual }}">
+                </div>
+            </div>
+
+            <div class="filters-actions">
+                <button type="submit" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Aplicar Filtros
+                </button>
+                <a href="{{ url_for('ventas.listar') }}" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="1 4 1 10 7 10"></polyline>
+                        <polyline points="23 20 23 14 17 14"></polyline>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                    </svg>
+                    Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sales Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3 class="table-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                Listado de Ventas ({{ ventas_data|length }})
+            </h3>
+        </div>
+
+        {% if ventas_data %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Factura</th>
+                        <th>Fecha</th>
+                        {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+                        <th>Cliente</th>
+                        {% endif %}
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Método Pago</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in ventas_data %}
+                    <tr>
+                        <td>
+                            <span class="badge badge-secondary">#{{ item.venta.id_venta }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #6366f1;">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <span class="text-monospace">{{ item.venta.numero_factura }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="date-info">
+                                <span class="date-day">{{ item.venta.fecha_venta.strftime('%d/%m/%Y') }}</span>
+                                <span class="date-time">{{ item.venta.fecha_venta.strftime('%I:%M %p') }}</span>
+                            </div>
+                        </td>
+                        {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+                        <td>
+                            <div class="user-info">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                <span>{{ item.cliente.nombres }} {{ item.cliente.apellidos }}</span>
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <span class="badge badge-info">{{ item.items_count }} item(s)</span>
+                        </td>
+                        <td>
+                            <div class="price-info">
+                                <span class="price-amount">L. {{ '{:,.2f}'.format(item.venta.total) }}</span>
+                                {% if item.venta.descuento > 0 %}
+                                <span class="price-discount">(-L. {{ '{:,.2f}'.format(item.venta.descuento) }})</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="payment-method">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                                </svg>
+                                {{ item.metodo_pago.nombre }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.estado.nombre == 'Completada' %}
+                            <span class="badge badge-success">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                {{ item.estado.nombre }}
+                            </span>
+                            {% elif item.estado.nombre == 'Pendiente de Pago' %}
+                            <span class="badge badge-warning">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {{ item.estado.nombre }}
+                            </span>
+                            {% elif item.estado.nombre == 'Cancelada' %}
+                            <span class="badge badge-danger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                                {{ item.estado.nombre }}
+                            </span>
+                            {% else %}
+                            <span class="badge badge-secondary">{{ item.estado.nombre }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('ventas.ver', id=item.venta.id_venta) }}" 
+                                   class="btn-action btn-action-view" 
+                                   title="Ver detalles">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </a>
+                                <a href="{{ url_for('ventas.factura', id=item.venta.id_venta) }}" 
+                                   class="btn-action btn-action-invoice" 
+                                   title="Ver factura"
+                                   target="_blank">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                </a>
+                                {% if current_user.tipo_usuario in ['admin', 'empleado'] and item.estado.nombre == 'Pendiente de Pago' %}
+                                <form method="POST" 
+                                      action="{{ url_for('ventas.confirmar_pago', id=item.venta.id_venta) }}" 
+                                      style="display: inline;"
+                                      onsubmit="return confirm('¿Confirmar el pago de esta venta?');">
+                                    <button type="submit" 
+                                            class="btn-action btn-action-confirm" 
+                                            title="Confirmar pago">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if current_user.tipo_usuario in ['admin', 'empleado'] and item.estado.nombre != 'Cancelada' %}
+                                <form method="POST" 
+                                      action="{{ url_for('ventas.cancelar', id=item.venta.id_venta) }}" 
+                                      style="display: inline;"
+                                      onsubmit="return confirm('¿Estás seguro de cancelar esta venta? Se revertirá el inventario.');">
+                                    <button type="submit" 
+                                            class="btn-action btn-action-delete" 
+                                            title="Cancelar venta">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                                        </svg>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <h3>No se encontraron ventas</h3>
+            <p>{% if estado_actual or cliente_actual or fecha_desde_actual or fecha_hasta_actual %}
+                No hay ventas que coincidan con los filtros aplicados.
+                {% else %}
+                Aún no se han registrado ventas en el sistema.
+                {% endif %}
+            </p>
+            {% if current_user.tipo_usuario == 'cliente' %}
+            <a href="{{ url_for('libros.listar') }}" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                Explorar Libros
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .ventas-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Page Header */
+    .page-header {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-left {
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-title svg {
+        stroke: #6366f1;
+    }
+
+    .page-subtitle {
+        font-size: 1rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: var(--card-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .stat-icon svg {
+        stroke: white;
+    }
+
+    .stat-info {
+        flex: 1;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin: 0;
+        font-weight: 600;
+    }
+
+    /* Filters Card */
+    .filters-card {
+        background: white;
+        border-radius: 16px;
+        padding: 0;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #f1f5f9;
+        background: #f8fafc;
+    }
+
+    .filters-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .filters-title svg {
+        stroke: #6366f1;
+    }
+
+    .btn-toggle-filters {
+        background: none;
+        border: none;
+        padding: 0.5rem;
+        cursor: pointer;
+        color: #64748b;
+        transition: all 0.2s;
+        border-radius: 6px;
+    }
+
+    .btn-toggle-filters:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+    }
+
+    .filters-form {
+        padding: 2rem;
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-label svg {
+        stroke: #6366f1;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+font-size: 0.9375rem;
+transition: all 0.2s;
+background: white;
+}
+.form-control:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.filters-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: #6366f1;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4f46e5;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+/* Table Card */
+.table-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.table-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #f8fafc;
+}
+
+.table-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.table-title svg {
+    stroke: #6366f1;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table thead {
+    background: #f8fafc;
+}
+
+.data-table th {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
+}
+
+.data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.data-table td {
+    padding: 1.25rem 1.5rem;
+    font-size: 0.9375rem;
+    color: #334155;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Date Info */
+.date-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.date-day {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.date-time {
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+/* User Info */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-info svg {
+    stroke: #6366f1;
+    flex-shrink: 0;
+}
+
+/* Price Info */
+.price-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.price-amount {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 1rem;
+}
+
+.price-discount {
+    font-size: 0.8125rem;
+    color: #dc2626;
+}
+
+/* Payment Method */
+.payment-method {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.875rem;
+    background: #f8fafc;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.btn-action-view {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.btn-action-view:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-action-invoice {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.btn-action-invoice:hover {
+    background: #6366f1;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-action-confirm {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.btn-action-confirm:hover {
+    background: #10b981;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-action-delete {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-action-delete:hover {
+    background: #dc2626;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-state svg {
+    stroke: #cbd5e1;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #475569;
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    color: #64748b;
+    margin: 0 0 1.5rem 0;
+}
+
+.text-monospace {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 600;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.align-items-center {
+    align-items: center;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ventas-container {
+        padding: 1rem;
+    }
+
+    .page-header,
+    .filters-card,
+    .table-card {
+        border-radius: 12px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header-actions {
+        width: 100%;
+    }
+
+    .header-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-table {
+        font-size: 0.875rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.875rem 1rem;
+    }
+
+    .action-buttons {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+}
+</style>
+<script>
+function toggleFilters() {
+    const form = document.getElementById('filtersForm');
+    const button = document.querySelector('.btn-toggle-filters svg');
+    
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        button.style.transform = 'rotate(180deg)';
+    } else {
+        form.style.display = 'none';
+        button.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Auto-submit form on filter change (optional)
+document.querySelectorAll('.filters-form select, .filters-form input').forEach(element => {
+    element.addEventListener('change', function() {
+        // Uncomment to auto-submit on change
+        // this.form.submit();
+    });
+});
+</script>
+{% endblock %}

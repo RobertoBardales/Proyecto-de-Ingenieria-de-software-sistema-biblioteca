@@ -169,6 +169,13 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
+        input[type="email"]:disabled,
+        input[type="password"]:disabled {
+            background-color: #f7fafc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
         .btn-login {
             width: 100%;
             padding: 1rem;
@@ -187,13 +194,18 @@
             gap: 0.5rem;
         }
 
-        .btn-login:hover {
+        .btn-login:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-login:active {
+        .btn-login:active:not(:disabled) {
             transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .divider {
@@ -367,5 +379,114 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Track failed login attempts
+        let failedAttempts = parseInt(localStorage.getItem('loginAttempts') || '0');
+        let lockoutTime = parseInt(localStorage.getItem('lockoutTime') || '0');
+        
+        // Check if user is locked out
+        function checkLockout() {
+            const now = Date.now();
+            
+            if (failedAttempts >= 5 && lockoutTime > now) {
+                const minutesLeft = Math.ceil((lockoutTime - now) / 60000);
+                disableForm(minutesLeft);
+                return true;
+            } else if (failedAttempts >= 5 && lockoutTime <= now) {
+                // Lockout expired, reset
+                localStorage.setItem('loginAttempts', '0');
+                localStorage.removeItem('lockoutTime');
+                failedAttempts = 0;
+            }
+            return false;
+        }
+        
+        // Disable the form
+        function disableForm(minutesLeft) {
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const submitButton = document.querySelector('.btn-login');
+            
+            emailInput.disabled = true;
+            passwordInput.disabled = true;
+            submitButton.disabled = true;
+            
+            // Show lockout message
+            const flashMessages = document.querySelector('.flash-messages') || createFlashContainer();
+            flashMessages.innerHTML = `
+                <div class="alert alert-error">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    <span>Demasiados intentos fallidos. Por favor espera ${minutesLeft} minutos antes de intentar nuevamente.</span>
+                </div>
+            `;
+            
+            // Update countdown every minute
+            const countdownInterval = setInterval(() => {
+                const now = Date.now();
+                const remaining = Math.ceil((lockoutTime - now) / 60000);
+                
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    localStorage.setItem('loginAttempts', '0');
+                    localStorage.removeItem('lockoutTime');
+                    location.reload();
+                } else {
+                    const alertSpan = flashMessages.querySelector('.alert span');
+                    if (alertSpan) {
+                        alertSpan.textContent = `Demasiados intentos fallidos. Por favor espera ${remaining} minutos antes de intentar nuevamente.`;
+                    }
+                }
+            }, 60000); // Update every minute
+        }
+        
+        function createFlashContainer() {
+            const container = document.createElement('div');
+            container.className = 'flash-messages';
+            const loginBody = document.querySelector('.login-body');
+            const form = loginBody.querySelector('form');
+            loginBody.insertBefore(container, form);
+            return container;
+        }
+        
+        // Check for error messages (failed login)
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLockout();
+            
+            const errorAlerts = document.querySelectorAll('.alert-error');
+            errorAlerts.forEach(alert => {
+                const message = alert.textContent.toLowerCase();
+                if (message.includes('incorrectos') || message.includes('contraseña')) {
+                    failedAttempts++;
+                    localStorage.setItem('loginAttempts', failedAttempts.toString());
+                    
+                    if (failedAttempts >= 5) {
+                        // Set lockout for 30 minutes
+                        lockoutTime = Date.now() + (30 * 60 * 1000);
+                        localStorage.setItem('lockoutTime', lockoutTime.toString());
+                        location.reload();
+                    } else {
+                        // Show remaining attempts
+                        const remaining = 5 - failedAttempts;
+                        const alertSpan = alert.querySelector('span');
+                        if (alertSpan) {
+                            alertSpan.textContent = `Email/Usuario o contraseña incorrectos. Te quedan ${remaining} intentos.`;
+                        }
+                    }
+                }
+            });
+            
+            // Check for success (reset attempts)
+            const successAlerts = document.querySelectorAll('.alert-success');
+            if (successAlerts.length > 0) {
+                localStorage.setItem('loginAttempts', '0');
+                localStorage.removeItem('lockoutTime');
+            }
+        });
+    </script>
 </body>
 </html>

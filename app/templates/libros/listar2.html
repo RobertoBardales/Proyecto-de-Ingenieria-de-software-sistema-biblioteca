@@ -1,0 +1,602 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Libros{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('main.index') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Gestión de Libros</h1>
+                <p class="subtitle">Administra el catálogo de la biblioteca</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <a href="{{ url_for('libros.nuevo') }}" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nuevo Libro
+            </a>
+        </div>
+    </div>
+
+    <!-- Advanced Filters -->
+    <div class="filters-container">
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Buscar por título, ISBN o descripción..." class="search-input">
+            <button class="clear-btn" id="clearBtn" onclick="clearFilters()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="filter-group">
+            <select id="categoriaFilter" class="filter-select">
+                <option value="">Todas las categorías</option>
+                {% for categoria in todas_categorias %}
+                <option value="{{ categoria.id_categoria }}">{{ categoria.nombre }}</option>
+                {% endfor %}
+            </select>
+            <select id="formatoFilter" class="filter-select">
+                <option value="">Todos los formatos</option>
+                <option value="Físico">Físico</option>
+                <option value="Digital">Digital</option>
+                <option value="Ambos">Ambos</option>
+            </select>
+            <select id="disponibilidadFilter" class="filter-select">
+                <option value="">Todas las disponibilidades</option>
+                <option value="venta">Disponible para venta</option>
+                <option value="prestamo">Disponible para préstamo</option>
+                <option value="ambos">Venta y préstamo</option>
+            </select>
+            <select id="stockFilter" class="filter-select">
+                <option value="">Todos los stocks</option>
+                <option value="disponible">Con stock disponible</option>
+                <option value="bajo">Stock bajo (&lt; 10)</option>
+                <option value="agotado">Agotado</option>
+            </select>
+            <select id="rowsPerPage" class="filter-select rows-select">
+                <option value="10">10 por página</option>
+                <option value="25" selected>25 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+                <option value="all">Mostrar todos</option>
+            </select>
+        </div>
+        <div class="filter-stats">
+            <span id="statsText">{{ libros_data|length }} libros</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Libro</th>
+                    <th>Autores</th>
+                    <th>Categorías</th>
+                    <th>Formato</th>
+                    <th>Stock</th>
+                    <th>Precio Venta</th>
+                    <th>Disponibilidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for item in libros_data %}
+                {% set libro = item.libro %}
+                {% set autores = item.autores %}
+                {% set categorias = item.categorias %}
+                {% set stock_total = libro.stock_fisico + libro.stock_digital %}
+                <tr data-search="{{ (libro.titulo + ' ' + libro.isbn + ' ' + (libro.descripcion or ''))|lower }}"
+                    data-categoria="{{ categorias[0].id_categoria if categorias else '' }}"
+                    data-formato="{{ libro.formato }}"
+                    data-disponibilidad="{{ 'ambos' if (libro.disp_venta and libro.disp_prestamo) else ('venta' if libro.disp_venta else ('prestamo' if libro.disp_prestamo else '')) }}"
+                    data-stock="{{ 'agotado' if stock_total == 0 else ('bajo' if stock_total < 10 else 'disponible') }}"
+                    data-stock-total="{{ stock_total }}">
+                    <td>
+                        <div class="book-info">
+                            {% if libro.portada %}
+                            <img src="{{ libro.portada }}" alt="{{ libro.titulo }}" class="book-cover">
+                            {% else %}
+                            <div class="book-cover-placeholder">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                </svg>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="book-title">{{ libro.titulo }}</div>
+                                <div class="book-isbn">ISBN: {{ libro.isbn }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="authors-list">
+                            {% for autor in autores %}
+                            <span class="author-badge">{{ autor.nombres }} {{ autor.apellidos }}</span>
+                            {% endfor %}
+                            {% if not autores %}
+                            <span class="text-muted-small">Sin autores</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="categories-list">
+                            {% for categoria in categorias[:2] %}
+                            <span class="badge badge-category">{{ categoria.nombre }}</span>
+                            {% endfor %}
+                            {% if categorias|length > 2 %}
+                            <span class="badge badge-more">+{{ categorias|length - 2 }}</span>
+                            {% endif %}
+                            {% if not categorias %}
+                            <span class="text-muted-small">Sin categorías</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-format-{{ libro.formato|lower }}">{{ libro.formato }}</span>
+                    </td>
+                    <td>
+                        <div class="stock-info">
+                            {% if stock_total == 0 %}
+                            <span class="stock-badge stock-agotado">Agotado</span>
+                            {% elif stock_total < 10 %}
+                            <span class="stock-badge stock-bajo">{{ stock_total }} unidades</span>
+                            {% else %}
+                            <span class="stock-badge stock-disponible">{{ stock_total }} unidades</span>
+                            {% endif %}
+                            <div class="stock-detail">
+                                <small>Físico: {{ libro.stock_fisico }} | Digital: {{ libro.stock_digital }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="price-info">
+                            <span class="price">L {{ "%.2f"|format(libro.precio_venta) }}</span>
+                            {% if libro.precio_prestamo > 0 %}
+                            <small class="price-prestamo">Préstamo: L {{ "%.2f"|format(libro.precio_prestamo) }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="availability-badges">
+                            {% if libro.disp_venta %}
+                            <span class="badge badge-success">Venta</span>
+                            {% endif %}
+                            {% if libro.disp_prestamo %}
+                            <span class="badge badge-info">Préstamo</span>
+                            {% endif %}
+                            {% if not libro.disp_venta and not libro.disp_prestamo %}
+                            <span class="badge badge-inactive">No disponible</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <a href="{{ url_for('libros.ver', id=libro.id_libro) }}" class="action-btn view" title="Ver detalles">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </a>
+                            <a href="{{ url_for('libros.editar', id=libro.id_libro) }}" class="action-btn edit" title="Editar">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
+                            <button class="action-btn delete" onclick='showDelete({{ libro.id_libro }}, "{{ libro.titulo }}")' title="Eliminar">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <p>No se encontraron libros</p>
+        </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="paginationContainer" class="pagination-container">
+        <div class="pagination-info">
+            Mostrando <span id="pageRange"></span> de <span id="totalVisible"></span> registros
+        </div>
+        <div class="pagination-controls">
+            <button class="pagination-btn" id="firstBtn" onclick="goToPage(1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="11 17 6 12 11 7"></polyline>
+                    <polyline points="18 17 13 12 18 7"></polyline>
+                </svg>
+            </button>
+            <button class="pagination-btn" id="prevBtn" onclick="goToPage(currentPage - 1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <div id="pageNumbers" class="page-numbers"></div>
+            <button class="pagination-btn" id="nextBtn" onclick="goToPage(currentPage + 1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+            <button class="pagination-btn" id="lastBtn" onclick="goToPage(totalPages)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="13 17 18 12 13 7"></polyline>
+                    <polyline points="6 17 11 12 6 7"></polyline>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header modal-danger">
+            <h3>Confirmar Eliminación</h3>
+            <button class="close-btn" onclick="closeModal('deleteModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <p>¿Eliminar el libro <strong id="deleteName"></strong>?</p>
+            <p class="text-muted">Esta acción marcará el libro como no disponible</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancelar</button>
+            <form id="deleteForm" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1600px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-box { position: relative; margin-bottom: 1rem; }
+.search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.search-input { width: 100%; padding: 0.75rem 3rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: border 0.2s; }
+.search-input:focus { outline: none; border-color: #667eea; }
+.clear-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.2s; }
+.clear-btn.show { display: flex; }
+.clear-btn:hover { background: #cbd5e0; }
+.filter-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.filter-select { padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; cursor: pointer; background: white; transition: border 0.2s; }
+.filter-select:focus { outline: none; border-color: #667eea; }
+.rows-select { font-weight: 500; }
+.filter-stats { color: #718096; font-size: 0.9rem; }
+.filter-stats span { font-weight: 600; color: #667eea; }
+
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+.data-table td { padding: 1rem; border-bottom: 1px solid #f7fafc; vertical-align: top; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.book-info { display: flex; align-items: center; gap: 0.75rem; min-width: 250px; }
+.book-cover { width: 50px; height: 70px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.book-cover-placeholder { width: 50px; height: 70px; border-radius: 4px; background: linear-gradient(135deg, #e2e8f0, #cbd5e0); display: flex; align-items: center; justify-content: center; color: #a0aec0; }
+.book-title { font-weight: 600; color: #1a202c; font-size: 0.95rem; line-height: 1.3; }
+.book-isbn { font-size: 0.8rem; color: #a0aec0; margin-top: 0.25rem; }
+
+.authors-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.author-badge { padding: 0.25rem 0.6rem; background: #f0f4ff; color: #667eea; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-block; }
+
+.categories-list { display: flex; flex-wrap: wrap; gap: 0.35rem; max-width: 200px; }
+
+.badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; display: inline-block; }
+.badge-category { background: #e6f3ff; color: #0066cc; }
+.badge-more { background: #e2e8f0; color: #4a5568; }
+.badge-format-físico { background: #d4f4dd; color: #1e7e34; }
+.badge-format-digital { background: #e6f3ff; color: #0066cc; }
+.badge-format-ambos { background: #fff3cd; color: #856404; }
+.badge-success { background: #d4f4dd; color: #1e7e34; }
+.badge-info { background: #cfe2ff; color: #084298; }
+.badge-inactive { background: #ffe0e0; color: #c41e3a; }
+
+.stock-info { display: flex; flex-direction: column; gap: 0.25rem; }
+.stock-badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; display: inline-block; width: fit-content; }
+.stock-disponible { background: #d4f4dd; color: #1e7e34; }
+.stock-bajo { background: #fff3cd; color: #856404; }
+.stock-agotado { background: #ffe0e0; color: #c41e3a; }
+.stock-detail { font-size: 0.8rem; color: #718096; }
+
+.price-info { display: flex; flex-direction: column; gap: 0.25rem; }
+.price { font-weight: 700; color: #1a202c; font-size: 1rem; }
+.price-prestamo { color: #718096; font-size: 0.8rem; }
+
+.availability-badges { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.text-muted-small { color: #a0aec0; font-size: 0.85rem; font-style: italic; }
+
+.actions { display: flex; gap: 0.5rem; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
+.action-btn.view { background: #e6f3ff; color: #0066cc; }
+.action-btn.view:hover { background: #0066cc; color: white; }
+.action-btn.edit { background: #fff3cd; color: #856404; }
+.action-btn.edit:hover { background: #ffc107; color: white; }
+.action-btn.delete { background: #ffe0e0; color: #c41e3a; }
+.action-btn.delete:hover { background: #dc3545; color: white; }
+
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover { background: #c82333; }
+
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; }
+.no-results.show { display: block; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results p { color: #718096; margin: 0; }
+
+/* Pagination */
+.pagination-container { background: white; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+.pagination-container.hidden { display: none; }
+.pagination-info { color: #718096; font-size: 0.9rem; }
+.pagination-info span { font-weight: 600; color: #667eea; }
+.pagination-controls { display: flex; gap: 0.5rem; align-items: center; }
+.pagination-btn { width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; }
+.pagination-btn:hover:not(:disabled) { border-color: #667eea; color: #667eea; background: #f0f4ff; }
+.pagination-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.page-numbers { display: flex; gap: 0.25rem; }
+.page-number { min-width: 36px; height: 36px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; font-weight: 500; font-size: 0.9rem; padding: 0 0.5rem; }
+.page-number:hover { border-color: #667eea; color: #667eea; background: #f0f4ff; }
+.page-number.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-color: transparent; }
+.page-ellipsis { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #a0aec0; font-weight: 600; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-small { max-width: 400px; }
+.modal-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; font-size: 1.25rem; }
+.modal-danger { background: #dc3545; color: white; border-bottom: none; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.close-btn:hover { background: rgba(0,0,0,0.1); }
+.modal-body { padding: 1.5rem; }
+.text-muted { color: #a0aec0; font-size: 0.9rem; margin-top: 0.5rem; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+@media (max-width: 1200px) {
+    .filter-group { grid-template-columns: repeat(3, 1fr); }
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+}
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; }
+    .filter-group { grid-template-columns: 1fr; }
+    .pagination-container { flex-direction: column; gap: 1rem; }
+    .pagination-info { text-align: center; }
+}
+</style>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const categoriaFilter = document.getElementById('categoriaFilter');
+const formatoFilter = document.getElementById('formatoFilter');
+const disponibilidadFilter = document.getElementById('disponibilidadFilter');
+const stockFilter = document.getElementById('stockFilter');
+const rowsPerPageSelect = document.getElementById('rowsPerPage');
+const clearBtn = document.getElementById('clearBtn');
+const tableBody = document.getElementById('tableBody');
+const noResults = document.getElementById('noResults');
+const statsText = document.getElementById('statsText');
+const paginationContainer = document.getElementById('paginationContainer');
+const pageRange = document.getElementById('pageRange');
+const totalVisible = document.getElementById('totalVisible');
+const pageNumbers = document.getElementById('pageNumbers');
+
+const allRows = [...tableBody.querySelectorAll('tr')];
+let filteredRows = [...allRows];
+let currentPage = 1;
+let totalPages = 1;
+let rowsPerPage = 25;
+
+function applyFilters() {
+    const search = searchInput.value.toLowerCase();
+    const categoria = categoriaFilter.value;
+    const formato = formatoFilter.value;
+    const disponibilidad = disponibilidadFilter.value;
+    const stock = stockFilter.value;
+    
+    filteredRows = allRows.filter(row => {
+        const matchSearch = !search || row.dataset.search.includes(search);
+        const matchCategoria = !categoria || row.dataset.categoria === categoria;
+        const matchFormato = !formato || row.dataset.formato === formato;
+        const matchDisponibilidad = !disponibilidad || row.dataset.disponibilidad === disponibilidad;
+        const matchStock = !stock || row.dataset.stock === stock;
+        
+        return matchSearch && matchCategoria && matchFormato && matchDisponibilidad && matchStock;
+    });
+    
+    currentPage = 1;
+    updatePagination();
+    clearBtn.classList.toggle('show', search || categoria || formato || disponibilidad || stock);
+}
+
+function updatePagination() {
+    const visibleCount = filteredRows.length;
+    
+    // Hide all rows first
+    allRows.forEach(row => row.style.display = 'none');
+    
+    // Show no results if needed
+    noResults.classList.toggle('show', visibleCount === 0);
+    
+    // Update stats
+    statsText.textContent = `${visibleCount} de ${allRows.length} libros`;
+    totalVisible.textContent = visibleCount;
+    
+    // Calculate pagination
+    if (rowsPerPageSelect.value === 'all') {
+        filteredRows.forEach(row => row.style.display = '');
+        paginationContainer.classList.add('hidden');
+        return;
+    }
+    
+    rowsPerPage = parseInt(rowsPerPageSelect.value);
+    totalPages = Math.ceil(visibleCount / rowsPerPage);
+    
+    paginationContainer.classList.toggle('hidden', totalPages <= 1);
+    
+    if (totalPages > 0) {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = Math.min(start + rowsPerPage, visibleCount);
+        
+        filteredRows.slice(start, end).forEach(row => row.style.display = '');
+        
+        pageRange.textContent = `${start + 1}-${end}`;
+        
+        renderPageNumbers();
+        
+        document.getElementById('firstBtn').disabled = currentPage === 1;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        document.getElementById('lastBtn').disabled = currentPage === totalPages;
+    }
+}
+
+function renderPageNumbers() {
+    pageNumbers.innerHTML = '';
+    
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    if (startPage > 1) {
+        pageNumbers.appendChild(createPageButton(1));
+        if (startPage > 2) {
+            pageNumbers.appendChild(createEllipsis());
+        }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.appendChild(createPageButton(i));
+    }
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            pageNumbers.appendChild(createEllipsis());
+        }
+        pageNumbers.appendChild(createPageButton(totalPages));
+    }
+}
+
+function createPageButton(page) {
+    const btn = document.createElement('button');
+    btn.className = 'page-number';
+    btn.textContent = page;
+    btn.onclick = () => goToPage(page);
+    if (page === currentPage) {
+        btn.classList.add('active');
+    }
+    return btn;
+}
+
+function createEllipsis() {
+    const span = document.createElement('span');
+    span.className = 'page-ellipsis';
+    span.textContent = '...';
+    return span;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    updatePagination();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearFilters() {
+    searchInput.value = '';
+    categoriaFilter.value = '';
+    formatoFilter.value = '';
+    disponibilidadFilter.value = '';
+    stockFilter.value = '';
+    applyFilters();
+}
+
+// Event listeners
+searchInput.addEventListener('input', applyFilters);
+categoriaFilter.addEventListener('change', applyFilters);
+formatoFilter.addEventListener('change', applyFilters);
+disponibilidadFilter.addEventListener('change', applyFilters);
+stockFilter.addEventListener('change', applyFilters);
+rowsPerPageSelect.addEventListener('change', () => {
+    currentPage = 1;
+    updatePagination();
+});
+
+// Initialize
+updatePagination();
+
+function showDelete(id, name) {
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('deleteForm').action = `/libros/eliminar/${id}`;
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+window.onclick = e => {
+    if (e.target.classList.contains('modal')) closeModal(e.target.id);
+};
+
+// Flash messages (if you have them in your base template)
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 300);
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}

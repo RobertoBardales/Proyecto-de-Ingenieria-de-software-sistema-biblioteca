@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Órdenes de Compra{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-section">
+        <h1>📦 Órdenes de Compra</h1>
+        <a href="{{ url_for('orden_compra.nueva') }}" class="btn btn-primary">
+            ➕ Nueva Orden de Compra
+        </a>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section card">
+        <h2>🔍 Filtros</h2>
+        <form method="GET" action="{{ url_for('orden_compra.listar') }}" class="filters-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Buscar:</label>
+                    <input type="text" name="busqueda" value="{{ busqueda_actual }}" 
+                           placeholder="Número, referencia, motivo...">
+                </div>
+
+                <div class="filter-group">
+                    <label>Estado:</label>
+                    <select name="estado">
+                        <option value="">Todos</option>
+                        {% for estado in estados %}
+                            <option value="{{ estado }}" {% if estado == estado_actual %}selected{% endif %}>
+                                {{ estado }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Editorial:</label>
+                    <select name="editorial">
+                        <option value="">Todas</option>
+                        {% for editorial in editoriales %}
+                            <option value="{{ editorial.id_editorial }}" 
+                                    {% if editorial.id_editorial|string == editorial_actual %}selected{% endif %}>
+                                {{ editorial.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Sucursal:</label>
+                    <select name="sucursal">
+                        <option value="">Todas</option>
+                        {% for sucursal in sucursales %}
+                            <option value="{{ sucursal.id_sucursal }}" 
+                                    {% if sucursal.id_sucursal|string == sucursal_actual %}selected{% endif %}>
+                                {{ sucursal.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Desde:</label>
+                    <input type="date" name="fecha_desde" value="{{ fecha_desde_actual }}">
+                </div>
+
+                <div class="filter-group">
+                    <label>Hasta:</label>
+                    <input type="date" name="fecha_hasta" value="{{ fecha_hasta_actual }}">
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-secondary">Filtrar</button>
+                    <a href="{{ url_for('orden_compra.listar') }}" class="btn btn-outline">Limpiar</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section">
+        <h2>📋 Resultados ({{ ordenes|length }} órdenes)</h2>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Número</th>
+                        <th>Editorial</th>
+                        <th>Sucursal</th>
+                        <th>Fecha Solicitud</th>
+                        <th>Estado</th>
+                        <th>Progreso</th>
+                        <th>Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for orden in ordenes %}
+                    <tr>
+                        <td>
+                            <strong>{{ orden.numero_orden }}</strong>
+                            {% if orden.referencia %}
+                                <br><small class="text-muted">Ref: {{ orden.referencia }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ orden.Editoriales_.nombre }}</td>
+                        <td>{{ orden.Sucursales_.nombre }}</td>
+                        <td>{{ orden.fecha_solicitud.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <span class="badge badge-{{ orden.estado|lower|replace(' ', '-') }}">
+                                {{ orden.estado }}
+                            </span>
+                        </td>
+                        <td>
+                            {% set total_items = orden.Detalle_Orden_Compra|sum(attribute='cantidad_ordenada') %}
+                            {% set total_recibidos = orden.Detalle_Orden_Compra|sum(attribute='cantidad_recibida') %}
+                            {% set porcentaje = (total_recibidos / total_items * 100) if total_items > 0 else 0 %}
+                            
+                            <div class="progress-info">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: {{ porcentaje }}%"></div>
+                                </div>
+                                <small>{{ total_recibidos }}/{{ total_items }} ({{ "%.0f"|format(porcentaje) }}%)</small>
+                            </div>
+                        </td>
+                        <td><strong>L {{ "{:,.2f}".format(orden.total) }}</strong></td>
+                        <td class="actions-cell">
+                            <a href="{{ url_for('orden_compra.ver', id=orden.id_orden) }}" 
+                               class="btn btn-sm btn-info" title="Ver detalles">
+                                👁️ Ver
+                            </a>
+                            
+                            {% if orden.estado == 'Pendiente' %}
+                                <form method="POST" action="{{ url_for('orden_compra.aprobar', id=orden.id_orden) }}" 
+                                      style="display:inline;" onsubmit="return confirm('¿Aprobar esta orden?');">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Aprobar orden">
+                                        ✅ Aprobar
+                                    </button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if orden.estado == 'Aprobada' %}
+                                <form method="POST" action="{{ url_for('orden_compra.marcar_transito', id=orden.id_orden) }}" 
+                                      style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-warning" title="Marcar en tránsito">
+                                        🚚 En Tránsito
+                                    </button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if orden.estado in ['Aprobada', 'En Tránsito'] %}
+                                <a href="{{ url_for('orden_compra.recepcionar', id=orden.id_orden) }}" 
+                                   class="btn btn-sm btn-primary" title="Recepcionar productos">
+                                    📥 Recepcionar
+                                </a>
+                            {% endif %}
+                            
+                            {% if orden.estado not in ['Cancelada', 'Recibida'] %}
+                                <a href="{{ url_for('orden_compra.cancelar', id=orden.id_orden) }}" 
+                                   class="btn btn-sm btn-danger" title="Cancelar orden">
+                                    ❌ Cancelar
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="no-data">
+                            📭 No hay órdenes de compra que coincidan con los filtros
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Replace the styles in your orden_compra/listar.html with these updated styles -->
+
+<style>
+.container { 
+    max-width: 1400px; 
+    margin: 2rem auto; 
+    padding: 0 1rem; 
+}
+
+/* Header Section */
+.header-section { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 2rem; 
+}
+
+.header-section h1 { 
+    margin: 0; 
+    font-size: 1.75rem; 
+    font-weight: 700; 
+    color: #1a202c; 
+}
+
+/* Cards */
+.card { 
+    background: white; 
+    padding: 1.5rem; 
+    border-radius: 12px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    margin-bottom: 1.5rem; 
+}
+
+.card h2 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+/* Filters */
+.filters-form { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 1rem; 
+}
+
+.filter-row { 
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-group { 
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label { 
+    margin-bottom: 0.5rem; 
+    font-weight: 600;
+    color: #4a5568;
+    font-size: 0.9rem;
+}
+
+.filter-group input, 
+.filter-group select { 
+    padding: 0.75rem; 
+    border: 2px solid #e2e8f0; 
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border 0.2s;
+}
+
+.filter-group input:focus, 
+.filter-group select:focus { 
+    outline: none; 
+    border-color: #667eea; 
+}
+
+.filter-actions { 
+    display: flex; 
+    gap: 0.75rem; 
+}
+
+/* Buttons */
+.btn { 
+    padding: 0.75rem 1.5rem; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    text-decoration: none; 
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.btn-primary { 
+    background: linear-gradient(135deg, #667eea, #764ba2); 
+    color: white; 
+}
+
+.btn-primary:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3); 
+}
+
+.btn-secondary { 
+    background: #667eea; 
+    color: white; 
+}
+
+.btn-secondary:hover { 
+    background: #5568d3; 
+}
+
+.btn-success { 
+    background: #28a745; 
+    color: white; 
+}
+
+.btn-success:hover { 
+    background: #218838; 
+}
+
+.btn-warning { 
+    background: #ffc107; 
+    color: #1a202c; 
+}
+
+.btn-warning:hover { 
+    background: #e0a800; 
+}
+
+.btn-danger { 
+    background: #dc3545; 
+    color: white; 
+}
+
+.btn-danger:hover { 
+    background: #c82333; 
+}
+
+.btn-info { 
+    background: #17a2b8; 
+    color: white; 
+}
+
+.btn-info:hover { 
+    background: #138496; 
+}
+
+.btn-outline { 
+    background: #e2e8f0; 
+    color: #4a5568; 
+    border: 2px solid #e2e8f0;
+}
+
+.btn-outline:hover { 
+    background: #cbd5e0; 
+}
+
+.btn-sm { 
+    padding: 0.4rem 0.8rem; 
+    font-size: 0.85rem; 
+}
+
+/* Results Section */
+.results-section h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+/* Table */
+.table-responsive { 
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.data-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
+.data-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.data-table th { 
+    padding: 1rem; 
+    text-align: left; 
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.data-table td { 
+    padding: 1rem; 
+    border-bottom: 1px solid #f7fafc; 
+}
+
+.data-table tbody tr { 
+    transition: background 0.2s; 
+}
+
+.data-table tbody tr:hover { 
+    background: #f7fafc; 
+}
+
+.actions-cell { 
+    white-space: nowrap;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Badges */
+.badge { 
+    padding: 0.35rem 0.75rem; 
+    border-radius: 12px; 
+    font-size: 0.85rem; 
+    font-weight: 500;
+    display: inline-block;
+}
+
+.badge-pendiente { 
+    background: #fff3cd; 
+    color: #856404; 
+}
+
+.badge-aprobada { 
+    background: #d1ecf1; 
+    color: #0c5460; 
+}
+
+.badge-en-tránsito { 
+    background: #ffe5d0; 
+    color: #cc5200; 
+}
+
+.badge-recibida { 
+    background: #d4f4dd; 
+    color: #1e7e34; 
+}
+
+.badge-cancelada { 
+    background: #e2e8f0; 
+    color: #4a5568; 
+}
+
+/* Progress Bar */
+.progress-info { 
+    min-width: 120px; 
+}
+
+.progress-bar { 
+    height: 8px; 
+    background: #e2e8f0; 
+    border-radius: 4px; 
+    overflow: hidden; 
+    margin-bottom: 4px; 
+}
+
+.progress-fill { 
+    height: 100%; 
+    background: linear-gradient(90deg, #667eea, #764ba2); 
+    transition: width 0.3s; 
+}
+
+.progress-info small {
+    font-size: 0.8rem;
+    color: #718096;
+}
+
+/* Utilities */
+.text-muted { 
+    color: #718096;
+    font-size: 0.85rem;
+}
+
+.no-data { 
+    text-align: center; 
+    padding: 3rem; 
+    color: #a0aec0;
+    font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .data-table {
+        font-size: 0.85rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .actions-cell {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Precios de Compra - Sistema Biblioteca{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <div class="header-left">
+            <div>
+                <h1>Precios de Compra por Editorial</h1>
+                <p class="subtitle">Gestiona los precios de compra de libros según la editorial proveedora</p>
+            </div>
+        </div>
+        <a href="{{ url_for('precio_compra.nuevo') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Precio
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-container">
+        <form method="GET" action="{{ url_for('precio_compra.listar') }}" class="filters-form">
+            <div class="filter-group">
+                <div class="filter-input-group">
+                    <label>Editorial</label>
+                    <select name="editorial" class="filter-select">
+                        <option value="">Todas las editoriales</option>
+                        {% for editorial in editoriales %}
+                            <option value="{{ editorial.id_editorial }}" 
+                                    {% if editorial_actual and editorial_actual == editorial.id_editorial|string %}selected{% endif %}>
+                                {{ editorial.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-input-group flex-grow">
+                    <label>Buscar</label>
+                    <div class="search-box">
+                        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" name="busqueda" class="search-input" 
+                               placeholder="Título, ISBN, Editorial..." value="{{ busqueda_actual }}">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        Buscar
+                    </button>
+                    <a href="{{ url_for('precio_compra.listar') }}" class="btn btn-outline">Limpiar</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    {% if precios %}
+        <div class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Libro</th>
+                        <th>ISBN</th>
+                        <th>Editorial</th>
+                        <th>Precio Venta</th>
+                        <th>Precio Compra</th>
+                        <th>Margen</th>
+                        <th>Estado</th>
+                        <th>Actualización</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for precio in precios %}
+                        {% set libro = precio.Libros_ %}
+                        {% set editorial = precio.Editoriales_ %}
+                        {% set margen = ((libro.precio_venta - precio.precio_compra) / libro.precio_venta * 100) if libro.precio_venta > 0 else 0 %}
+                        <tr>
+                            <td>
+                                <div class="libro-info">
+                                    <div class="libro-icon">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <strong>{{ libro.titulo }}</strong>
+                                </div>
+                            </td>
+                            <td><code class="isbn-code">{{ libro.isbn }}</code></td>
+                            <td>
+                                <div class="editorial-info">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 21h18"></path>
+                                        <path d="M5 21V7l8-4v18"></path>
+                                        <path d="M19 21V11l-6-4"></path>
+                                    </svg>
+                                    {{ editorial.nombre }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-info">L {{ "%.2f"|format(libro.precio_venta) }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">L {{ "%.2f"|format(precio.precio_compra) }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if margen >= 50 else 'warning' if margen >= 30 else 'danger' }}">
+                                    {{ "%.1f"|format(margen) }}%
+                                </span>
+                            </td>
+                            <td>
+                                {% if precio.activo %}
+                                    <span class="badge badge-active">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                        Activo
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-inactive">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                        Inactivo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="text-muted">
+                                    {{ precio.fecha_actualizacion.strftime('%d/%m/%Y %H:%M') }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <a href="{{ url_for('precio_compra.editar', id=precio.id_precio_compra) }}" 
+                                       class="action-btn edit" title="Editar">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </a>
+                                    {% if precio.activo %}
+                                        <form method="POST" 
+                                              action="{{ url_for('precio_compra.desactivar', id=precio.id_precio_compra) }}" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('¿Desactivar este precio?');">
+                                            <button type="submit" class="action-btn warning" title="Desactivar">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="POST" 
+                                              action="{{ url_for('precio_compra.activar', id=precio.id_precio_compra) }}" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('¿Activar este precio?');">
+                                            <button type="submit" class="action-btn success" title="Activar">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div class="table-footer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Se encontraron {{ precios|length }} precio(s) configurado(s)
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <h3>No hay precios configurados</h3>
+            <p>
+                {% if busqueda_actual or editorial_actual %}
+                    No se encontraron resultados con los filtros aplicados.
+                {% else %}
+                    Comienza agregando precios de compra para tus libros.
+                {% endif %}
+            </p>
+            <a href="{{ url_for('precio_compra.nuevo') }}" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Agregar Primer Precio
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- Info Box -->
+    <div class="info-box">
+        <div class="info-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <h4>Información sobre Precios de Compra</h4>
+        </div>
+        <ul>
+            <li>Los precios configurados aquí se usarán automáticamente al crear órdenes de compra</li>
+            <li>Solo puede haber un precio activo por combinación libro-editorial</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Filters */
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.filters-form { display: flex; flex-direction: column; gap: 1rem; }
+.filter-group { display: flex; gap: 1rem; align-items: end; }
+.filter-input-group { display: flex; flex-direction: column; min-width: 200px; }
+.filter-input-group.flex-grow { flex: 1; }
+.filter-input-group label { margin-bottom: 0.5rem; font-weight: 600; color: #4a5568; font-size: 0.9rem; }
+.filter-select { padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; cursor: pointer; background: white; transition: border 0.2s; }
+.filter-select:focus { outline: none; border-color: #667eea; }
+.search-box { position: relative; }
+.search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.search-input { width: 100%; padding: 0.75rem 1rem 0.75rem 3rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: border 0.2s; }
+.search-input:focus { outline: none; border-color: #667eea; }
+.filter-actions { display: flex; gap: 0.75rem; }
+
+/* Buttons */
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; font-size: 0.95rem; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #667eea; color: white; }
+.btn-secondary:hover { background: #5568d3; }
+.btn-outline { background: #e2e8f0; color: #4a5568; }
+.btn-outline:hover { background: #cbd5e0; }
+
+/* Table */
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 1.5rem; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.9rem; }
+.data-table td { padding: 1rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+/* Book and Editorial Info */
+.libro-info { display: flex; align-items: center; gap: 0.75rem; }
+.libro-icon { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.isbn-code { padding: 0.25rem 0.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85rem; color: #4a5568; }
+.editorial-info { display: flex; align-items: center; gap: 0.5rem; color: #4a5568; }
+.editorial-info svg { color: #a0aec0; }
+
+/* Badges */
+.badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.35rem; }
+.badge-info { background: #e6f3ff; color: #0066cc; }
+.badge-success { background: #d4f4dd; color: #1e7e34; }
+.badge-warning { background: #fff3cd; color: #856404; }
+.badge-danger { background: #ffe0e0; color: #c41e3a; }
+.badge-active { background: #d4f4dd; color: #1e7e34; }
+.badge-inactive { background: #e2e8f0; color: #4a5568; }
+.badge-en-recepción { 
+    background: #e3d5ff; 
+    color: #6b21a8; 
+}
+
+/* Actions */
+.actions { display: flex; gap: 0.5rem; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.action-btn.edit { background: #fff3cd; color: #856404; }
+.action-btn.edit:hover { background: #ffc107; color: white; }
+.action-btn.warning { background: #fff3cd; color: #856404; }
+.action-btn.warning:hover { background: #ffc107; color: white; }
+.action-btn.success { background: #d4f4dd; color: #1e7e34; }
+.action-btn.success:hover { background: #28a745; color: white; }
+
+/* Table Footer */
+.table-footer { padding: 1rem 1.5rem; background: #f7fafc; color: #718096; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+.table-footer svg { color: #667eea; }
+
+/* Empty State */
+.empty-state { background: white; border-radius: 12px; padding: 4rem 2rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+.empty-state svg { color: #cbd5e0; margin-bottom: 1.5rem; }
+.empty-state h3 { margin: 0 0 0.5rem 0; color: #4a5568; font-size: 1.25rem; font-weight: 600; }
+.empty-state p { color: #718096; margin-bottom: 1.5rem; }
+
+/* Info Box */
+.info-box { background: linear-gradient(135deg, #e6f3ff 0%, #f0f4ff 100%); border-radius: 12px; padding: 1.5rem; border-left: 4px solid #667eea; }
+.info-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: #667eea; }
+.info-header h4 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.info-box ul { margin: 0; padding-left: 1.5rem; color: #4a5568; }
+.info-box li { margin-bottom: 0.5rem; line-height: 1.6; }
+.info-box li:last-child { margin-bottom: 0; }
+
+/* Utilities */
+.text-muted { color: #718096; font-size: 0.85rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .filter-group { flex-direction: column; align-items: stretch; }
+    .filter-input-group { min-width: auto; }
+    .filter-actions { flex-direction: column; }
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+    .actions { flex-wrap: wrap; }
+}
+</style>
+{% endblock %}

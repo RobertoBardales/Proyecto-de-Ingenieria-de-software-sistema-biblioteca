@@ -84,10 +84,13 @@
                 <div class="form-group">
                     <label for="tipo_usuario">Tipo de Usuario <span class="required">*</span></label>
                     <select id="tipo_usuario" name="tipo_usuario" class="form-input" required>
-                        <option value="cliente" {{ 'selected' if not cliente or cliente.tipo_usuario == 'cliente' else '' }}>Cliente</option>
-                        <option value="administrador" {{ 'selected' if cliente and cliente.tipo_usuario == 'administrador' else '' }}>Administrador</option>
-                        <option value="empleado" {{ 'selected' if cliente and cliente.tipo_usuario == 'empleado' else '' }}>Empleado</option>
+                        {% if not cliente %}
+                        <option value="">Seleccione tipo de usuario...</option>
+                        {% endif %}
+                        <option value="cliente" {{ 'selected' if cliente and cliente.tipo_usuario == 'cliente' else '' }}>Cliente</option>
+                        <option value="premium" {{ 'selected' if cliente and cliente.tipo_usuario == 'premium' else '' }}>Premium</option>
                     </select>
+                    <small class="form-hint">Seleccione el tipo de usuario en el sistema</small>
                 </div>
 
                 <!-- Dirección -->
@@ -147,6 +150,9 @@
                     <label for="id_estado">Estado <span class="required">*</span></label>
                     <div class="input-with-action">
                         <select id="id_estado" name="id_estado" class="form-input" required>
+                            {% if not cliente %}
+                            <option value="">Seleccione estado...</option>
+                            {% endif %}
                             {% for estado in estados %}
                             <option value="{{ estado.id_estado }}" 
                                     {{ 'selected' if cliente and cliente.id_estado == estado.id_estado else ('selected' if not cliente and estado.id_estado == 1 else '') }}>
@@ -169,11 +175,42 @@
 
                 <!-- OT -->
                 <div class="form-group">
-                    <label for="ot">Obligado Tributario (OT)</label>
-                    <select id="ot" name="ot" class="form-input">
-                        <option value="0" {{ 'selected' if not cliente or not cliente.ot else '' }}>No</option>
+                    <label for="ot">Obligado Tributario (OT) <span class="required">*</span></label>
+                    <select id="ot" name="ot" class="form-input" required>
+                        {% if not cliente %}
+                        <option value="">Seleccione...</option>
+                        {% endif %}
+                        <option value="0" {{ 'selected' if cliente and not cliente.ot else '' }}>No</option>
                         <option value="1" {{ 'selected' if cliente and cliente.ot else '' }}>Sí</option>
                     </select>
+                    <small class="form-hint">Indica si es obligado tributario</small>
+                </div>
+
+                <!-- Sucursal Asignada -->
+                <div class="form-group full-width">
+                    <label for="id_sucursal">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.25rem;">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        </svg>
+                        Sucursal Asignada
+                    </label>
+                    <select id="id_sucursal" name="id_sucursal" class="form-input">
+                        <option value="">-- Sin asignar (se usará la predeterminada) --</option>
+                        {% for sucursal in sucursales %}
+                        <option value="{{ sucursal.id_sucursal }}" 
+                                {{ 'selected' if cliente and cliente.id_sucursal == sucursal.id_sucursal else '' }}
+                                {{ 'disabled' if not sucursal.activo else '' }}>
+                            {{ sucursal.nombre }} - {{ sucursal.ciudad }}{{ ' (Inactiva)' if not sucursal.activo else '' }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 16v-4M12 8h.01"></path>
+                        </svg>
+                        La sucursal determina dónde se procesarán las ventas del cliente. Si no se asigna, se usará la predeterminada.
+                    </small>
                 </div>
 
                 <!-- Observaciones -->
@@ -330,572 +367,102 @@
 </div>
 
 <style>
-.form-wrapper {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
-
-.form-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-}
-
-.input-with-action {
-    display: flex;
-    gap: 0.5rem;
-    align-items: stretch;
-}
-
-.input-with-action select {
-    flex: 1;
-}
-
-.btn-quick-add {
-    width: 42px;
-    height: 42px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.btn-quick-add:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
-}
-
-.documents-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: #2d3748;
-    font-size: 0.95rem;
-    margin-bottom: 1rem;
-}
-
-.documents-container {
-    padding: 1.5rem;
-    background: #f7fafc;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-}
-
-.documents-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.nuevos-documentos-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.nuevo-documento-card {
-    background: #e0f2fe;
-    border: 2px solid #0ea5e9;
-    border-radius: 8px;
-    padding: 1rem;
-    position: relative;
-}
-
-.nuevo-documento-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.nuevo-documento-badge {
-    background: #0ea5e9;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.btn-remove-nuevo {
-    padding: 0.4rem;
-    background: #fee;
-    color: #dc3545;
-    border: 1px solid #fcc;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-remove-nuevo:hover {
-    background: #dc3545;
-    color: white;
-    border-color: #dc3545;
-}
-
-.nuevo-documento-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.document-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.document-item:hover {
-    border-color: #cbd5e0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.document-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.document-type {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #667eea;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.document-value {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #2d3748;
-    font-family: 'Courier New', monospace;
-}
-
-.btn-delete-doc {
-    padding: 0.5rem;
-    background: #fee;
-    color: #dc3545;
-    border: 1px solid #fcc;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-delete-doc:hover {
-    background: #dc3545;
-    color: white;
-    border-color: #dc3545;
-    transform: scale(1.1);
-}
-
-.no-documents {
-    text-align: center;
-    padding: 2rem;
-    color: #a0aec0;
-    margin-bottom: 1rem;
-}
-
-.no-documents svg {
-    opacity: 0.3;
-    margin-bottom: 1rem;
-}
-
-.no-documents p {
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-.btn-add-document {
-    width: 100%;
-    padding: 0.75rem;
-    background: linear-gradient(135deg, #48bb78, #38a169);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    font-family: 'Poppins', sans-serif;
-}
-
-.btn-add-document:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
-}
-
-.text-info {
-    color: #0ea5e9 !important;
-    font-weight: 500;
-}
-
-.quick-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 2000;
-    align-items: center;
-    justify-content: center;
-}
-
-.quick-modal.show {
-    display: flex;
-}
-
-.quick-modal-content {
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-.quick-modal-header {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 12px 12px 0 0;
-}
-
-.quick-modal-header h3 {
-    margin: 0;
-}
-
-.quick-modal-body {
-    padding: 1.5rem;
-}
-
-.quick-modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-}
-
-.form-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
-    text-align: center;
-    position: relative;
-}
-
-.back-link {
-    position: absolute;
-    top: 1.5rem;
-    left: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: white;
-    text-decoration: none;
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    transition: background 0.2s;
-}
-
-.back-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-.form-header h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.75rem;
-    font-weight: 700;
-}
-
-.form-header p {
-    margin: 0;
-    opacity: 0.9;
-}
-
-.form-content {
-    padding: 2rem;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.form-group.full-width {
-    grid-column: 1 / -1;
-}
-
-.form-group label {
-    font-weight: 600;
-    color: #2d3748;
-    font-size: 0.95rem;
-}
-
-.required {
-    color: #dc3545;
-}
-
-.form-input {
-    padding: 0.75rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-    font-family: 'Poppins', sans-serif;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.form-input:read-only {
-    background: #f7fafc;
-    cursor: not-allowed;
-}
-
-.form-input.error {
-    border-color: #dc3545;
-}
-
-.form-hint {
-    font-size: 0.85rem;
-    color: #718096;
-}
-
-.text-warning {
-    color: #f59e0b !important;
-}
-
-.text-muted {
-    color: #a0aec0;
-    font-weight: 400;
-}
-
-.password-reset-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: #fffbeb;
-    border: 2px solid #fbbf24;
-    border-radius: 8px;
-    gap: 1rem;
-}
-
-.password-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-}
-
-.password-info svg {
-    color: #f59e0b;
-    flex-shrink: 0;
-}
-
-.password-text {
-    font-weight: 600;
-    color: #78350f;
-    margin: 0;
-}
-
-.password-info-box {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    background: #dbeafe;
-    border: 2px solid #3b82f6;
-    border-radius: 8px;
-}
-
-.password-info-box svg {
-    color: #1e40af;
-    flex-shrink: 0;
-}
-
-.info-text {
-    font-weight: 600;
-    color: #1e3a8a;
-    margin: 0 0 0.25rem 0;
-}
-
-.btn-reset-password {
-    padding: 0.65rem 1.25rem;
-    background: #f59e0b;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.btn-reset-password:hover {
-    background: #d97706;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.form-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 2px solid #e2e8f0;
-}
-
-.btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-    transition: all 0.2s;
-    font-family: 'Poppins', sans-serif;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-    background: #e2e8f0;
-    color: #4a5568;
-}
-
-.btn-secondary:hover {
-    background: #cbd5e0;
-}
-
+.form-wrapper {max-width: 800px;margin: 2rem auto;padding: 0 1rem;}
+.form-container {background: white;border-radius: 12px;box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);overflow: hidden;}
+.input-with-action {display: flex;gap: 0.5rem;align-items: stretch;}
+.input-with-action select {flex: 1;}
+.btn-quick-add {width: 42px;height: 42px;background: linear-gradient(135deg, #667eea, #764ba2);color: white;border: none;border-radius: 8px;cursor: pointer;display: flex;align-items: center;justify-content: center;transition: all 0.2s;flex-shrink: 0;}
+.btn-quick-add:hover {transform: translateY(-2px);box-shadow: 0 4px 12px rgba(102,126,234,0.4);}
+.documents-label {display: flex;align-items: center;gap: 0.5rem;font-weight: 600;color: #2d3748;font-size: 0.95rem;margin-bottom: 1rem;}
+.documents-container {padding: 1.5rem;background: #f7fafc;border: 2px solid #e2e8f0;border-radius: 8px;}
+.documents-list {display: flex;flex-direction: column;gap: 0.75rem;margin-bottom: 1rem;}
+.nuevos-documentos-section {display: flex;flex-direction: column;gap: 0.75rem;margin-bottom: 1rem;}
+.nuevo-documento-card {background: #e0f2fe;border: 2px solid #0ea5e9;border-radius: 8px;padding: 1rem;position: relative;}
+.nuevo-documento-header {display: flex;justify-content: space-between;align-items: center;margin-bottom: 1rem;}
+.nuevo-documento-badge {background: #0ea5e9;color: white;padding: 0.25rem 0.75rem;border-radius: 12px;font-size: 0.75rem;font-weight: 600;text-transform: uppercase;letter-spacing: 0.5px;}
+.btn-remove-nuevo {padding: 0.4rem;background: #fee;color: #dc3545;border: 1px solid #fcc;border-radius: 6px;cursor: pointer;transition: all 0.2s;display: flex;align-items: center;justify-content: center;}
+.btn-remove-nuevo:hover {background: #dc3545;color: white;border-color: #dc3545;}
+.nuevo-documento-fields {display: grid;grid-template-columns: 1fr 1fr;gap: 1rem;}
+.document-item {display: flex;justify-content: space-between;align-items: center;padding: 1rem;background: white;border: 2px solid #e2e8f0;border-radius: 8px;transition: all 0.2s;}
+.document-item:hover {border-color: #cbd5e0;box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);}
+.document-info {display: flex;flex-direction: column;gap: 0.25rem;}
+.document-type {font-size: 0.85rem;font-weight: 600;color: #667eea;text-transform: uppercase;letter-spacing: 0.5px;}
+.document-value {font-size: 1rem;font-weight: 500;color: #2d3748;font-family: 'Courier New', monospace;}
+.btn-delete-doc {padding: 0.5rem;background: #fee;color: #dc3545;border: 1px solid #fcc;border-radius: 6px;cursor: pointer;transition: all 0.2s;display: flex;align-items: center;justify-content: center;}
+.btn-delete-doc:hover {background: #dc3545;color: white;border-color: #dc3545;transform: scale(1.1);}
+.no-documents {text-align: center;padding: 2rem;color: #a0aec0;margin-bottom: 1rem;}
+.no-documents svg {opacity: 0.3;margin-bottom: 1rem;}
+.no-documents p {margin: 0;font-size: 0.95rem;}
+.btn-add-document {width: 100%;padding: 0.75rem;background: linear-gradient(135deg, #48bb78, #38a169);color: white;border: none;border-radius: 8px;font-weight: 600;cursor: pointer;display: flex;align-items: center;justify-content: center;gap: 0.5rem;transition: all 0.2s;font-family: 'Poppins', sans-serif;}
+.btn-add-document:hover {transform: translateY(-2px);box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);}
+.text-info {color: #0ea5e9 !important;font-weight: 500;}
+.quick-modal {display: none;position: fixed;inset: 0;background: rgba(0,0,0,0.5);z-index: 2000;align-items: center;justify-content: center;}
+.quick-modal.show {display: flex;}
+.quick-modal-content {background: white;border-radius: 12px;width: 90%;max-width: 500px;max-height: 80vh;overflow-y: auto;}
+.quick-modal-header {background: linear-gradient(135deg, #667eea, #764ba2);color: white;padding: 1.5rem;border-radius: 12px 12px 0 0;}
+.quick-modal-header h3 {margin: 0;}
+.quick-modal-body {padding: 1.5rem;}
+.quick-modal-footer {padding: 1rem 1.5rem;border-top: 1px solid #e2e8f0;display: flex;gap: 0.5rem;justify-content: flex-end;}
+.form-header {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: white;padding: 2rem;text-align: center;position: relative;}
+.back-link {position: absolute;top: 1.5rem;left: 1.5rem;display: flex;align-items: center;gap: 0.5rem;color: white;text-decoration: none;font-weight: 500;padding: 0.5rem 1rem;border-radius: 8px;transition: background 0.2s;}
+.back-link:hover {background: rgba(255, 255, 255, 0.2);color: white;}
+.form-header h1 {margin: 0 0 0.5rem 0;font-size: 1.75rem;font-weight: 700;}
+.form-header p {margin: 0;opacity: 0.9;}
+.form-content {padding: 2rem;}
+.form-grid {display: grid;grid-template-columns: repeat(2, 1fr);gap: 1.5rem;}
+.form-group {display: flex;flex-direction: column;gap: 0.5rem;}
+.form-group.full-width {grid-column: 1 / -1;}
+.form-group label {font-weight: 600;color: #2d3748;font-size: 0.95rem;}
+.required {color: #dc3545;}
+.form-input {padding: 0.75rem;border: 2px solid #e2e8f0;border-radius: 8px;font-size: 0.95rem;transition: all 0.2s;font-family: 'Poppins', sans-serif;}
+.form-input:focus {outline: none;border-color: #667eea;box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);}
+.form-input:read-only {background: #f7fafc;cursor: not-allowed;}
+.form-input.error {border-color: #dc3545;}
+.form-hint {font-size: 0.85rem;color: #718096;}
+.text-warning {color: #f59e0b !important;}
+.text-muted {color: #a0aec0;font-weight: 400;}
+.password-reset-section {display: flex;justify-content: space-between;align-items: center;padding: 1rem;background: #fffbeb;border: 2px solid #fbbf24;border-radius: 8px;gap: 1rem;}
+.password-info {display: flex;align-items: center;gap: 0.75rem;flex: 1;}
+.password-info svg {color: #f59e0b;flex-shrink: 0;}
+.password-text {font-weight: 600;color: #78350f;margin: 0;}
+.password-info-box {display: flex;align-items: flex-start;gap: 1rem;padding: 1rem;background: #dbeafe;border: 2px solid #3b82f6;border-radius: 8px;}
+.password-info-box svg {color: #1e40af;flex-shrink: 0;}
+.info-text {font-weight: 600;color: #1e3a8a;margin: 0 0 0.25rem 0;}
+.btn-reset-password {padding: 0.65rem 1.25rem;background: #f59e0b;color: white;border: none;border-radius: 8px;font-weight: 600;cursor: pointer;display: flex;align-items: center;gap: 0.5rem;transition: all 0.2s;white-space: nowrap;}
+.btn-reset-password:hover {background: #d97706;transform: translateY(-1px);box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);}
+.form-actions {display: flex;justify-content: space-between;margin-top: 2rem;padding-top: 2rem;border-top: 2px solid #e2e8f0;}
+.btn {padding: 0.75rem 1.5rem;border: none;border-radius: 8px;font-weight: 600;cursor: pointer;display: inline-flex;align-items: center;gap: 0.5rem;text-decoration: none;transition: all 0.2s;font-family: 'Poppins', sans-serif;}
+.btn-primary {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: white;}
+.btn-primary:hover {transform: translateY(-2px);box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);}
+.btn-secondary {background: #e2e8f0;color: #4a5568;}
+.btn-secondary:hover {background: #cbd5e0;}
 @media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .back-link {
-        position: static;
-        display: inline-flex;
-        margin-bottom: 1rem;
-    }
-
-    .form-content {
-        padding: 1.5rem;
-    }
-
-    .form-actions {
-        flex-direction: column-reverse;
-        gap: 0.75rem;
-    }
-
-    .btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .password-reset-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .btn-reset-password {
-        justify-content: center;
-    }
-    
-    .document-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-    }
-    
-    .btn-delete-doc {
-        align-self: flex-end;
-    }
-    
-    .nuevo-documento-fields {
-        grid-template-columns: 1fr;
-    }
+.form-grid {grid-template-columns: 1fr;}
+.back-link {position: static;display: inline-flex;margin-bottom: 1rem;}
+.form-content {padding: 1.5rem;}
+.form-actions {flex-direction: column-reverse;gap: 0.75rem;}
+.btn {width: 100%;justify-content: center;}
+.password-reset-section {flex-direction: column;align-items: stretch;}
+.btn-reset-password {justify-content: center;}
+.document-item {flex-direction: column;align-items: flex-start;gap: 0.75rem;}
+.btn-delete-doc {align-self: flex-end;}
+.nuevo-documento-fields {grid-template-columns: 1fr;}
 }
 </style>
-
 <script>
 let nuevoDocumentoCounter = 0;
+const tiposDocumentos = [{% for tipo in tipos_documentos %}{ id: {{ tipo.id_tipo_documento }}, nombre: "{{ tipo.nombre }}" }{{ "," if not loop.last else "" }}{% endfor %}];
 
-// Store tipos_documentos data for JavaScript use
-const tiposDocumentos = [
-    {% for tipo in tipos_documentos %}
-    { id: {{ tipo.id_tipo_documento }}, nombre: "{{ tipo.nombre }}" }{{ "," if not loop.last else "" }}
-    {% endfor %}
-];
-
-// Real-time validation for Nombres
 document.getElementById('nombres').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Only letters and spaces
     value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
-    // Max 1 space consecutive
     value = value.replace(/\s{2,}/g, ' ');
-    // Max 2 same letters consecutive
     value = value.replace(/([A-Za-zÁÉÍÓÚáéíóúÑñ])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Real-time validation for Apellidos
 document.getElementById('apellidos').addEventListener('input', function(e) {
     let value = e.target.value;
     value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
@@ -906,83 +473,71 @@ document.getElementById('apellidos').addEventListener('input', function(e) {
     e.target.value = value;
 });
 
-// Real-time validation for Email
 document.getElementById('email').addEventListener('input', function(e) {
     let value = e.target.value.toLowerCase();
-    // Max 2 same characters consecutive
     value = value.replace(/(.)\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Real-time validation for Teléfono (Honduran format)
 document.getElementById('telefono').addEventListener('input', function(e) {
     let value = e.target.value;
+    if (!value) {
+        e.target.value = '';
+        return;
+    }
     let digits = value.replace(/[^\d]/g, '');
-    
-    // Limit to 8 digits
+    if (digits.startsWith('504')) {
+        digits = digits.substring(3);
+    }
     if (digits.length > 8) {
         digits = digits.substring(0, 8);
     }
-    
-    // Format: +504 9999-9999
     if (digits.length > 0) {
         if (digits.length <= 4) {
             value = '+504 ' + digits;
         } else {
             value = '+504 ' + digits.substring(0, 4) + '-' + digits.substring(4);
         }
+        e.target.value = value;
     } else {
-        value = '';
+        e.target.value = '';
     }
-    
-    e.target.value = value;
 });
 
-// Real-time validation for Dirección
 document.getElementById('direccion').addEventListener('input', function(e) {
     let value = e.target.value;
-    // Max 1 space consecutive
     value = value.replace(/\s{2,}/g, ' ');
-    // Max 2 same characters consecutive (except spaces)
     value = value.replace(/([^\s])\1{2,}/g, function(match) {
         return match.substring(0, 2);
     });
     e.target.value = value;
 });
 
-// Real-time validation for Observaciones
 document.getElementById('observaciones').addEventListener('input', function(e) {
     let value = e.target.value;
     value = value.replace(/\s{2,}/g, ' ');
     e.target.value = value;
 });
 
-// Form validation before submit
 document.getElementById('clienteForm').addEventListener('submit', function(e) {
     const telefono = document.getElementById('telefono').value.trim();
-    
-    // Validate phone if provided
     if (telefono && telefono !== '') {
         const cleanPhone = telefono.replace(/[\s\-]/g, '');
-        
         if (!cleanPhone.startsWith('+504')) {
             e.preventDefault();
             alert('El teléfono debe incluir el código de país +504\nEjemplo: +504 9999-9999');
             document.getElementById('telefono').focus();
             return false;
         }
-        
         const digits = cleanPhone.replace('+504', '');
-        
         if (digits.length !== 8) {
             e.preventDefault();
             alert('El teléfono debe tener exactamente 8 dígitos después de +504');
             document.getElementById('telefono').focus();
             return false;
         }
-        
         if (!['3', '7', '8', '9'].includes(digits[0])) {
             e.preventDefault();
             alert('El número de teléfono debe empezar con 3, 7, 8 o 9');
@@ -990,22 +545,18 @@ document.getElementById('clienteForm').addEventListener('submit', function(e) {
             return false;
         }
     }
-    
-    // Validate email format
     const email = document.getElementById('email').value.trim();
     if (email) {
         const emailParts = email.split('@');
         if (emailParts.length === 2) {
             const localPart = emailParts[0];
             const domainPart = emailParts[1];
-            
             if (localPart.length < 2) {
                 e.preventDefault();
                 alert('El email debe tener al menos 2 caracteres antes del @');
                 document.getElementById('email').focus();
                 return false;
             }
-            
             const domainBeforeDot = domainPart.split('.')[0];
             if (domainBeforeDot.length > 8) {
                 e.preventDefault();
@@ -1017,39 +568,24 @@ document.getElementById('clienteForm').addEventListener('submit', function(e) {
     }
 });
 
-// ============ DOCUMENT MANAGEMENT ============
-
 function agregarNuevoDocumento() {
-    console.log('agregarNuevoDocumento called');
-    console.log('Tipos documentos disponibles:', tiposDocumentos);
-    
     nuevoDocumentoCounter++;
-    
-    // Remove "no documents" message if exists
     const noDocuments = document.getElementById('noDocuments');
     if (noDocuments) {
-        console.log('Removiendo mensaje "no documents"');
         noDocuments.remove();
     }
-    
     const container = document.getElementById('nuevosDocumentos');
-    console.log('Container encontrado:', container);
-    
     if (!container) {
         console.error('No se encontró el container nuevosDocumentos');
         return;
     }
-    
     const docCard = document.createElement('div');
     docCard.className = 'nuevo-documento-card';
     docCard.id = `nuevoDoc_${nuevoDocumentoCounter}`;
-    
-    // Build options HTML
     let optionsHtml = '<option value="">Seleccione...</option>';
     tiposDocumentos.forEach(tipo => {
         optionsHtml += `<option value="${tipo.id}">${tipo.nombre}</option>`;
     });
-    
     docCard.innerHTML = `
         <div class="nuevo-documento-header">
             <span class="nuevo-documento-badge">Nuevo Documento</span>
@@ -1082,9 +618,7 @@ function agregarNuevoDocumento() {
             </div>
         </div>
     `;
-    
     container.appendChild(docCard);
-    console.log('Documento card agregado:', docCard.id);
 }
 
 function removerNuevoDocumento(id) {
@@ -1092,14 +626,10 @@ function removerNuevoDocumento(id) {
     if (elemento) {
         elemento.remove();
     }
-    
-    // Check if there are any documents left
     const nuevosContainer = document.getElementById('nuevosDocumentos');
     const existentesContainer = document.getElementById('documentosExistentes');
-    
     if ((!nuevosContainer || nuevosContainer.children.length === 0) && 
         (!existentesContainer || existentesContainer.children.length === 0)) {
-        
         const container = document.querySelector('.documents-container');
         const noDocsDiv = document.createElement('div');
         noDocsDiv.className = 'no-documents';
@@ -1120,17 +650,15 @@ function actualizarPlaceholder(selectElement) {
     const valorInput = card.querySelector('.nuevo-valor-doc');
     const hintElement = card.querySelector('.doc-hint');
     const tipoTexto = selectElement.options[selectElement.selectedIndex].text.toLowerCase();
-    
     valorInput.value = '';
-    
     if (tipoTexto.includes('identidad') || tipoTexto.includes('dni')) {
         valorInput.placeholder = '0000-0000-00000';
         hintElement.textContent = 'Formato: 0000-0000-00000 (13 dígitos)';
-        valorInput.maxLength = 17; // Including hyphens
+        valorInput.maxLength = 17;
     } else if (tipoTexto.includes('rtn')) {
         valorInput.placeholder = '0000-0000-000000';
         hintElement.textContent = 'Formato: 0000-0000-000000 (14 dígitos)';
-        valorInput.maxLength = 18; // Including hyphens
+        valorInput.maxLength = 18;
     } else if (tipoTexto.includes('pasaporte')) {
         valorInput.placeholder = 'ABC123456';
         hintElement.textContent = 'Formato: 6-9 caracteres alfanuméricos';
@@ -1144,19 +672,15 @@ function actualizarPlaceholder(selectElement) {
         hintElement.textContent = 'Mínimo 3 caracteres, máximo 50';
         valorInput.maxLength = 50;
     }
-    
     valorInput.focus();
 }
 
-// Auto-format document values based on type
 document.addEventListener('input', function(e) {
     if (e.target.classList.contains('nuevo-valor-doc')) {
         const selectElement = e.target.closest('.nuevo-documento-card').querySelector('select[name="nuevo_tipo_documento"]');
         const tipoTexto = selectElement.options[selectElement.selectedIndex]?.text.toLowerCase() || '';
         let value = e.target.value.toUpperCase();
-        
         if (tipoTexto.includes('identidad') || tipoTexto.includes('dni')) {
-            // Format: 0000-0000-00000
             value = value.replace(/[^\d]/g, '');
             if (value.length > 13) value = value.substring(0, 13);
             if (value.length > 4) {
@@ -1166,7 +690,6 @@ document.addEventListener('input', function(e) {
                 value = value.substring(0, 9) + '-' + value.substring(9);
             }
         } else if (tipoTexto.includes('rtn')) {
-            // Format: 0000-0000-000000
             value = value.replace(/[^\d]/g, '');
             if (value.length > 14) value = value.substring(0, 14);
             if (value.length > 4) {
@@ -1176,65 +699,43 @@ document.addEventListener('input', function(e) {
                 value = value.substring(0, 9) + '-' + value.substring(9);
             }
         } else if (tipoTexto.includes('pasaporte')) {
-            // Format: ABC123456 (alphanumeric only)
             value = value.replace(/[^A-Z0-9]/g, '');
             if (value.length > 9) value = value.substring(0, 9);
         } else if (tipoTexto.includes('licencia')) {
-            // Format: HN123456 (letters + numbers)
             value = value.replace(/[^A-Z0-9]/g, '');
             if (value.length > 10) value = value.substring(0, 10);
         } else {
-            // Generic: max 50 chars
             if (value.length > 50) value = value.substring(0, 50);
         }
-        
         e.target.value = value;
     }
 });
 
-// Delete existing document
 async function eliminarDocumentoExistente(docId) {
-    console.log('Intentando eliminar documento:', docId);
-    
     if (!confirm('¿Estás seguro de eliminar este documento?')) {
         return;
     }
-    
     try {
         const url = `/clientes/eliminar-documento/${docId}`;
-        console.log('URL:', url);
-        
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             }
         });
-        
-        console.log('Response status:', response.status);
-        
         const data = await response.json();
-        console.log('Response data:', data);
-        
         if (data.success) {
             const docItem = document.querySelector(`[data-doc-id="${docId}"]`);
-            console.log('Documento encontrado:', docItem);
-            
             if (docItem) {
                 docItem.remove();
             }
-            
-            // Check if there are any documents left
             const documentsList = document.getElementById('documentosExistentes');
             const nuevosContainer = document.getElementById('nuevosDocumentos');
-            
             if (documentsList && documentsList.children.length === 0) {
                 documentsList.remove();
             }
-            
             if ((!documentsList || documentsList.children.length === 0) && 
                 (!nuevosContainer || nuevosContainer.children.length === 0)) {
-                
                 const container = document.querySelector('.documents-container');
                 const noDocsDiv = document.createElement('div');
                 noDocsDiv.className = 'no-documents';
@@ -1248,7 +749,6 @@ async function eliminarDocumentoExistente(docId) {
                 `;
                 container.insertBefore(noDocsDiv, container.querySelector('.btn-add-document'));
             }
-            
             mostrarToast('Documento eliminado exitosamente', 'success');
         } else {
             alert('Error: ' + data.message);
@@ -1258,8 +758,6 @@ async function eliminarDocumentoExistente(docId) {
         alert('Error al eliminar el documento: ' + error.message);
     }
 }
-
-// ============ ESTADO MODAL ============
 
 function abrirModalEstado() {
     document.getElementById('modalEstado').classList.add('show');
@@ -1274,32 +772,26 @@ function cerrarModalEstado() {
 async function guardarEstadoRapido() {
     const form = document.getElementById('formEstadoRapido');
     const formData = new FormData(form);
-    
     const nombre = formData.get('nombre').trim();
     if (!nombre) {
         alert('El nombre es obligatorio');
         return;
     }
-    
     const descripcion = formData.get('descripcion').trim();
     if (!descripcion) {
         alert('La descripción es obligatoria');
         return;
     }
-    
     try {
         const response = await fetch('/estado-usuarios/crear-rapido', {
             method: 'POST',
             body: formData
         });
-        
         const data = await response.json();
-        
         if (data.success) {
             const select = document.getElementById('id_estado');
             const option = new Option(data.nombre, data.id_estado, true, true);
             select.add(option);
-            
             cerrarModalEstado();
             mostrarToast('Estado creado exitosamente', 'success');
         } else {
@@ -1310,8 +802,6 @@ async function guardarEstadoRapido() {
         alert('Error al crear el estado');
     }
 }
-
-// ============ UTILITY FUNCTIONS ============
 
 function resetPassword(clienteId) {
     if (confirm('¿Estás seguro de resetear la contraseña?\n\nSe generará una contraseña temporal aleatoria segura de 10 caracteres con mayúsculas, minúsculas, números y símbolos.')) {
@@ -1340,21 +830,18 @@ function mostrarToast(mensaje, tipo = 'success') {
         font-family: 'Poppins', sans-serif;
     `;
     document.body.appendChild(toast);
-    
     setTimeout(() => {
         toast.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
-// Modal click outside to close
 document.getElementById('modalEstado')?.addEventListener('click', function(e) {
     if (e.target === this) {
         cerrarModalEstado();
     }
 });
 
-// Real-time validation for Estado modal
 document.getElementById('quick_nombre')?.addEventListener('input', function(e) {
     let value = e.target.value;
     value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
@@ -1371,5 +858,4 @@ document.getElementById('quick_descripcion')?.addEventListener('input', function
     e.target.value = value;
 });
 </script>
-
 {% endblock %}

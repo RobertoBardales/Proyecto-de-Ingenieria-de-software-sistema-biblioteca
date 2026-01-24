@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Devoluciones{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('biblioteca_personal.mi_biblioteca') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Historial de Devoluciones</h1>
+                <p class="subtitle">Libros prestados que han sido devueltos</p>
+            </div>
+        </div>
+        <a href="{{ url_for('devoluciones.politica') }}" class="btn btn-info">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            Política de Devoluciones
+        </a>
+    </div>
+
+    <!-- Search Filter -->
+    <div class="filters-container">
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Buscar por título, cliente o ISBN..." class="search-input">
+            <button class="clear-btn" id="clearBtn" onclick="clearSearch()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="filter-stats">
+            <span id="statsText">{{ devoluciones|length }} devoluciones</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        {% if devoluciones %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Libro</th>
+                    <th>Cliente</th>
+                    <th>Fecha Préstamo</th>
+                    <th>Fecha Devolución</th>
+                    <th>Estado</th>
+                    <th>Multa</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for detalle, prestamo, libro, cliente in devoluciones %}
+                <tr data-search="{{ (libro.titulo + ' ' + libro.isbn + ' ' + cliente.nombres + ' ' + cliente.apellidos)|lower }}">
+                    <td>
+                        <div class="book-info">
+                            {% if libro.portada %}
+                            <img src="{{ libro.portada }}" alt="{{ libro.titulo }}" class="book-thumbnail">
+                            {% else %}
+                            <div class="book-placeholder">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                </svg>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="book-title">{{ libro.titulo }}</div>
+                                <div class="book-isbn">ISBN: {{ libro.isbn }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="client-info">
+                            <span class="client-name">{{ cliente.nombres }} {{ cliente.apellidos }}</span>
+                            <span class="client-email">{{ cliente.email }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="date-badge">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            {{ prestamo.fecha_prestamo.strftime('%d/%m/%Y') }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="date-badge date-return">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 11 12 14 22 4"></polyline>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                            {{ prestamo.fecha_devolucion_real.strftime('%d/%m/%Y') if prestamo.fecha_devolucion_real else 'N/A' }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-success">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            {{ detalle.estado }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if detalle.multa and detalle.multa > 0 %}
+                            <span class="multa-badge multa-danger">L. {{ "%.2f"|format(detalle.multa) }}</span>
+                        {% else %}
+                            <span class="multa-badge multa-none">Sin multa</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <button class="action-btn view" title="Ver detalles"
+                                onclick='showDetails({{ detalle.id_detalle_prestamos }}, "{{ libro.titulo }}", "{{ cliente.nombres }} {{ cliente.apellidos }}", "{{ prestamo.fecha_prestamo.strftime('%d/%m/%Y') }}", "{{ prestamo.fecha_devolucion_real.strftime('%d/%m/%Y') if prestamo.fecha_devolucion_real else 'N/A' }}", "{{ detalle.multa or 0 }}")'>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                            <a href="{{ url_for('libros.ver', id=libro.id_libro) }}" class="action-btn info" title="Ver libro">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <p>No se encontraron resultados</p>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="12" y1="18" x2="12" y2="12"></line>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+            <h3>No hay devoluciones registradas</h3>
+            <p>Las devoluciones de préstamos aparecerán aquí una vez procesadas.</p>
+            <a href="{{ url_for('biblioteca_personal.mi_biblioteca') }}" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                Ir a Mi Biblioteca
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div id="detailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Detalles de la Devolución</h3>
+            <button class="close-btn" onclick="closeModal('detailsModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-row">
+                    <label>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        Libro:
+                    </label>
+                    <span id="dLibro"></span>
+                </div>
+                <div class="detail-row">
+                    <label>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Cliente:
+                    </label>
+                    <span id="dCliente"></span>
+                </div>
+                <div class="detail-row">
+                    <label>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        Fecha Préstamo:
+                    </label>
+                    <span id="dFechaPrestamo"></span>
+                </div>
+                <div class="detail-row">
+                    <label>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 11 12 14 22 4"></polyline>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        Fecha Devolución:
+                    </label>
+                    <span id="dFechaDevolucion"></span>
+                </div>
+                <div class="detail-row">
+                    <label>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Multa:
+                    </label>
+                    <span id="dMulta"></span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('detailsModal')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-box { position: relative; margin-bottom: 0.5rem; }
+.search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.search-input { width: 100%; padding: 0.75rem 3rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: border 0.2s; }
+.search-input:focus { outline: none; border-color: #667eea; }
+.clear-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.2s; }
+.clear-btn:hover { background: #cbd5e0; }
+.clear-btn.show { display: flex; }
+.filter-stats { color: #718096; font-size: 0.9rem; }
+.filter-stats span { font-weight: 600; color: #667eea; }
+
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+.data-table td { padding: 1rem; border-bottom: 1px solid #f7fafc; vertical-align: middle; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.book-info { display: flex; align-items: center; gap: 0.75rem; }
+.book-thumbnail { width: 50px; height: 65px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.book-placeholder { width: 50px; height: 65px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; }
+.book-title { font-weight: 600; color: #1a202c; font-size: 0.95rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.book-isbn { color: #718096; font-size: 0.8rem; font-family: monospace; }
+
+.client-info { display: flex; flex-direction: column; gap: 0.25rem; }
+.client-name { font-weight: 600; color: #1a202c; font-size: 0.9rem; }
+.client-email { color: #718096; font-size: 0.8rem; }
+
+.date-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem; background: #e6f3ff; color: #0066cc; border-radius: 6px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+.date-return { background: #d1fae5; color: #047857; }
+
+.badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+.badge-success { background: #d1fae5; color: #047857; }
+
+.multa-badge { display: inline-block; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+.multa-danger { background: #fee; color: #c53030; }
+.multa-none { background: #e6fffa; color: #047857; }
+
+.actions { display: flex; gap: 0.5rem; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
+.action-btn.view { background: #e6f3ff; color: #0066cc; }
+.action-btn.view:hover { background: #0066cc; color: white; }
+.action-btn.info { background: #f0f4ff; color: #667eea; }
+.action-btn.info:hover { background: #667eea; color: white; }
+
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; font-size: 0.95rem; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-info { background: linear-gradient(135deg, #4299e1, #3182ce); color: white; }
+.btn-info:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(66,153,225,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+
+.empty-state { text-align: center; padding: 4rem 2rem; color: #a0aec0; }
+.empty-state svg { margin: 0 auto 1.5rem; opacity: 0.3; }
+.empty-state h3 { color: #4a5568; margin: 1rem 0 0.5rem; font-size: 1.5rem; }
+.empty-state p { color: #718096; margin-bottom: 2rem; }
+
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; }
+.no-results.show { display: block; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results p { color: #718096; margin: 0; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; animation: slideIn 0.3s; }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+.modal-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #48bb78, #38a169); color: white; border-radius: 12px 12px 0 0; }
+.modal-header h3 { margin: 0; font-size: 1.25rem; }
+.close-btn { background: rgba(255,255,255,0.2); border: none; font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; transition: background 0.2s; }
+.close-btn:hover { background: rgba(255,255,255,0.3); }
+.modal-body { padding: 2rem; }
+.detail-grid { display: grid; gap: 1rem; }
+.detail-row { display: grid; grid-template-columns: 180px 1fr; gap: 1rem; padding: 1rem; background: #f7fafc; border-radius: 8px; align-items: center; }
+.detail-row label { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #4a5568; }
+.detail-row span { color: #1a202c; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+@media (max-width: 1024px) {
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+    .book-title { max-width: 150px; }
+}
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .header-left { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .data-table { display: block; overflow-x: auto; }
+    .detail-row { grid-template-columns: 1fr; gap: 0.5rem; }
+    .detail-row label { margin-bottom: 0.25rem; }
+}
+</style>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const clearBtn = document.getElementById('clearBtn');
+const tableBody = document.getElementById('tableBody');
+const noResults = document.getElementById('noResults');
+const statsText = document.getElementById('statsText');
+const rows = tableBody ? [...tableBody.querySelectorAll('tr')] : [];
+
+function applySearch() {
+    if (!tableBody) return;
+    
+    const search = searchInput.value.toLowerCase();
+    let visible = 0;
+    
+    rows.forEach(row => {
+        const matchSearch = !search || row.dataset.search.includes(search);
+        
+        if (matchSearch) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    noResults.classList.toggle('show', visible === 0);
+    statsText.textContent = `${visible} de ${rows.length} devoluciones`;
+    clearBtn.classList.toggle('show', search.length > 0);
+}
+
+function clearSearch() {
+    searchInput.value = '';
+    applySearch();
+}
+
+if (searchInput) {
+    searchInput.addEventListener('input', applySearch);
+}
+
+function showDetails(id, libro, cliente, fechaPrestamo, fechaDevolucion, multa) {
+    document.getElementById('dLibro').textContent = libro;
+    document.getElementById('dCliente').textContent = cliente;
+    document.getElementById('dFechaPrestamo').textContent = fechaPrestamo;
+    document.getElementById('dFechaDevolucion').textContent = fechaDevolucion;
+    
+    const multaFloat = parseFloat(multa);
+    if (multaFloat > 0) {
+        document.getElementById('dMulta').innerHTML = `<span class="multa-badge multa-danger">L. ${multaFloat.toFixed(2)}</span>`;
+    } else {
+        document.getElementById('dMulta').innerHTML = `<span class="multa-badge multa-none">Sin multa</span>`;
+    }
+    
+    document.getElementById('detailsModal').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+window.onclick = e => {
+    if (e.target.classList.contains('modal')) closeModal(e.target.id);
+};
+</script>
+{% endblock %}

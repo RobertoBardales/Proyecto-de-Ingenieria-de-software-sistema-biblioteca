@@ -1,11 +1,14 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from app import db
-from models import Sucursales
+from models import Sucursales, Pais
 from sqlalchemy import func
 import re
 
 sucursales_bp = Blueprint('sucursales', __name__, url_prefix='/sucursales')
+
+# ID de Honduras según tu base de datos
+HONDURAS_ID = 2  # Honduras tiene id_pais = 2
 
 def validar_nombre(nombre):
     """Validar nombre de sucursal"""
@@ -200,7 +203,11 @@ def get_next_id():
     ultimo_id = db.session.query(func.max(Sucursales.id_sucursal)).scalar()
     return (ultimo_id or 0) + 1
 
-# API para crear desde modal
+def get_paises():
+    """Obtener lista de países"""
+    return db.session.query(Pais).order_by(Pais.nombre_pais).all()
+
+# API para crear sucursal desde modal (si lo necesitas en otro lado)
 @sucursales_bp.route('/crear-rapido', methods=['POST'])
 @login_required
 def crear_rapido():
@@ -264,6 +271,8 @@ def listar():
 @sucursales_bp.route('/nuevo', methods=['GET', 'POST'])
 @login_required
 def crear():
+    paises = get_paises()
+    
     if request.method == 'POST':
         try:
             nombre = request.form.get('nombre', '').strip()
@@ -279,22 +288,22 @@ def crear():
             valido, error = validar_nombre(nombre)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_direccion(direccion)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_telefono(telefono)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_email(email)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             # Verificar email duplicado
             email_existe = db.session.query(Sucursales).filter(
@@ -302,36 +311,36 @@ def crear():
             ).first()
             if email_existe:
                 flash('Este email ya está registrado.', 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_ciudad(ciudad)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_departamento(departamento)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_codigo_postal(codigo_postal)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             if observaciones:
                 valido, error = validar_observaciones(observaciones)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('sucursales/form.html')
+                    return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
             # Validar nombre único
             existe = db.session.query(Sucursales).filter_by(nombre=nombre).first()
             if existe:
                 flash('Ya existe una sucursal con ese nombre.', 'error')
-                return render_template('sucursales/form.html')
+                return render_template('sucursales/form.html', paises=paises, honduras_id=HONDURAS_ID)
             
-            # Crear sucursal
+            # Crear sucursal (sin id_pais ya que no existe en el modelo)
             nuevo_id = get_next_id()
             nueva_sucursal = Sucursales(
                 id_sucursal=nuevo_id,
@@ -340,7 +349,7 @@ def crear():
                 telefono=telefono,
                 email=email,
                 ciudad=ciudad.title(),
-                departamento=departamento.title(),
+                departamento=departamento,
                 codigo_postal=codigo_postal,
                 activo=int(request.form.get('activo', 1)),
                 observaciones=observaciones or None
@@ -356,13 +365,15 @@ def crear():
             db.session.rollback()
             flash(f'Error al crear sucursal: {str(e)}', 'error')
     
-    return render_template('sucursales/form.html', sucursal=None)
+    return render_template('sucursales/form.html', sucursal=None, paises=paises, honduras_id=HONDURAS_ID)
 
 # UPDATE - Mostrar formulario de edición
 @sucursales_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     sucursal = db.session.get(Sucursales, id)
+    paises = get_paises()
+    
     if not sucursal:
         flash('Sucursal no encontrada.', 'error')
         return redirect(url_for('sucursales.listar'))
@@ -382,22 +393,22 @@ def editar(id):
             valido, error = validar_nombre(nombre)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_direccion(direccion)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_telefono(telefono)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_email(email)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             # Verificar email duplicado (excepto el actual)
             email_existe = db.session.query(Sucursales).filter(
@@ -406,28 +417,28 @@ def editar(id):
             ).first()
             if email_existe:
                 flash('Este email ya está registrado.', 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_ciudad(ciudad)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_departamento(departamento)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             valido, error = validar_codigo_postal(codigo_postal)
             if not valido:
                 flash(error, 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             if observaciones:
                 valido, error = validar_observaciones(observaciones)
                 if not valido:
                     flash(error, 'error')
-                    return render_template('sucursales/form.html', sucursal=sucursal)
+                    return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
             # Validar nombre único (excepto el actual)
             existe = db.session.query(Sucursales).filter(
@@ -436,15 +447,15 @@ def editar(id):
             ).first()
             if existe:
                 flash('Ya existe una sucursal con ese nombre.', 'error')
-                return render_template('sucursales/form.html', sucursal=sucursal)
+                return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
             
-            # Actualizar datos
+            # Actualizar datos (sin id_pais ya que no existe en el modelo)
             sucursal.nombre = nombre.title()
             sucursal.direccion = direccion
             sucursal.telefono = telefono
             sucursal.email = email
             sucursal.ciudad = ciudad.title()
-            sucursal.departamento = departamento.title()
+            sucursal.departamento = departamento
             sucursal.codigo_postal = codigo_postal
             sucursal.activo = int(request.form.get('activo', 1))
             sucursal.observaciones = observaciones or None
@@ -457,7 +468,7 @@ def editar(id):
             db.session.rollback()
             flash(f'Error al actualizar sucursal: {str(e)}', 'error')
     
-    return render_template('sucursales/form.html', sucursal=sucursal)
+    return render_template('sucursales/form.html', sucursal=sucursal, paises=paises, honduras_id=HONDURAS_ID)
 
 # DELETE - Eliminar sucursal
 @sucursales_bp.route('/eliminar/<int:id>', methods=['POST'])

@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Política de Devoluciones - Mi Biblioteca{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('biblioteca_personal.mi_biblioteca') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Política de Devoluciones</h1>
+                <p class="subtitle">Información importante sobre la devolución de libros prestados</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="policy-content">
+        <!-- Important Notice -->
+        <div class="alert alert-info">
+            <div class="alert-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+            </div>
+            <div class="alert-content">
+                <h4>Nota Importante</h4>
+                <p>
+                    Esta política aplica <strong>únicamente para libros prestados</strong>. 
+                    Los libros comprados <strong>no son retornables</strong> y pasan a formar parte 
+                    permanente de tu biblioteca personal.
+                </p>
+            </div>
+        </div>
+
+        <!-- Policy Cards Grid -->
+        <div class="policy-grid">
+            <!-- Período de Devolución -->
+            <div class="policy-card">
+                <div class="policy-card-header">
+                    <div class="policy-card-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: white;">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <path d="M12 1v6m0 6v6"></path>
+                            <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24"></path>
+                            <path d="M1 12h6m6 0h6"></path>
+                            <path d="M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"></path>
+                        </svg>
+                    </div>
+                    <h3>Período de Devolución</h3>
+                </div>
+                <div class="policy-card-body">
+                    <ul class="policy-list">
+                        <li>
+                            <span class="policy-check">✓</span>
+                            Cada préstamo tiene una <strong>fecha de devolución estimada</strong> al momento de solicitar el libro.
+                        </li>
+                        <li>
+                            <span class="policy-check">✓</span>
+                            El período estándar de préstamo es de <strong>14 días</strong> desde la fecha de préstamo.
+                        </li>
+                        <li>
+                            <span class="policy-check">✓</span>
+                            Puedes devolver el libro en cualquier momento <strong>antes o en la fecha estimada</strong> sin cargos.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Devoluciones Tardías -->
+            <div class="policy-card">
+                <div class="policy-card-header">
+                    <div class="policy-card-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: white;">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3.05h16.94a2 2 0 0 0 1.71-3.05L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <h3>Devoluciones Tardías y Multas</h3>
+                </div>
+                <div class="policy-card-body">
+                    <div class="multa-alert">
+                        <strong>Sistema de Multas por Retraso:</strong>
+                    </div>
+                    <ul class="policy-list">
+                        <li>
+                            <span class="policy-icon">💰</span>
+                            <strong>L. 50.00 por día de retraso</strong> después de la fecha estimada.
+                        </li>
+                        <li>
+                            <span class="policy-icon">📅</span>
+                            Las multas se calculan automáticamente al procesar la devolución.
+                        </li>
+                        <li>
+                            <span class="policy-icon">💳</span>
+                            Las multas deben ser pagadas antes de solicitar nuevos préstamos.
+                        </li>
+                    </ul>
+                    <div class="example-box">
+                        <strong>Ejemplo de Cálculo:</strong>
+                        <p>Si devuelves un libro 5 días después de la fecha estimada:</p>
+                        <p class="example-calc">5 días × L. 50.00 = <span>L. 250.00</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Condiciones del Libro -->
+            <div class="policy-card">
+                <div class="policy-card-header">
+                    <div class="policy-card-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: white;">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                    </div>
+                    <h3>Condiciones del Libro</h3>
+                </div>
+                <div class="policy-card-body">
+                    <ul class="policy-list">
+                        <li>
+                            <span class="policy-check">✓</span>
+                            Los libros deben ser devueltos en <strong>buenas condiciones</strong>.
+                        </li>
+                        <li>
+                            <span class="policy-warn">⚠</span>
+                            Daños mayores, páginas faltantes o deterioro pueden resultar en <strong>cargos adicionales</strong>.
+                        </li>
+                        <li>
+                            <span class="policy-warn">⚠</span>
+                            Evita marcar, subrayar o escribir en los libros prestados.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Proceso de Devolución -->
+            <div class="policy-card">
+                <div class="policy-card-header">
+                    <div class="policy-card-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: white;">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <h3>Proceso de Devolución</h3>
+                </div>
+                <div class="policy-card-body">
+                    <ol class="policy-steps">
+                        <li>Ve a <strong>"Mi Biblioteca"</strong> desde el menú principal.</li>
+                        <li>Encuentra el libro que deseas devolver en préstamos activos.</li>
+                        <li>Haz clic en el botón <span class="badge-step">Devolver</span>.</li>
+                        <li>Revisa la información del préstamo y multas aplicables.</li>
+                        <li>Agrega observaciones sobre la devolución (opcional).</li>
+                        <li>Confirma la devolución. El libro regresará al inventario.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Libros Comprados vs Prestados -->
+            <div class="policy-card policy-card-wide">
+                <div class="policy-card-header">
+                    <div class="policy-card-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: white;">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                    </div>
+                    <h3>Libros Comprados vs Prestados</h3>
+                </div>
+                <div class="policy-card-body">
+                    <div class="comparison-grid">
+                        <div class="comparison-item">
+                            <h5 style="color: #10b981;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; margin-right: 0.5rem;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                Libros Comprados
+                            </h5>
+                            <ul class="comparison-list">
+                                <li>✓ Son tuyos permanentemente</li>
+                                <li>✓ Puedes descargar formatos digitales</li>
+                                <li>✓ <strong>NO son retornables</strong></li>
+                                <li>✓ Aparecen siempre en tu biblioteca</li>
+                            </ul>
+                        </div>
+                        <div class="comparison-item">
+                            <h5 style="color: #f59e0b;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; margin-right: 0.5rem;">
+                                    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
+                                Libros Prestados
+                            </h5>
+                            <ul class="comparison-list">
+                                <li>✓ Préstamo temporal (14 días)</li>
+                                <li>✓ Deben ser devueltos</li>
+                                <li>✓ Pueden generar multas por retraso</li>
+                                <li>✓ Desaparecen al devolverlos</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-section">
+            <div class="faq-header">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 16v-4M12 8h.01"></path>
+                </svg>
+                <h2>Preguntas Frecuentes</h2>
+            </div>
+
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <input type="checkbox" id="faq1" class="faq-checkbox">
+                    <label for="faq1" class="faq-question">
+                        ¿Puedo devolver un libro comprado?
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </label>
+                    <div class="faq-answer">
+                        <strong>No.</strong> Los libros comprados son tuyos permanentemente y no pueden ser devueltos. 
+                        Solo los libros <strong>prestados</strong> deben ser devueltos dentro del período establecido.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq2" class="faq-checkbox">
+                    <label for="faq2" class="faq-question">
+                        ¿Qué pasa si pierdo un libro prestado?
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </label>
+                    <div class="faq-answer">
+                        En caso de pérdida de un libro prestado, debes contactar al servicio de atención al cliente 
+                        inmediatamente. Se te cobrará el valor de reposición del libro más las multas acumuladas por retraso.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq3" class="faq-checkbox">
+                    <label for="faq3" class="faq-question">
+                        ¿Puedo renovar un préstamo?
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </label>
+                    <div class="faq-answer">
+                        Las renovaciones dependen de la disponibilidad del libro y de tu historial de préstamos. 
+                        Contacta con nuestro equipo para consultar sobre renovaciones antes de que expire tu préstamo actual.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq4" class="faq-checkbox">
+                    <label for="faq4" class="faq-question">
+                        ¿Cómo pago las multas acumuladas?
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </label>
+                    <div class="faq-answer">
+                        Las multas se reflejan al momento de devolver el libro. Puedes pagarlas en cualquier sucursal 
+                        o a través de los métodos de pago disponibles en línea. Las multas pendientes deben ser pagadas 
+                        antes de solicitar nuevos préstamos.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Section -->
+        <div class="contact-section">
+            <div class="contact-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+            </div>
+            <h3>¿Necesitas Ayuda?</h3>
+            <p>Si tienes dudas sobre tu préstamo o el proceso de devolución, nuestro equipo está aquí para ayudarte.</p>
+            <div class="contact-buttons">
+                <a href="{{ url_for('tickets.crear_ticket') }}" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 7V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"></path>
+                    </svg>
+                    Crear Ticket de Soporte
+                </a>
+                <a href="{{ url_for('biblioteca_personal.mi_biblioteca') }}" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    Ir a Mi Biblioteca
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; }
+    .header-left { display: flex; gap: 1.5rem; align-items: center; width: 100%; }
+    .back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; white-space: nowrap; }
+    .back-btn:hover { background: #f0f4ff; }
+    .page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+    .subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+    .policy-content { }
+
+    .alert { padding: 1.5rem; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe; display: flex; gap: 1rem; margin-bottom: 2rem; }
+    .alert-info { background: #eff6ff; border-color: #bfdbfe; }
+    .alert-icon { flex-shrink: 0; color: #0284c7; }
+    .alert-content h4 { margin: 0 0 0.5rem 0; font-weight: 600; color: #1a202c; }
+    .alert-content p { margin: 0; color: #4a5568; line-height: 1.6; }
+
+    .policy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .policy-card-wide { grid-column: 1 / -1; }
+
+    .policy-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; transition: all 0.3s; }
+    .policy-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
+
+    .policy-card-header { display: flex; align-items: center; gap: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa, #f0f4ff); border-bottom: 1px solid #e2e8f0; }
+    .policy-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .policy-card-header h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: #1a202c; }
+
+    .policy-card-body { padding: 1.5rem; }
+
+    .policy-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
+    .policy-list li { display: flex; gap: 0.75rem; align-items: flex-start; }
+    .policy-check { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #dcfce7; color: #166534; font-weight: 700; flex-shrink: 0; }
+    .policy-warn { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; width: 24px; height: 24px; flex-shrink: 0; }
+    .policy-icon { display: inline-block; margin-right: 0.5rem; }
+
+    .multa-alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-weight: 600; color: #92400e; }
+
+    .example-box { background: #f3e8ff; border-left: 4px solid #a78bfa; padding: 1rem; border-radius: 6px; margin-top: 1rem; }
+    .example-box strong { color: #6b21a8; }
+    .example-box p { margin: 0.5rem 0; color: #6b21a8; }
+    .example-calc { font-weight: 700; font-size: 1.1rem; }
+    .example-calc span { color: #dc2626; }
+
+    .policy-steps { list-style: none; padding: 0; margin: 0; counter-reset: step-counter; }
+    .policy-steps li { counter-increment: step-counter; display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .policy-steps li::before { 
+        content: counter(step-counter); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        width: 32px; 
+        height: 32px; 
+        background: linear-gradient(135deg, #667eea, #764ba2); 
+        color: white; 
+        border-radius: 50%; 
+        font-weight: 600; 
+        flex-shrink: 0; 
+    }
+    .policy-steps li::after { content: ''; }
+    .badge-step { background: #fca5a5; color: #7c2d12; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.85rem; }
+
+    .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+    .comparison-item { background: #f8fafc; padding: 1.5rem; border-radius: 10px; }
+    .comparison-item h5 { margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; }
+    .comparison-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
+    .comparison-list li { color: #4a5568; font-size: 0.95rem; }
+
+    .faq-section { margin-bottom: 2rem; }
+    .faq-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+    .faq-header svg { color: #667eea; }
+    .faq-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #1a202c; }
+
+    .faq-grid { display: grid; gap: 1rem; }
+    .faq-item { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+
+    .faq-checkbox { display: none; }
+    .faq-question { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; cursor: pointer; font-weight: 600; color: #1a202c; user-select: none; transition: all 0.2s; }
+    .faq-question:hover { background: #f8fafc; }
+    .faq-question svg { transition: transform 0.3s; color: #667eea; }
+    .faq-checkbox:checked + .faq-question { background: #f0f4ff; }
+    .faq-checkbox:checked + .faq-question svg { transform: rotate(180deg); }
+
+    .faq-answer { padding: 0 1.5rem; max-height: 0; overflow: hidden; transition: all 0.3s; color: #4a5568; }
+    .faq-checkbox:checked + .faq-question + .faq-answer { padding: 1.5rem; max-height: 500px; }
+
+    .contact-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 3rem 2rem; text-align: center; color: white; margin-bottom: 2rem; }
+    .contact-icon { margin-bottom: 1.5rem; display: flex; justify-content: center; }
+    .contact-icon svg { color: white; opacity: 0.9; }
+    .contact-section h3 { margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700; }
+    .contact-section p { margin: 0 0 1.5rem 0; color: rgba(255,255,255,0.9); max-width: 500px; margin-left: auto; margin-right: auto; }
+
+    .contact-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; }
+    .btn-primary { background: white; color: #667eea; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .btn-secondary { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.3); }
+
+    @media (max-width: 768px) {
+        .page-header { flex-direction: column; align-items: flex-start; }
+        .header-left { flex-direction: column; }
+        .policy-grid { grid-template-columns: 1fr; }
+        .comparison-grid { grid-template-columns: 1fr; }
+        .contact-buttons { flex-direction: column; }
+        .btn { width: 100%; justify-content: center; }
+        .contact-section { padding: 2rem 1rem; }
+        .faq-question { padding: 1rem; }
+        .faq-answer { padding-left: 1rem !important; padding-right: 1rem !important; }
+    }
+</style>
+{% endblock %}

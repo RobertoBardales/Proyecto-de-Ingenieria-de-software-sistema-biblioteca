@@ -3,42 +3,48 @@
 {% block title %}{{ tema.titulo }}{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="thread-container">
     <!-- Breadcrumb -->
-    <div class="breadcrumb">
+    <nav class="breadcrumb">
         <a href="{{ url_for('temas_foros.listar') }}">Foros</a>
-        <span>›</span>
-        <span>{{ tema.categoria_foro }}</span>
-    </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <a href="{{ url_for('temas_foros.listar', categoria=tema.categoria_foro) }}">{{ tema.categoria_foro }}</a>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <span>{{ tema.titulo[:50] }}...</span>
+    </nav>
 
-    <!-- Tema principal -->
-    <div class="tema-principal">
-        <!-- Header -->
-        <div class="tema-header">
-            <div class="tema-badges">
-                <span class="badge badge-categoria">{{ tema.categoria_foro }}</span>
+    <!-- Original Post -->
+    <article class="original-post">
+        <div class="post-header">
+            <div class="post-badges">
+                <span class="badge badge-category">{{ tema.categoria_foro }}</span>
                 {% if tema.destacado %}
-                <span class="badge badge-destacado">⭐ Destacado</span>
+                <span class="badge badge-pinned">📌 Destacado</span>
                 {% endif %}
             </div>
             
-            <!-- Acciones (solo para creador o admin) -->
+            <!-- Actions -->
             {% if current_user.id_cliente == tema.id_cliente_creador or current_user.tipo_usuario == 'admin' %}
-            <div class="tema-acciones">
+            <div class="post-actions">
                 <a href="{{ url_for('temas_foros.editar', id=tema.id_tema) }}" 
-                   class="btn-action btn-edit" 
-                   title="Editar">
-                    ✏️
+                   class="action-btn action-edit" 
+                   title="Editar tema">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
                 </a>
                 
                 {% if current_user.tipo_usuario == 'admin' %}
-                <form action="{{ url_for('temas_foros.destacar', id=tema.id_tema) }}" 
-                      method="POST" 
-                      style="display: inline;">
-                    <button type="submit" 
-                            class="btn-action btn-star" 
-                            title="{{ 'Desmarcar' if tema.destacado else 'Destacar' }}">
-                        {{ '⭐' if not tema.destacado else '☆' }}
+                <form action="{{ url_for('temas_foros.destacar', id=tema.id_tema) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="action-btn action-star" title="{{ 'Desmarcar' if tema.destacado else 'Destacar' }}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="{{ 'currentColor' if tema.destacado else 'none' }}" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
                     </button>
                 </form>
                 {% endif %}
@@ -46,107 +52,167 @@
                 <form action="{{ url_for('temas_foros.eliminar', id=tema.id_tema) }}" 
                       method="POST" 
                       style="display: inline;"
-                      onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar este tema?\n\nSe eliminará el tema y todas sus respuestas.');">
-                    <button type="submit" 
-                            class="btn-action btn-delete" 
-                            title="Eliminar">
-                        🗑️
+                      onsubmit="return confirm('⚠️ ¿Eliminar este tema y todas sus respuestas?');">
+                    <button type="submit" class="action-btn action-delete" title="Eliminar tema">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
                     </button>
                 </form>
             </div>
             {% endif %}
         </div>
 
-        <!-- Título -->
-        <h1 class="tema-titulo">{{ tema.titulo }}</h1>
+        <h1 class="post-title">{{ tema.titulo }}</h1>
 
-        <!-- Info del autor -->
-        <div class="tema-autor">
-            <div class="avatar">{{ creador.nombres[0] }}{{ creador.apellidos[0] }}</div>
-            <div class="autor-info">
-                <span class="autor-nombre">{{ creador.nombres }} {{ creador.apellidos }}</span>
-                <span class="tema-fecha">
-                    📅 {{ tema.fecha_creacion.strftime('%d/%m/%Y %H:%M') }} 
-                    · 👁️ {{ tema.vistas or 0 }} vistas
-                </span>
+        <div class="post-author">
+            <div class="author-avatar-large">{{ creador.nombres[0] }}{{ creador.apellidos[0] }}</div>
+            <div class="author-info">
+                <span class="author-name">{{ creador.nombres }} {{ creador.apellidos }}</span>
+                <div class="post-meta">
+                    <span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        {{ tema.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}
+                    </span>
+                    <span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        {{ tema.vistas or 0 }} vistas
+                    </span>
+                </div>
             </div>
         </div>
 
-        <!-- Descripción -->
-        <div class="tema-contenido">
+        <div class="post-content">
             {{ tema.descripcion | replace('\n', '<br>') | safe }}
         </div>
-    </div>
+    </article>
 
-    <!-- Respuestas -->
-    <div class="respuestas-section">
-        <h2 class="respuestas-titulo">
-            💬 {{ mensajes|length }} Respuesta{{ 's' if mensajes|length != 1 else '' }}
-        </h2>
+    <!-- Replies Section -->
+    <div class="replies-section">
+        <div class="replies-header">
+            <h2>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                {{ mensajes|length }} Respuesta{{ 's' if mensajes|length != 1 else '' }}
+            </h2>
+        </div>
 
         {% if mensajes %}
             {% for mensaje, autor in mensajes %}
-            <div class="mensaje-card">
-                <div class="mensaje-autor">
-                    <div class="avatar-small">{{ autor.nombres[0] }}{{ autor.apellidos[0] }}</div>
-                    <div>
-                        <span class="autor-nombre">{{ autor.nombres }} {{ autor.apellidos }}</span>
-                        <span class="mensaje-fecha">{{ mensaje.fecha_publicacion.strftime('%d/%m/%Y %H:%M') }}</span>
+            <article class="reply-card" id="reply-{{ mensaje.id_mensaje }}">
+                <div class="reply-sidebar">
+                    <div class="author-avatar-small">{{ autor.nombres[0] }}{{ autor.apellidos[0] }}</div>
+                </div>
+                
+                <div class="reply-content">
+                    <div class="reply-header">
+                        <div class="reply-author-info">
+                            <span class="reply-author-name">{{ autor.nombres }} {{ autor.apellidos }}</span>
+                            <span class="reply-time">{{ mensaje.fecha_publicacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                        </div>
+                        
+                        {% if current_user.id_cliente == mensaje.id_cliente or current_user.tipo_usuario == 'admin' %}
+                        <div class="reply-actions">
+                            <button class="reply-action-btn" onclick="toggleEditMode({{ mensaje.id_mensaje }})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Editar
+                            </button>
+                            <form action="{{ url_for('mensajes_foros.eliminar', id=mensaje.id_mensaje) }}" 
+                                  method="POST" 
+                                  style="display: inline;"
+                                  onsubmit="return confirm('¿Eliminar esta respuesta?');">
+                                <button type="submit" class="reply-action-btn reply-action-delete">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Eliminar
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="reply-text" id="reply-text-{{ mensaje.id_mensaje }}">
+                        {{ mensaje.contenido | replace('\n', '<br>') | safe }}
+                    </div>
+                    
+                    <!-- Edit Form (hidden by default) -->
+                    <div class="reply-edit-form" id="edit-form-{{ mensaje.id_mensaje }}" style="display: none;">
+                        <form action="{{ url_for('mensajes_foros.editar', id=mensaje.id_mensaje) }}" method="POST">
+                            <textarea name="contenido" 
+                                      class="edit-textarea" 
+                                      rows="6" 
+                                      required>{{ mensaje.contenido }}</textarea>
+                            <div class="edit-actions">
+                                <button type="button" class="btn-cancel" onclick="toggleEditMode({{ mensaje.id_mensaje }})">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="btn-save">
+                                    Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                
-                <div class="mensaje-contenido">
-                    {{ mensaje.contenido | replace('\n', '<br>') | safe }}
-                </div>
-                
-                <!-- Acciones del mensaje (solo para autor o admin) -->
-                {% if current_user.id_cliente == mensaje.id_cliente or current_user.tipo_usuario == 'admin' %}
-                <div class="mensaje-acciones">
-                    <button class="btn-texto" onclick="editarMensaje({{ mensaje.id_mensaje }})">
-                        ✏️ Editar
-                    </button>
-                    <form action="/mensajes_foros/eliminar/{{ mensaje.id_mensaje }}" 
-                          method="POST" 
-                          style="display: inline;"
-                          onsubmit="return confirm('¿Eliminar este mensaje?');">
-                        <button type="submit" class="btn-texto btn-texto-danger">🗑️ Eliminar</button>
-                    </form>
-                </div>
-                {% endif %}
-            </div>
+            </article>
             {% endfor %}
         {% else %}
-            <div class="empty-respuestas">
-                <p>💬 Aún no hay respuestas. ¡Sé el primero en responder!</p>
+            <div class="no-replies">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <p>Aún no hay respuestas. ¡Sé el primero en comentar!</p>
             </div>
         {% endif %}
     </div>
 
-    <!-- Formulario de respuesta -->
-    <div class="responder-section">
-        <h3>✍️ Tu Respuesta</h3>
-        <form action="/mensajes_foros/nuevo" method="POST" id="formRespuesta">
+    <!-- Reply Form -->
+    <div class="reply-form-section">
+        <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Escribe tu respuesta
+        </h3>
+        <form action="{{ url_for('mensajes_foros.nuevo') }}" method="POST" id="replyForm">
             <input type="hidden" name="id_tema" value="{{ tema.id_tema }}">
             
             <textarea name="contenido" 
-                      id="respuestaTexto"
-                      class="form-textarea" 
+                      id="replyContent"
+                      class="reply-textarea" 
                       rows="6"
-                      placeholder="Escribe tu respuesta aquí..."
+                      placeholder="Comparte tu opinión, experiencia o responde las dudas del tema..."
                       required></textarea>
             
-            <small class="help-text" id="contadorRespuesta">0 / 2000 caracteres</small>
-            <div id="errorRespuesta" class="error-message"></div>
-            
-            <button type="submit" class="btn btn-primary">
-                📤 Publicar Respuesta
-            </button>
+            <div class="form-footer">
+                <small class="char-counter" id="charCounter">0 / 2000 caracteres</small>
+                <button type="submit" class="btn-submit">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    Publicar Respuesta
+                </button>
+            </div>
+            <div id="replyError" class="error-alert"></div>
         </form>
     </div>
 </div>
 
 <style>
-.container {
+.thread-container {
     max-width: 900px;
     margin: 2rem auto;
     padding: 0 1rem;
@@ -157,127 +223,135 @@
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     font-size: 0.9rem;
-    color: #718096;
 }
 
 .breadcrumb a {
     color: #667eea;
     text-decoration: none;
+    font-weight: 500;
 }
 
 .breadcrumb a:hover {
     text-decoration: underline;
 }
 
-.tema-principal {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.breadcrumb span {
+    color: #718096;
 }
 
-.tema-header {
+.breadcrumb svg {
+    color: #cbd5e0;
+}
+
+.original-post {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.post-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
-.tema-badges {
+.post-badges {
     display: flex;
     gap: 0.5rem;
 }
 
 .badge {
-    padding: 0.35rem 0.75rem;
-    border-radius: 12px;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
 }
 
-.badge-categoria {
-    background: #e6f3ff;
+.badge-category {
+    background: linear-gradient(135deg, #e6f3ff, #cce7ff);
     color: #0066cc;
 }
 
-.badge-destacado {
-    background: linear-gradient(135deg, #ffd700, #ffed4e);
+.badge-pinned {
+    background: linear-gradient(135deg, #fff9e6, #ffed4e);
     color: #856404;
 }
 
-.tema-acciones {
+.post-actions {
     display: flex;
     gap: 0.5rem;
 }
 
-.btn-action {
-    width: 36px;
-    height: 36px;
+.action-btn {
+    width: 40px;
+    height: 40px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    font-size: 1.1rem;
     background: white;
 }
 
-.btn-edit {
+.action-edit {
     background: #fff3cd;
     color: #856404;
-    border: 2px solid #ffc107;
 }
 
-.btn-edit:hover {
+.action-edit:hover {
     background: #ffc107;
     color: white;
 }
 
-.btn-star {
+.action-star {
     background: #fff9e6;
     color: #ffd700;
-    border: 2px solid #ffd700;
 }
 
-.btn-star:hover {
+.action-star:hover {
     background: #ffd700;
 }
 
-.btn-delete {
-    background: #ffe0e0;
-    color: #c41e3a;
-    border: 2px solid #dc3545;
+.action-delete {
+    background: #fee;
+    color: #c53030;
 }
 
-.btn-delete:hover {
-    background: #dc3545;
+.action-delete:hover {
+    background: #fc8181;
     color: white;
 }
 
-.tema-titulo {
+.post-title {
     font-size: 2rem;
     font-weight: 700;
     color: #1a202c;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     line-height: 1.3;
 }
 
-.tema-autor {
+.post-author {
     display: flex;
     align-items: center;
     gap: 1rem;
+    padding-bottom: 1.5rem;
     margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
     border-bottom: 2px solid #e2e8f0;
 }
 
-.avatar {
-    width: 48px;
-    height: 48px;
+.author-avatar-large {
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
@@ -285,229 +359,386 @@
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
 }
 
-.autor-info {
+.author-info {
     display: flex;
     flex-direction: column;
+    gap: 0.25rem;
 }
 
-.autor-nombre {
-    font-weight: 600;
+.author-name {
+    font-weight: 700;
     color: #2d3748;
+    font-size: 1.1rem;
 }
 
-.tema-fecha {
-    font-size: 0.85rem;
+.post-meta {
+    display: flex;
+    gap: 1rem;
     color: #a0aec0;
+    font-size: 0.85rem;
 }
 
-.tema-contenido {
+.post-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.post-content {
     color: #4a5568;
     line-height: 1.8;
-    font-size: 1rem;
+    font-size: 1.05rem;
 }
 
-.respuestas-section {
+/* Replies */
+.replies-section {
     margin-bottom: 2rem;
 }
 
-.respuestas-titulo {
+.replies-header {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.replies-header h2 {
+    margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
     color: #1a202c;
-    margin-bottom: 1.5rem;
-}
-
-.mensaje-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.mensaje-autor {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 0.5rem;
 }
 
-.avatar-small {
-    width: 40px;
-    height: 40px;
+.reply-card {
+    background: white;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.reply-card:last-child {
+    border-bottom: none;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.reply-sidebar {
+    flex-shrink: 0;
+}
+
+.author-avatar-small {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 0.95rem;
 }
 
-.mensaje-fecha {
+.reply-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.reply-author-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.reply-author-name {
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.reply-time {
     font-size: 0.8rem;
     color: #a0aec0;
-    display: block;
 }
 
-.mensaje-contenido {
-    color: #4a5568;
-    line-height: 1.6;
-    margin-bottom: 0.5rem;
-}
-
-.mensaje-acciones {
+.reply-actions {
     display: flex;
-    gap: 1rem;
-    padding-top: 0.5rem;
+    gap: 0.75rem;
 }
 
-.btn-texto {
+.reply-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
     background: none;
     border: none;
     color: #667eea;
-    font-weight: 500;
-    cursor: pointer;
-    font-size: 0.85rem;
-    padding: 0;
-}
-
-.btn-texto:hover {
-    text-decoration: underline;
-}
-
-.btn-texto-danger {
-    color: #dc3545;
-}
-
-.empty-respuestas {
-    text-align: center;
-    padding: 3rem;
-    color: #a0aec0;
-    background: white;
-    border-radius: 12px;
-}
-
-.responder-section {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.responder-section h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1.25rem;
-    color: #1a202c;
-}
-
-.form-textarea {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-family: inherit;
-    resize: vertical;
-    margin-bottom: 0.5rem;
-}
-
-.form-textarea:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.help-text {
-    display: block;
-    color: #718096;
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
-}
-
-.error-message {
-    display: none;
-    color: #dc3545;
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    background: #f8d7da;
-    border-radius: 4px;
-    border-left: 3px solid #dc3545;
-}
-
-.error-message.show {
-    display: block;
-}
-
-.btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
     font-weight: 600;
+    font-size: 0.85rem;
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+    border-radius: 6px;
     transition: all 0.2s;
 }
 
-.btn-primary {
+.reply-action-btn:hover {
+    background: #f7fafc;
+}
+
+.reply-action-delete {
+    color: #c53030;
+}
+
+.reply-text {
+    color: #4a5568;
+    line-height: 1.7;
+}
+
+/* Edit Form */
+.reply-edit-form {
+    margin-top: 1rem;
+}
+
+.edit-textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #667eea;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+}
+
+.edit-textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+.edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.btn-cancel:hover {
+    background: #e2e8f0;
+}
+
+.btn-save {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
+.btn-save:hover {
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(102,126,234,0.3);
 }
 
+.no-replies {
+    background: white;
+    padding: 4rem 2rem;
+    text-align: center;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.no-replies svg {
+    color: #cbd5e0;
+    margin-bottom: 1rem;
+}
+
+.no-replies p {
+    color: #a0aec0;
+    font-size: 1.05rem;
+}
+
+/* Reply Form */
+.reply-form-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.reply-form-section h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a202c;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reply-textarea {
+    width: 100%;
+    padding: 1.25rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 150px;
+    transition: all 0.2s;
+}
+
+.reply-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.char-counter {
+    color: #a0aec0;
+    font-size: 0.85rem;
+}
+
+.btn-submit {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102,126,234,0.3);
+}
+
+.error-alert {
+    display: none;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fee;
+    border: 1px solid #fc8181;
+    border-radius: 8px;
+    color: #c53030;
+    font-size: 0.9rem;
+}
+
+.error-alert.show {
+    display: block;
+}
+
 @media (max-width: 768px) {
-    .tema-titulo {
+    .original-post {
+        padding: 1.5rem;
+    }
+    
+    .post-title {
         font-size: 1.5rem;
     }
     
-    .tema-header {
+    .post-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
+    }
+    
+    .reply-card {
+        flex-direction: column;
     }
 }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const textarea = document.getElementById('respuestaTexto');
-    const contador = document.getElementById('contadorRespuesta');
-    const errorDiv = document.getElementById('errorRespuesta');
-    const form = document.getElementById('formRespuesta');
+// Toggle edit mode for replies
+function toggleEditMode(messageId) {
+    const textDiv = document.getElementById(`reply-text-${messageId}`);
+    const editForm = document.getElementById(`edit-form-${messageId}`);
+    
+    if (editForm.style.display === 'none') {
+        textDiv.style.display = 'none';
+        editForm.style.display = 'block';
+    } else {
+        textDiv.style.display = 'block';
+        editForm.style.display = 'none';
+    }
+}
 
-    // Contador de caracteres
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('replyContent');
+    const counter = document.getElementById('charCounter');
+    const errorDiv = document.getElementById('replyError');
+    const form = document.getElementById('replyForm');
+
     textarea.addEventListener('input', function() {
         const count = this.value.length;
-        contador.textContent = `${count} / 2000 caracteres`;
+        counter.textContent = `${count} / 2000 caracteres`;
         
         if (count > 2000) {
-            contador.style.color = '#dc3545';
+            counter.style.color = '#c53030';
             errorDiv.textContent = '❌ La respuesta no puede exceder 2000 caracteres';
             errorDiv.classList.add('show');
+        } else if (count > 1800) {
+            counter.style.color = '#dd6b20';
+            errorDiv.classList.remove('show');
         } else {
-            contador.style.color = '#718096';
+            counter.style.color = '#a0aec0';
             errorDiv.classList.remove('show');
         }
     });
 
-    // Validación al enviar
     form.addEventListener('submit', function(e) {
-        const valor = textarea.value.trim();
+        let valor = textarea.value.trim();
+        
+        // Clean excessive spaces while preserving line breaks
+        const lines = valor.split('\n');
+        const cleanedLines = lines.map(line => line.trim().replace(/\s+/g, ' '));
+        valor = cleanedLines.join('\n');
+        textarea.value = valor;
         
         if (valor.length < 5) {
             e.preventDefault();
             errorDiv.textContent = '❌ La respuesta debe tener al menos 5 caracteres';
             errorDiv.classList.add('show');
+            textarea.focus();
             return;
         }
         
@@ -515,6 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             errorDiv.textContent = '❌ La respuesta no puede exceder 2000 caracteres';
             errorDiv.classList.add('show');
+            textarea.focus();
             return;
         }
     });

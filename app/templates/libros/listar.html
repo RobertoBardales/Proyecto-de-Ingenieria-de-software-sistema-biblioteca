@@ -1,0 +1,1071 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogo de Libros{% endblock %}
+
+{% block content %}
+<div class="catalog-container">
+    <!-- Header -->
+    <div class="catalog-header">
+        <div class="header-content">
+            <h1>📚 Catálogo de Libros</h1>
+            <p>Explora nuestra colección de {{ libros_data|length }} libros disponibles</p>
+        </div>
+
+        <a href="{{ url_for('libros.nuevo') }}" class="btn-create">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Agregar Libro
+        </a>
+    </div>
+    <!-- Format Selection Modal -->
+    <div id="formatModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Seleccionar Formato</h3>
+                <button onclick="cerrarModal()" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalLibroTitulo" class="modal-libro-titulo"></p>
+                <div class="format-options" id="formatOptions">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="catalog-layout">
+        <!-- Filters Sidebar -->
+        <aside class="filters-sidebar">
+            <div class="filters-card">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filtros
+                </h3>
+
+                <form method="GET" id="filterForm">
+                    <!-- Search -->
+                    <div class="filter-group">
+                        <label>🔍 Buscar</label>
+                        <input type="text" 
+                               name="busqueda" 
+                               placeholder="Título, ISBN..." 
+                               value="{{ busqueda_actual }}"
+                               class="filter-input">
+                    </div>
+
+                    <!-- Category -->
+                    <div class="filter-group">
+                        <label>📂 Categoría</label>
+                        <select name="categoria" class="filter-select">
+                            <option value="">Todas</option>
+                            {% for cat in todas_categorias %}
+                            <option value="{{ cat.id_categoria }}" {{ 'selected' if categoria_actual == cat.id_categoria|string else '' }}>
+                                {{ cat.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Author -->
+                    <div class="filter-group">
+                        <label>✍️ Autor</label>
+                        <select name="autor" class="filter-select">
+                            <option value="">Todos</option>
+                            {% for autor in todos_autores %}
+                            <option value="{{ autor.id_autor }}" {{ 'selected' if autor_actual == autor.id_autor|string else '' }}>
+                                {{ autor.apellidos }}, {{ autor.nombres }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Format -->
+                    <div class="filter-group">
+                        <label>📖 Formato</label>
+                        <select name="formato" class="filter-select">
+                            <option value="">Todos</option>
+                            {% for fmt in formatos_disponibles %}
+                            <option value="{{ fmt }}" {{ 'selected' if formato_actual == fmt else '' }}>
+                                {{ fmt }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Availability -->
+                    <div class="filter-group">
+                        <label>🛒 Disponibilidad</label>
+                        <select name="disponibilidad" class="filter-select">
+                            <option value="">Cualquiera</option>
+                            <option value="venta" {{ 'selected' if disponibilidad_actual == 'venta' else '' }}>En venta</option>
+                            <option value="prestamo" {{ 'selected' if disponibilidad_actual == 'prestamo' else '' }}>En préstamo</option>
+                        </select>
+                    </div>
+
+                    <!-- Sort -->
+                    <div class="filter-group">
+                        <label>📊 Ordenar por</label>
+                        <select name="orden" class="filter-select">
+                            <option value="titulo" {{ 'selected' if orden_actual == 'titulo' else '' }}>Título (A-Z)</option>
+                            <option value="precio_asc" {{ 'selected' if orden_actual == 'precio_asc' else '' }}>Precio: Menor a Mayor</option>
+                            <option value="precio_desc" {{ 'selected' if orden_actual == 'precio_desc' else '' }}>Precio: Mayor a Menor</option>
+                            <option value="stock" {{ 'selected' if orden_actual == 'stock' else '' }}>Stock Disponible</option>
+                            <option value="reciente" {{ 'selected' if orden_actual == 'reciente' else '' }}>Más Recientes</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="btn-apply">Aplicar</button>
+                        <a href="{{ url_for('libros.listar') }}" class="btn-clear">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Books Grid -->
+        <main class="books-grid-container">
+            {% if libros_data %}
+            <div class="books-grid">
+                {% for item in libros_data %}
+                <article class="book-card">
+                    <div class="book-cover">
+                        {% if item.libro.portada %}
+                        <img src="{{ item.libro.portada }}" alt="{{ item.libro.titulo }}">
+                        {% else %}
+                        <div class="cover-placeholder">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Badges -->
+                        <div class="book-badges">
+                            {% if item.libro.disp_venta %}
+                            <span class="badge badge-sale">🛒 Venta</span>
+                            {% endif %}
+                            {% if item.libro.disp_prestamo %}
+                            <span class="badge badge-loan">📚 Préstamo</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="book-info">
+                        <div class="book-categories">
+                            {% for cat in item.categorias[:2] %}
+                            <span class="category-tag">{{ cat.nombre }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <h3 class="book-title">
+                            <a href="{{ url_for('libros.ver', id=item.libro.id_libro) }}">
+                                {{ item.libro.titulo }}
+                            </a>
+                        </h3>
+
+                        <div class="book-authors">
+                            {% for autor in item.autores %}
+                            <span>{{ autor.nombres }} {{ autor.apellidos }}</span>
+                            {% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div class="book-meta">
+                            <span class="meta-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                </svg>
+                                {{ item.libro.num_pag }} págs
+                            </span>
+                            <span class="meta-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                </svg>
+                                {{ item.libro.formato }}
+                            </span>
+                        </div>
+
+                        <div class="book-stock">
+                            <span class="stock-badge {{ 'in-stock' if (item.libro.stock_fisico + item.libro.stock_digital) > 0 else 'out-stock' }}">
+                                {% if (item.libro.stock_fisico + item.libro.stock_digital) > 0 %}
+                                ✓ {{ item.libro.stock_fisico + item.libro.stock_digital }} disponibles
+                                {% else %}
+                                ✕ Sin stock
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="book-footer">
+                            <div class="book-prices">
+                                {% if item.libro.disp_venta %}
+                                <div class="price">
+                                    <span class="price-label">Venta</span>
+                                    <span class="price-value">L {{ "%.2f"|format(item.libro.precio_venta) }}</span>
+                                </div>
+                                {% endif %}
+                                {% if item.libro.disp_prestamo %}
+                                <div class="price">
+                                    <span class="price-label">Préstamo</span>
+                                    <span class="price-value">L {{ "%.2f"|format(item.libro.precio_prestamo) }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="book-actions">
+                                {% if current_user.is_authenticated %}
+                                    <!-- Buy Button -->
+                                    {% if item.libro.disp_venta and (item.libro.stock_fisico > 0 or item.libro.stock_digital > 0) %}
+                                    <button onclick="mostrarOpcionesCompra({{ item.libro.id_libro }}, '{{ item.libro.titulo | replace("'", "\\'") }}', {{ item.libro.stock_fisico }}, {{ item.libro.stock_digital }})" 
+                                            class="btn-buy" title="Comprar libro">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="9" cy="21" r="1"></circle>
+                                            <circle cx="20" cy="21" r="1"></circle>
+                                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                                        </svg>
+                                        Comprar
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <!-- Borrow Button -->
+                                    {% if item.libro.disp_prestamo and item.libro.stock_fisico > 0 %}
+                                    <button onclick="agregarAlCarritoPrestamo({{ item.libro.id_libro }}, '{{ item.libro.titulo | replace("'", "\\'") }}')" 
+                                            class="btn-borrow" title="Solicitar préstamo">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                        </svg>
+                                        Préstamo
+                                    </button>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                <a href="{{ url_for('libros.ver', id=item.libro.id_libro) }}" class="btn-view">
+                                    Ver detalles
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <h3>No se encontraron libros</h3>
+                <p>{{ 'Intenta ajustar los filtros de búsqueda' if busqueda_actual or categoria_actual or autor_actual else 'Aún no hay libros registrados' }}</p>
+                {% if current_user.tipo_usuario == 'admin' and not (busqueda_actual or categoria_actual or autor_actual) %}
+                <a href="{{ url_for('libros.nuevo') }}" class="btn-primary">
+                    Agregar Primer Libro
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<style>
+:root {
+    --primary: #6366f1;
+    --secondary: #ec4899;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --dark: #1e293b;
+    --text: #334155;
+    --text-light: #64748b;
+    --light: #f8fafc;
+    --border: #e2e8f0;
+}
+
+.catalog-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.catalog-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.header-content h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.header-content p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.05rem;
+}
+
+.btn-create {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    background: white;
+    color: var(--primary);
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.catalog-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+}
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 16px;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--dark);
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--text-light);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-close:hover {
+    background: var(--light);
+    color: var(--dark);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-libro-titulo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.format-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.format-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+.format-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(102,126,234,0.4);
+}
+
+.format-btn span {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.format-btn small {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* New button styles */
+.btn-buy {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.btn-buy:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-borrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.btn-borrow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.book-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+/* Filters Sidebar */
+.filters-sidebar {
+    position: sticky;
+    top: 90px;
+    height: fit-content;
+}
+
+.filters-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.filters-card h3 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--dark);
+}
+
+.filter-group {
+    margin-bottom: 1.25rem;
+}
+
+.filter-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.filter-input,
+.filter-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border);
+}
+
+.btn-apply {
+    flex: 1;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-apply:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.3);
+}
+
+.btn-clear {
+    padding: 0.75rem 1rem;
+    background: var(--light);
+    color: var(--text);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.btn-clear:hover {
+    background: var(--border);
+}
+
+/* Books Grid */
+.books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.book-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+}
+
+.book-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+}
+
+.book-cover {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    background: linear-gradient(135deg, #f7fafc, #e2e8f0);
+    overflow: hidden;
+}
+
+.book-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+}
+
+.book-badges {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    backdrop-filter: blur(10px);
+}
+
+.badge-sale {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+}
+
+.badge-loan {
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+}
+
+.book-info {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.book-categories {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.category-tag {
+    padding: 0.25rem 0.75rem;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.book-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.book-title a {
+    color: var(--dark);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.book-title a:hover {
+    color: var(--primary);
+}
+
+.book-authors {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.book-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.book-stock {
+    margin-top: auto;
+}
+
+.stock-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.in-stock {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+}
+
+.out-stock {
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+}
+
+.book-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 2px solid var(--border);
+}
+
+.book-prices {
+    display: flex;
+    gap: 1rem;
+}
+
+.price {
+    display: flex;
+    flex-direction: column;
+}
+
+.price-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.price-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.book-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-add-cart {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.btn-add-cart:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-view {
+    flex: 1;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+}
+
+.btn-view:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.3);
+}
+
+/* Empty State */
+.empty-state {
+    background: white;
+    border-radius: 16px;
+    padding: 5rem 2rem;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.empty-state svg {
+    color: var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    color: var(--dark);
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.empty-state p {
+    color: var(--text-light);
+    font-size: 1.05rem;
+    margin-bottom: 2rem;
+}
+
+.btn-primary {
+    display: inline-block;
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102,126,234,0.3);
+}
+
+@media (max-width: 1024px) {
+    .catalog-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .filters-sidebar {
+        position: static;
+    }
+    
+    .books-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .catalog-header {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+    
+    .books-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Global variables for modal
+let currentLibroId = null;
+let currentLibroTitulo = '';
+
+// Show format selection modal
+function mostrarOpcionesCompra(libroId, libroTitulo, stockFisico, stockDigital) {
+    currentLibroId = libroId;
+    currentLibroTitulo = libroTitulo;
+    
+    const modal = document.getElementById('formatModal');
+    const titulo = document.getElementById('modalLibroTitulo');
+    const options = document.getElementById('formatOptions');
+    
+    titulo.textContent = libroTitulo;
+    
+    let html = '<div class="format-buttons">';
+    
+    if (stockFisico > 0) {
+        html += `
+            <button onclick="agregarAlCarritoVenta(${libroId}, 'Físico')" class="format-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>Físico</span>
+                <small>${stockFisico} disponibles</small>
+            </button>
+        `;
+    }
+    
+    if (stockDigital > 0) {
+        html += `
+            <button onclick="agregarAlCarritoVenta(${libroId}, 'Digital')" class="format-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <span>Digital</span>
+                <small>${stockDigital} disponibles</small>
+            </button>
+        `;
+    }
+    
+    html += '</div>';
+    options.innerHTML = html;
+    
+    modal.style.display = 'block';
+}
+
+function cerrarModal() {
+    document.getElementById('formatModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('formatModal');
+    if (event.target === modal) {
+        cerrarModal();
+    }
+}
+
+// Add to sales cart
+async function agregarAlCarritoVenta(libroId, formato) {
+    try {
+        const formData = new FormData();
+        formData.append('cantidad', 1);
+        formData.append('formato', formato);
+        
+        const response = await fetch(`/ventas/carrito/agregar/${libroId}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            updateCartCount(data.cart_count, 'ventas');
+            cerrarModal();
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al agregar al carrito', 'error');
+    }
+}
+
+// Add to loan cart
+async function agregarAlCarritoPrestamo(libroId, libroTitulo) {
+    try {
+        const response = await fetch(`/prestamos/carrito/agregar/${libroId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            updateCartCount(data.cart_count, 'prestamos');
+        } else {
+            showToast(data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al agregar al carrito de préstamos', 'error');
+    }
+}
+
+function updateCartCount(count, type) {
+    const cartBadge = document.querySelector(`.cart-count-${type}`);
+    if (cartBadge) {
+        cartBadge.textContent = count;
+        cartBadge.style.display = count > 0 ? 'flex' : 'none';
+        
+        cartBadge.style.animation = 'bounce 0.5s';
+        setTimeout(() => {
+            cartBadge.style.animation = '';
+        }, 500);
+    }
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s;
+        font-weight: 600;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Auto-submit form on filter change
+document.querySelectorAll('.filter-select').forEach(select => {
+    select.addEventListener('change', () => {
+        document.getElementById('filterForm').submit();
+    });
+});
+</script>
+
+<style>
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-10px); }
+}
+</style>
+{% endblock %}

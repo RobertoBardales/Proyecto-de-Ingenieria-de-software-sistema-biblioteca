@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}Recepción #{{ recepcion.id_recepcion }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('orden_compra.listar') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver al Listado
+            </a>
+            <div>
+                <h1>Recepción #{{ recepcion.id_recepcion }}</h1>
+                <p class="subtitle">Detalles de la recepción de productos</p>
+            </div>
+        </div>
+        <a href="{{ url_for('orden_compra.ver', id=recepcion.id_orden) }}" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Ver Orden
+        </a>
+    </div>
+
+    <!-- Status Alert -->
+    {% if recepcion.inventariado %}
+    <div class="success-alert">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <div>
+            <strong>Esta recepción ya fue inventariada</strong>
+            <p>Fecha: {{ recepcion.fecha_inventariado.strftime('%d/%m/%Y %H:%M') }}</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="warning-alert">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div>
+            <strong>Esta recepción aún no ha sido inventariada</strong>
+            <p>Los productos recibidos no se han agregado al inventario</p>
+        </div>
+        <a href="{{ url_for('orden_compra.inventariar_recepcion', id=recepcion.id_recepcion) }}" class="btn btn-success btn-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Inventariar Ahora
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Reception Info -->
+    <div class="info-card">
+        <div class="info-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <h3>Información de la Recepción</h3>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Orden de Compra</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <a href="{{ url_for('orden_compra.ver', id=recepcion.Orden_Compra_.id_orden) }}" class="link">
+                        {{ recepcion.Orden_Compra_.numero_orden }}
+                    </a>
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Editorial</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21h18"></path>
+                        <path d="M5 21V7l8-4v18"></path>
+                        <path d="M19 21V11l-6-4"></path>
+                    </svg>
+                    {{ recepcion.Orden_Compra_.Editoriales_.nombre }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Sucursal</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {{ recepcion.Orden_Compra_.Sucursales_.nombre }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Fecha de Recepción</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ recepcion.fecha_recepcion.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+            <div class="info-item">
+                <label>Empleado Receptor</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    {{ recepcion.Empleados_.nombres }} {{ recepcion.Empleados_.apellidos }}
+                </div>
+            </div>
+            {% if recepcion.numero_guia %}
+            <div class="info-item">
+                <label>Número de Guía</label>
+                <div class="info-value">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <code class="guia-code">{{ recepcion.numero_guia }}</code>
+                </div>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <label>Estado de Recepción</label>
+                <div class="info-value">
+                    {% if recepcion.estado_recepcion == 'Aceptado' %}
+                        <span class="badge badge-success">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            {{ recepcion.estado_recepcion }}
+                        </span>
+                    {% elif recepcion.estado_recepcion == 'Rechazado' %}
+                        <span class="badge badge-danger">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            {{ recepcion.estado_recepcion }}
+                        </span>
+                    {% else %}
+                        <span class="badge badge-warning">{{ recepcion.estado_recepcion }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if recepcion.observaciones %}
+            <div class="info-item full-width">
+                <label>Observaciones</label>
+                <div class="info-value-text">
+                    {{ recepcion.observaciones }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card stat-success">
+            <div class="stat-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <div class="stat-number">{{ total_recibido }}</div>
+            <div class="stat-label">Total Recibido</div>
+        </div>
+        
+        <div class="stat-card stat-danger">
+            <div class="stat-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </div>
+            <div class="stat-number">{{ total_rechazado }}</div>
+            <div class="stat-label">Total Rechazado</div>
+        </div>
+        
+        <div class="stat-card stat-primary">
+            <div class="stat-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+            </div>
+            <div class="stat-number">{{ productos_buenos }}</div>
+            <div class="stat-label">En Buen Estado</div>
+        </div>
+        
+        {% if productos_danados > 0 or productos_defectuosos > 0 %}
+        <div class="stat-card stat-warning">
+            <div class="stat-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <div class="stat-number">{{ productos_danados + productos_defectuosos }}</div>
+            <div class="stat-label">Dañados/Defectuosos</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Products Detail -->
+    <div class="table-card">
+        <div class="table-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <h3>Detalle de Productos</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Libro</th>
+                        <th>Formato</th>
+                        <th>Cant. Recibida</th>
+                        <th>Cant. Rechazada</th>
+                        <th>Estado</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detalle in recepcion.Detalle_Recepcion_Compra %}
+                    <tr>
+                        <td>
+                            <div class="libro-cell">
+                                <strong>{{ detalle.Detalle_Orden_Compra_.Libros_.titulo }}</strong>
+                                <small>ISBN: {{ detalle.Detalle_Orden_Compra_.Libros_.isbn }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ detalle.Detalle_Orden_Compra_.formato }}</span>
+                        </td>
+                        <td class="text-center">
+                            <strong class="text-success">{{ detalle.cantidad_recibida }}</strong>
+                        </td>
+                        <td class="text-center">
+                            {% if detalle.cantidad_rechazada > 0 %}
+                                <strong class="text-danger">{{ detalle.cantidad_rechazada }}</strong>
+                            {% else %}
+                                <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if detalle.estado_producto == 'Bueno' %}
+                                <span class="badge badge-success">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    {{ detalle.estado_producto }}
+                                </span>
+                            {% elif detalle.estado_producto == 'Dañado' %}
+                                <span class="badge badge-warning">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    {{ detalle.estado_producto }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-danger">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                    {{ detalle.estado_producto }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if detalle.observaciones %}
+                                <span class="observaciones-text">{{ detalle.observaciones }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions-center">
+        {% if not recepcion.inventariado %}
+        <a href="{{ url_for('orden_compra.inventariar_recepcion', id=recepcion.id_recepcion) }}" class="btn btn-primary btn-large">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Inventariar Recepción
+        </a>
+        {% endif %}
+        <a href="{{ url_for('orden_compra.ver', id=recepcion.id_orden) }}" class="btn btn-secondary btn-large">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Volver a la Orden
+        </a>
+    </div>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Alerts */
+.success-alert, .warning-alert { 
+    display: flex; 
+    gap: 1rem; 
+    padding: 1rem 1.25rem; 
+    border-radius: 12px; 
+    margin-bottom: 1.5rem; 
+    align-items: center;
+}
+.success-alert { 
+    background: linear-gradient(135deg, #d4f4dd 0%, #e6f9ea 100%); 
+    border-left: 4px solid #28a745; 
+}
+.success-alert svg { color: #28a745; flex-shrink: 0; }
+.success-alert div { color: #1e7e34; }
+.success-alert strong { display: block; margin-bottom: 0.25rem; }
+.success-alert p { margin: 0; font-size: 0.9rem; }
+
+.warning-alert { 
+    background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%); 
+    border-left: 4px solid #ffc107; 
+}
+.warning-alert svg { color: #856404; flex-shrink: 0; }
+.warning-alert div { color: #856404; flex: 1; }
+.warning-alert strong { display: block; margin-bottom: 0.25rem; }
+.warning-alert p { margin: 0; font-size: 0.9rem; }
+
+/* Info Card */
+.info-card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    margin-bottom: 1.5rem;
+}
+.info-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin-bottom: 1.5rem; 
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.info-header svg { color: #667eea; }
+.info-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+.info-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 1.25rem; 
+}
+.info-item { display: flex; flex-direction: column; }
+.info-item.full-width { grid-column: 1 / -1; }
+.info-item label { 
+    font-size: 0.85rem; 
+    font-weight: 600; 
+    color: #718096; 
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-value { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    padding: 0.75rem; 
+    background: #f7fafc; 
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.info-value svg { color: #667eea; flex-shrink: 0; }
+.info-value-text { 
+    padding: 0.75rem; 
+    background: #f7fafc; 
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+.link { color: #667eea; text-decoration: none; font-weight: 600; }
+.link:hover { text-decoration: underline; }
+
+.guia-code { 
+    padding: 0.25rem 0.5rem; 
+    background: #e2e8f0; 
+    border: 1px solid #cbd5e0; 
+    border-radius: 4px; 
+    font-family: 'Courier New', monospace; 
+    font-size: 0.9rem; 
+    color: #4a5568; 
+}
+
+/* Stats Grid */
+.stats-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 1rem; 
+    margin-bottom: 1.5rem; 
+}
+.stat-card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    text-align: center;
+    border: 2px solid #e2e8f0;
+    transition: transform 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); }
+.stat-icon { 
+    width: 48px; 
+    height: 48px; 
+    margin: 0 auto 1rem; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+.stat-success .stat-icon { background: #d4f4dd; color: #28a745; }
+.stat-danger .stat-icon { background: #ffe0e0; color: #dc3545; }
+.stat-primary .stat-icon { background: #e6f3ff; color: #667eea; }
+.stat-warning .stat-icon { background: #fff3cd; color: #ffc107; }
+.stat-number { 
+    font-size: 2rem; 
+    font-weight: 700; 
+    margin-bottom: 0.5rem; 
+    color: #1a202c; 
+}
+.stat-label { 
+    font-size: 0.9rem; 
+    color: #718096; 
+    font-weight: 500; 
+}
+
+/* Table Card */
+.table-card { 
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    overflow: hidden; 
+    margin-bottom: 1.5rem;
+}
+.table-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    padding: 1.5rem; 
+    border-bottom: 2px solid #e2e8f0;
+}
+.table-header svg { color: #667eea; }
+.table-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    color: #1a202c; 
+}
+
+.table-responsive { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.85rem; }
+.data-table td { padding: 0.75rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.libro-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+.libro-cell strong { color: #1a202c; }
+.libro-cell small { color: #718096; font-size: 0.85rem; }
+
+.text-center { text-align: center; }
+.text-success { color: #28a745; font-weight: 600; }
+.text-danger { color: #dc3545; font-weight: 600; }
+.text-muted { color: #a0aec0; }
+
+.observaciones-text { 
+    color: #4a5568; 
+    font-size: 0.9rem; 
+    line-height: 1.5; 
+}
+
+/* Badges */
+.badge { 
+    padding: 0.35rem 0.75rem; 
+    border-radius: 12px; 
+    font-size: 0.85rem; 
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.badge-info { background: #e6f3ff; color: #0066cc; }
+.badge-success { background: #d4f4dd; color: #1e7e34; }
+.badge-danger { background: #ffe0e0; color: #c41e3a; }
+.badge-warning { background: #fff3cd; color: #856404; }
+
+/* Buttons */
+.btn { 
+    padding: 0.75rem 1.5rem; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    text-decoration: none; 
+    transition: all 0.2s; 
+    font-size: 0.95rem; 
+}
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+.btn-large { padding: 1rem 2rem; font-size: 1rem; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-success { background: #28a745; color: white; }
+.btn-success:hover { background: #218838; transform: translateY(-2px); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+
+.form-actions-center { 
+    display: flex; 
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem; 
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+/* Responsive */
+@media (max-width: 768px) {
+.page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+.header-left { flex-direction: column; align-items: flex-start; }
+.info-grid { grid-template-columns: 1fr; }
+.stats-grid { grid-template-columns: 1fr; }
+.warning-alert { flex-direction: column; align-items: flex-start; }
+.data-table { font-size: 0.85rem; }
+.data-table th, .data-table td { padding: 0.5rem; }
+.form-actions-center { flex-direction: column; }
+}
+</style>
+{% endblock %}

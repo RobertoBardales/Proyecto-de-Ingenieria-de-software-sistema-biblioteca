@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+
+{% block title %}Documentos de Empleados{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('empleados.listar') }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+            <div>
+                <h1>Gestión de Documentos de Empleados</h1>
+                <p class="subtitle">Administra los documentos de identidad de tu personal</p>
+            </div>
+        </div>
+        <a href="{{ url_for('empleados_documento.nuevo') }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Documento
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-container">
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Buscar por empleado, tipo de documento o número..." class="search-input">
+            <button class="clear-btn" id="clearBtn" onclick="clearFilters()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="filter-group">
+            <select id="filtroTipo" class="filter-select">
+                <option value="">Todos los tipos</option>
+                {% set tipos_unicos = documentos | map(attribute='2.nombre') | unique | sort %}
+                {% for tipo in tipos_unicos %}
+                <option value="{{ tipo }}">{{ tipo }}</option>
+                {% endfor %}
+            </select>
+            <select id="filtroEmpleado" class="filter-select">
+                <option value="">Todos los empleados</option>
+                {% set empleados_unicos = documentos | map(attribute='1') | unique | sort(attribute='nombres') %}
+                {% for empleado in empleados_unicos %}
+                <option value="{{ empleado.id_empleado }}">{{ empleado.nombres }} {{ empleado.apellidos }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-stats">
+            <span id="statsText">{{ documentos|length }} documentos registrados</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empleado</th>
+                    <th>Tipo de Documento</th>
+                    <th>Número/Valor</th>
+                    <th class="actions-header">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaDocumentos">
+                {% if documentos %}
+                    {% for doc, empleado, tipo in documentos %}
+                    <tr data-tipo="{{ tipo.nombre }}" 
+                        data-empleado-id="{{ empleado.id_empleado }}"
+                        data-search="{{ (empleado.nombres + ' ' + empleado.apellidos + ' ' + tipo.nombre + ' ' + doc.valor_documento)|lower }}">
+                        <td>
+                            <div class="employee-info">
+                                <div class="avatar">{{ empleado.nombres[0] }}{{ empleado.apellidos[0] }}</div>
+                                <div>
+                                    <div class="employee-name">{{ empleado.nombres }} {{ empleado.apellidos }}</div>
+                                    <div class="employee-detail">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="12" cy="7" r="4"></circle>
+                                        </svg>
+                                        ID: {{ empleado.id_empleado }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-type">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                {{ tipo.nombre }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="document-container">
+                                <code class="document-value">{{ doc.valor_documento }}</code>
+                                <button class="copy-btn" onclick="copyDocument('{{ doc.valor_documento }}')" title="Copiar">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <a href="{{ url_for('empleados_documento.editar', id=doc.id_empleado_documento) }}" 
+                                   class="action-btn edit" title="Editar documento">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </a>
+                                <button class="action-btn delete" 
+                                        onclick='showDelete({{ doc.id_empleado_documento }}, "{{ empleado.nombres }} {{ empleado.apellidos }}", "{{ tipo.nombre }}", "{{ doc.valor_documento }}")' 
+                                        title="Eliminar documento">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results" style="display: {{ 'block' if not documentos else 'none' }}">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="12" y1="18" x2="12" y2="12"></line>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+            <h3>No hay documentos registrados</h3>
+            <p>Comienza agregando documentos de identidad a tus empleados</p>
+            <a href="{{ url_for('empleados_documento.nuevo') }}" class="btn btn-primary" style="margin-top: 1rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Agregar Primer Documento
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards (if there are documents) -->
+    {% if documentos %}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ empleados_unicos|length }}</div>
+                <div class="stat-label">Empleados con Documentos</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ documentos|length }}</div>
+                <div class="stat-label">Total de Documentos</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ tipos_unicos|length }}</div>
+                <div class="stat-label">Tipos de Documentos</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content modal-small">
+        <div class="modal-header modal-danger">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                Confirmar Eliminación
+            </h3>
+            <button class="close-btn" onclick="closeModal('deleteModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <p>¿Estás seguro de eliminar este documento?</p>
+            <div class="delete-details">
+                <div class="detail-item">
+                    <span class="detail-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Empleado:
+                    </span>
+                    <span id="deleteEmpleado"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Tipo:
+                    </span>
+                    <span id="deleteTipo"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="4" y1="9" x2="20" y2="9"></line>
+                            <line x1="4" y1="15" x2="20" y2="15"></line>
+                            <line x1="10" y1="3" x2="8" y2="21"></line>
+                            <line x1="16" y1="3" x2="14" y2="21"></line>
+                        </svg>
+                        Valor:
+                    </span>
+                    <code id="deleteValor"></code>
+                </div>
+            </div>
+            <div class="warning-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Esta acción no se puede deshacer
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('deleteModal')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Cancelar
+            </button>
+            <form id="deleteForm" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-danger">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Eliminar Documento
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <span id="toastMessage"></span>
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+.filters-container { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.search-box { position: relative; margin-bottom: 1rem; }
+.search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+.search-input { width: 100%; padding: 0.75rem 3rem 0.75rem 3rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; transition: border 0.2s; }
+.search-input:focus { outline: none; border-color: #667eea; }
+.clear-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.2s; }
+.clear-btn.show { display: flex; }
+.clear-btn:hover { background: #cbd5e0; }
+.filter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.filter-select { padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; cursor: pointer; background: white; transition: border 0.2s; }
+.filter-select:focus { outline: none; border-color: #667eea; }
+.filter-stats { color: #718096; font-size: 0.9rem; font-weight: 500; }
+.filter-stats span { font-weight: 600; color: #667eea; }
+
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 1.5rem; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.data-table th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.9rem; }
+.data-table th.actions-header { text-align: center; }
+.data-table td { padding: 1rem; border-bottom: 1px solid #f7fafc; }
+.data-table tbody tr { transition: background 0.2s; }
+.data-table tbody tr:hover { background: #f7fafc; }
+
+.employee-info { display: flex; align-items: center; gap: 0.75rem; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; flex-shrink: 0; }
+.employee-name { font-weight: 600; color: #1a202c; margin-bottom: 0.25rem; }
+.employee-detail { font-size: 0.85rem; color: #a0aec0; display: flex; align-items: center; gap: 0.25rem; }
+.employee-detail svg { flex-shrink: 0; }
+
+.badge { padding: 0.4rem 0.85rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.4rem; }
+.badge-type { background: #e6f3ff; color: #0066cc; }
+.badge svg { flex-shrink: 0; }
+
+.document-container { display: flex; align-items: center; gap: 0.5rem; }
+.document-value { background: #f7fafc; padding: 0.5rem 0.75rem; border-radius: 6px; font-family: 'Courier New', monospace; font-weight: 600; font-size: 0.9rem; color: #2d3748; border: 1px solid #e2e8f0; display: inline-block; }
+.copy-btn { background: #e2e8f0; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: #4a5568; }
+.copy-btn:hover { background: #667eea; color: white; }
+
+.actions { display: flex; gap: 0.5rem; justify-content: center; }
+.action-btn { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; text-decoration: none; }
+.action-btn.edit { background: #fff3cd; color: #856404; }
+.action-btn.edit:hover { background: #ffc107; color: white; transform: translateY(-2px); box-shadow: 0 2px 8px rgba(255,193,7,0.3); }
+.action-btn.delete { background: #ffe0e0; color: #c41e3a; }
+.action-btn.delete:hover { background: #dc3545; color: white; transform: translateY(-2px); box-shadow: 0 2px 8px rgba(220,53,69,0.3); }
+
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; font-size: 0.95rem; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(220,53,69,0.3); }
+
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results h3 { color: #4a5568; margin: 0.5rem 0; }
+.no-results p { color: #718096; margin: 0.5rem 0; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.stat-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 1rem; align-items: center; }
+.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-icon.blue { background: #e6f3ff; color: #0066cc; }
+.stat-icon.purple { background: #f3e8ff; color: #7c3aed; }
+.stat-icon.green { background: #d1fae5; color: #059669; }
+.stat-content { flex: 1; }
+.stat-value { font-size: 1.75rem; font-weight: 700; color: #1a202c; line-height: 1; }
+.stat-label { font-size: 0.875rem; color: #718096; margin-top: 0.25rem; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-small { max-width: 500px; }
+.modal-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+.modal-danger { background: #dc3545; color: white; border-bottom: none; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: inherit; transition: all 0.2s; }
+.close-btn:hover { background: rgba(0,0,0,0.1); }
+.modal-body { padding: 1.5rem; }
+.modal-body > p:first-child { font-size: 1.05rem; font-weight: 600; color: #2d3748; margin-bottom: 1rem; }
+.delete-details { background: #f7fafc; border-radius: 8px; padding: 1rem; margin: 1rem 0; border: 1px solid #e2e8f0; }
+.detail-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0; }
+.detail-item:last-child { border-bottom: none; }
+.detail-label { font-weight: 600; color: #4a5568; display: flex; align-items: center; gap: 0.5rem; }
+.detail-item code { background: white; padding: 0.35rem 0.6rem; border-radius: 4px; font-size: 0.9rem; border: 1px solid #e2e8f0; }
+.warning-box { background: #fff5f5; border-left: 3px solid #e53e3e; padding: 0.75rem 1rem; border-radius: 6px; color: #c41e3a; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+.warning-box svg { flex-shrink: 0; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+.toast { position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 1rem 1.5rem; border-radius: 8px; display: none; align-items: center; gap: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001; animation: slideIn 0.3s ease; }
+.toast.show { display: flex; }
+.toast svg { flex-shrink: 0; }
+@keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+@media (max-width: 968px) {
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .header-left { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .filter-group { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .data-table { font-size: 0.85rem; }
+    .data-table th, .data-table td { padding: 0.75rem 0.5rem; }
+    .employee-info { gap: 0.5rem; }
+    .avatar { width: 36px; height: 36px; font-size: 0.85rem; }
+    .document-container { flex-direction: column; align-items: flex-start; }
+    .actions { flex-direction: column; }
+}
+</style>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const filtroTipo = document.getElementById('filtroTipo');
+const filtroEmpleado = document.getElementById('filtroEmpleado');
+const clearBtn = document.getElementById('clearBtn');
+const tableBody = document.getElementById('tablaDocumentos');
+const noResults = document.getElementById('noResults');
+const statsText = document.getElementById('statsText');
+
+const allRows = [...tableBody.querySelectorAll('tr')];
+const totalRows = allRows.length;
+
+function applyFilters() {
+    const search = searchInput.value.toLowerCase();
+    const tipo = filtroTipo.value;
+    const empleadoId = filtroEmpleado.value;
+    
+    let visibleCount = 0;
+    
+    allRows.forEach(row => {
+        const matchSearch = !search || row.dataset.search.includes(search);
+        const matchTipo = !tipo || row.dataset.tipo === tipo;
+        const matchEmpleado = !empleadoId || row.dataset.empleadoId === empleadoId;
+        
+        if (matchSearch && matchTipo && matchEmpleado) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update stats
+    if (visibleCount === totalRows) {
+        statsText.textContent = `${totalRows} documentos registrados`;
+    } else {
+        statsText.textContent = `${visibleCount} de ${totalRows} documentos`;
+    }
+    
+    // Show/hide no results
+    noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    
+    // Show/hide clear button
+    clearBtn.classList.toggle('show', search || tipo || empleadoId);
+}
+
+function clearFilters() {
+    searchInput.value = '';
+    filtroTipo.value = '';
+    filtroEmpleado.value = '';
+    applyFilters();
+}
+
+function showDelete(id, empleado, tipo, valor) {
+    document.getElementById('deleteEmpleado').textContent = empleado;
+    document.getElementById('deleteTipo').textContent = tipo;
+    document.getElementById('deleteValor').textContent = valor;
+    document.getElementById('deleteForm').action = `/empleados-documento/eliminar/${id}`;
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+}
+
+function copyDocument(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(() => {
+            showToast('Documento copiado al portapapeles');
+        }).catch(() => {
+            fallbackCopy(value);
+        });
+    } else {
+        fallbackCopy(value);
+    }
+}
+
+function fallbackCopy(value) {
+    const textArea = document.createElement('textarea');
+    textArea.value = value;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+        document.execCommand('copy');
+        showToast('Documento copiado al portapapeles');
+    } catch (err) {
+        showToast('Error al copiar documento');
+    }
+    document.body.removeChild(textArea);
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    toastMessage.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Event listeners
+searchInput.addEventListener('input', applyFilters);
+filtroTipo.addEventListener('change', applyFilters);
+filtroEmpleado.addEventListener('change', applyFilters);
+
+window.onclick = e => {
+    if (e.target.classList.contains('modal')) closeModal(e.target.id);
+};
+
+// Close modal with Escape key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const openModal = document.querySelector('.modal.show');
+        if (openModal) closeModal(openModal.id);
+    }
+});
+
+// Initialize
+if (totalRows > 0) {
+    applyFilters();
+}
+</script>
+{% endblock %}

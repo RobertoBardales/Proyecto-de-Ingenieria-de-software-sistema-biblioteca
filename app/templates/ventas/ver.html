@@ -1,0 +1,880 @@
+{% extends "base.html" %}
+
+{% block title %}Venta #{{ venta.id_venta }}{% endblock %}
+
+{% block content %}
+<div class="sale-container">
+    <!-- Header -->
+    <div class="sale-header">
+        <div class="header-left">
+            <h1>Venta #{{ venta.id_venta }}</h1>
+            <div class="status-badges">
+                {% if estado.id_estado == 1 %}
+                <span class="badge badge-success">{{ estado.nombre }}</span>
+                {% elif estado.id_estado == 2 %}
+                <span class="badge badge-warning">{{ estado.nombre }}</span>
+                {% elif estado.id_estado == 3 %}
+                <span class="badge badge-danger">{{ estado.nombre }}</span>
+                {% else %}
+                <span class="badge badge-info">{{ estado.nombre }}</span>
+                {% endif %}
+
+                {% if venta.exonerado %}
+                <span class="badge badge-secondary">Exonerado de ISV</span>
+                {% endif %}
+
+                {% if factura_sar %}
+                <span class="badge badge-primary">Factura SAR</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('ventas.factura', id=venta.id_venta, mask_rtn=venta.mask_rtn if venta.mask_rtn else 0) }}" class="btn btn-primary" target="_blank">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                </svg>
+                Ver Factura
+            </a>
+
+            <!-- NEW: Send Email Button -->
+            <form method="POST" action="{{ url_for('ventas.enviar_factura_email', id=venta.id_venta) }}" style="display: inline;">
+                <button type="submit" class="btn btn-info">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Enviar por Email
+                </button>
+            </form>
+            
+            {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+                {% if venta.id_estado == 2 %}
+                <form method="POST" action="{{ url_for('ventas.confirmar_pago', id=venta.id_venta) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('¿Confirmar pago recibido?')">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Confirmar Pago
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if venta.id_estado != 3 %}
+                <form method="POST" action="{{ url_for('ventas.cancelar', id=venta.id_venta) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Cancelar esta venta? Se revertirá el inventario.')">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        Cancelar Venta
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+
+            <a href="{{ url_for('ventas.listar') }}" class="btn btn-secondary">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="sale-grid">
+        <!-- Left Column -->
+        <div class="sale-main">
+            <!-- Sale Info -->
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                    Información de la Venta
+                </h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Fecha de Venta</span>
+                        <span class="info-value">{{ venta.fecha_venta.strftime('%d/%m/%Y %I:%M %p') }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Número de Factura</span>
+                        <span class="info-value">{{ venta.numero_factura }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Método de Pago</span>
+                        <span class="info-value">{{ metodo_pago.nombre }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Estado</span>
+                        <span class="info-value">{{ estado.nombre }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+                    </svg>
+                    Cliente
+                </h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Nombre</span>
+                        <span class="info-value">{{ cliente.nombres }} {{ cliente.apellidos }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">{{ cliente.email }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Teléfono</span>
+                        <span class="info-value">{{ cliente.telefono }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Dirección</span>
+                        <span class="info-value">{{ cliente.direccion }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Info (for admin/empleado) -->
+            {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/>
+                    </svg>
+                    Empleado que Procesó
+                </h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Nombre</span>
+                        <span class="info-value">{{ empleado.nombres }} {{ empleado.apellidos }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Rol</span>
+                        <span class="info-value">{{ empleado.rol }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Items -->
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Libros Comprados
+                </h3>
+                <div class="items-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Libro</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-right">Precio Unit.</th>
+                                <th class="text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detalle, libro in detalles %}
+                            <tr>
+                                <td>
+                                    <div class="book-cell">
+                                        <div class="book-img">
+                                            {% if libro.portada %}
+                                            <img src="{{ libro.portada }}" alt="{{ libro.titulo }}">
+                                            {% else %}
+                                            <div class="no-img">📚</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="book-info">
+                                            <div class="book-title">{{ libro.titulo }}</div>
+                                            <div class="book-meta">ISBN: {{ libro.isbn }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">{{ detalle.cantidad }}</td>
+                                <td class="text-right">L. {{ "%.2f"|format(detalle.precio_unitario) }}</td>
+                                <td class="text-right font-bold">L. {{ "%.2f"|format(detalle.subtotal) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tax Exemption Info -->
+            {% if venta.exonerado %}
+            <div class="card alert-info">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/>
+                    </svg>
+                    Exoneración de ISV
+                </h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Importe Exonerado</span>
+                        <span class="info-value">L. {{ "%.2f"|format(venta.importe_exonerado) }}</span>
+                    </div>
+                    {% if venta.numero_reg_exoneracion %}
+                    <div class="info-item">
+                        <span class="info-label">N° Registro Exoneración</span>
+                        <span class="info-value">{{ venta.numero_reg_exoneracion }}</span>
+                    </div>
+                    {% endif %}
+                    {% if venta.numero_reg_sag %}
+                    <div class="info-item">
+                        <span class="info-label">N° Registro SAG</span>
+                        <span class="info-value">{{ venta.numero_reg_sag }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- SAR Info -->
+            {% if factura_sar %}
+            <div class="card alert-success">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+                    </svg>
+                    Información SAR (Honduras)
+                </h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">CAI</span>
+                        <span class="info-value font-mono">{{ factura_sar.cai }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">RTN Empresa</span>
+                        <span class="info-value font-mono">{{ factura_sar.rtn_empresa }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Rango Final Autorizado</span>
+                        <span class="info-value font-mono">{{ factura_sar.rango_final }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Fecha Emisión CAI</span>
+                        <span class="info-value">{{ factura_sar.fecha_emision.strftime('%d/%m/%Y') }}</span>
+                    </div>
+                    {% if factura_sar.anulada %}
+                    <div class="info-item">
+                        <span class="info-label">Estado</span>
+                        <span class="info-value text-danger">
+                            <strong>ANULADA</strong>
+                            {% if factura_sar.fecha_anulacion %}
+                            - {{ factura_sar.fecha_anulacion.strftime('%d/%m/%Y') }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Summary -->
+        <div class="sale-sidebar">
+            <div class="summary-card sticky">
+                <h3>Resumen de Pago</h3>
+                
+                <div class="summary-section">
+                    <div class="summary-line">
+                        <span>Subtotal</span>
+                        <span>L. {{ "%.2f"|format(venta.subtotal) }}</span>
+                    </div>
+                    
+                    {% if venta.descuento > 0 %}
+                    <div class="summary-line discount">
+                        <span>Descuento</span>
+                        <span>- L. {{ "%.2f"|format(venta.descuento) }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if not venta.exonerado %}
+                        {% if venta.isv_15 > 0 %}
+                        <div class="summary-line">
+                            <span>ISV (15%)</span>
+                            <span>L. {{ "%.2f"|format(venta.isv_15) }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if venta.isv_18 > 0 %}
+                        <div class="summary-line">
+                            <span>ISV (18%)</span>
+                            <span>L. {{ "%.2f"|format(venta.isv_18) }}</span>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <div class="summary-line exonerated">
+                        <span>ISV</span>
+                        <span>EXONERADO</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="summary-total">
+                    <span>Total</span>
+                    <span class="total-amount">L. {{ "%.2f"|format(venta.total) }}</span>
+                </div>
+
+                <!-- Payment Status Alert -->
+                {% if venta.id_estado == 2 %}
+                <div class="alert alert-warning">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                    <div>
+                        <strong>Pago Pendiente</strong>
+                        <p>Esta venta está esperando confirmación de pago.</p>
+                    </div>
+                </div>
+                {% elif venta.id_estado == 1 %}
+                <div class="alert alert-success">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+                    </svg>
+                    <div>
+                        <strong>Venta Completada</strong>
+                        <p>El pago ha sido procesado exitosamente.</p>
+                    </div>
+                </div>
+                {% elif venta.id_estado == 3 %}
+                <div class="alert alert-danger">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    <div>
+                        <strong>Venta Cancelada</strong>
+                        <p>Esta venta ha sido cancelada y el inventario revertido.</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Quick Stats -->
+                <div class="quick-stats">
+                    <div class="stat-item">
+                        <div class="stat-icon">📦</div>
+                        <div>
+                            <div class="stat-value">{{ detalles|length }}</div>
+                            <div class="stat-label">Libros</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">📊</div>
+                        <div>
+                            <div class="stat-value">{{ detalles|sum(attribute='0.cantidad') }}</div>
+                            <div class="stat-label">Cantidad Total</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.sale-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Header */
+.sale-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.header-left h1 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.status-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-primary {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.badge-secondary {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Grid */
+.sale-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Cards */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1.25rem 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.card-title svg {
+    color: #667eea;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 0.9375rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.font-mono {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.text-danger {
+    color: #dc2626 !important;
+}
+
+/* Table */
+.items-table {
+    overflow-x: auto;
+}
+
+.items-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.items-table th {
+    padding: 0.75rem;
+    background: #f8fafc;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.items-table td {
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9375rem;
+}
+
+.book-cell {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.book-img {
+    width: 50px;
+    height: 65px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.book-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-img {
+    width: 100%;
+    height: 100%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.book-info {
+    flex: 1;
+}
+
+.book-title {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.book-meta {
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+/* Alerts */
+.alert-info {
+    border-left: 4px solid #3b82f6;
+}
+
+.alert-success {
+    border-left: 4px solid #10b981;
+}
+
+.alert-danger {
+    border-left: 4px solid #ef4444;
+}
+
+.alert-warning {
+    border-left: 4px solid #f59e0b;
+}
+
+/* Summary Sidebar */
+.sale-sidebar {
+    position: sticky;
+    top: 2rem;
+}
+
+.summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.summary-card h3 {
+    margin: 0 0 1.25rem 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.summary-section {
+    padding: 1rem 0;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+    color: #475569;
+}
+
+.summary-line.discount {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.summary-line.exonerated {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.25rem 0;
+    border-top: 2px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.total-amount {
+    font-size: 1.5rem;
+    color: #667eea;
+}
+
+/* Alert */
+.alert {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+}
+
+.alert svg {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.alert strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.9375rem;
+}
+
+.alert p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.alert-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Quick Stats */
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.stat-icon {
+    font-size: 1.75rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .sale-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .sale-sidebar {
+        position: static;
+        order: -1;
+    }
+    
+    .sale-header {
+        flex-direction: column;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .header-actions .btn,
+    .header-actions form {
+        flex: 1;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .book-cell {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .items-table th:nth-child(2),
+    .items-table td:nth-child(2) {
+        display: none;
+    }
+    
+    .quick-stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+
+// Auto-hide flash messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+const alerts = document.querySelectorAll('.alert');
+alerts.forEach(alert => {
+setTimeout(() => {
+alert.style.opacity = '0';
+alert.style.transition = 'opacity 0.5s';
+setTimeout(() => alert.remove(), 500);
+}, 5000);
+});
+});
+</script>
+{% endblock %}

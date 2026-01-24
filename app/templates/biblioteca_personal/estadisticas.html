@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Estadísticas de Lectura{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-bar-chart"></i> Mis Estadísticas</h2>
+        <a href="{{ url_for('biblioteca_personal.mi_biblioteca') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <!-- Main Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-book-fill fs-1 text-primary"></i>
+                    <h2 class="mt-3">{{ estadisticas.total_libros }}</h2>
+                    <p class="text-muted mb-0">Libros en Biblioteca</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-cart-check-fill fs-1 text-success"></i>
+                    <h2 class="mt-3">{{ estadisticas.total_compras }}</h2>
+                    <p class="text-muted mb-0">Compras Realizadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-cash-stack fs-1 text-warning"></i>
+                    <h2 class="mt-3">L. {{ "%.2f"|format(estadisticas.total_gastado) }}</h2>
+                    <p class="text-muted mb-0">Total Invertido</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bi bi-tag-fill fs-1 text-info"></i>
+                    <h2 class="mt-3">{{ estadisticas.categoria_favorita }}</h2>
+                    <p class="text-muted mb-0">Categoría Favorita</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Purchases -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Compras Recientes</h5>
+        </div>
+        <div class="card-body">
+            {% if estadisticas.compras_recientes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Factura</th>
+                                <th>Artículos</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta, items_count in estadisticas.compras_recientes %}
+                            <tr>
+                                <td>{{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ venta.numero_factura }}</td>
+                                <td>{{ items_count }} libro(s)</td>
+                                <td>L. {{ "%.2f"|format(venta.total) }}</td>
+                                <td>
+                                    {% if venta.id_estado == 1 %}
+                                        <span class="badge bg-success">Completada</span>
+                                    {% elif venta.id_estado == 2 %}
+                                        <span class="badge bg-warning">Pendiente</span>
+                                    {% elif venta.id_estado == 4 %}
+                                        <span class="badge bg-info">Dev. Parcial</span>
+                                    {% elif venta.id_estado == 5 %}
+                                        <span class="badge bg-secondary">Dev. Total</span>
+                                    {% else %}
+                                        <span class="badge bg-dark">{{ venta.Estado_Venta.nombre }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No hay compras recientes.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb"></i> ¿Sabías que...?</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Puedes descargar tus libros digitales cuando quieras</li>
+                        <li>Tienes 30 días para devolver cualquier compra</li>
+                        <li>Tus libros físicos se pueden prestar a amigos (bajo tu responsabilidad)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-gift"></i> Beneficios</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Acceso permanente a tus libros digitales</li>
+                        <li>Historial completo de todas tus compras</li>
+                        <li>Recomendaciones personalizadas (próximamente)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

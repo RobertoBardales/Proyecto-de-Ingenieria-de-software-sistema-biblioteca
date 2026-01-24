@@ -4,7 +4,6 @@ from sqlalchemy import select, func, desc
 from models import TemasForos, Clientes, MensajesForos
 from app import db
 from datetime import datetime
-import re
 
 bp = Blueprint('temas_foros', __name__, url_prefix='/foros')
 
@@ -31,6 +30,16 @@ def get_next_id():
     ).scalar()
     return (max_id or 0) + 1
 
+def limpiar_titulo(titulo):
+    """Limpia el título eliminando espacios múltiples"""
+    return ' '.join(titulo.split())
+
+def limpiar_descripcion(descripcion):
+    """Limpia la descripción preservando saltos de línea"""
+    lines = descripcion.split('\n')
+    cleaned_lines = [' '.join(line.split()) for line in lines]
+    return '\n'.join(cleaned_lines)
+
 def validar_titulo(titulo):
     """Valida el título del tema"""
     if not titulo or not titulo.strip():
@@ -44,14 +53,6 @@ def validar_titulo(titulo):
     
     if len(titulo) > 255:
         return False, 'El título no puede exceder 255 caracteres'
-    
-    # No más de 2 espacios consecutivos
-    if '   ' in titulo:
-        return False, 'El título no puede tener más de 2 espacios consecutivos'
-    
-    # No más de 3 caracteres iguales seguidos
-    if re.search(r'(.)\1{3,}', titulo):
-        return False, 'El título no puede tener más de 3 caracteres iguales seguidos'
     
     return True, None
 
@@ -88,53 +89,72 @@ def incrementar_vistas(id_tema):
 @login_required
 def listar():
     """Lista todos los temas del foro con filtros"""
-    # Obtener filtros
-    categoria = request.args.get('categoria', '')
-    orden = request.args.get('orden', 'reciente')
-    busqueda = request.args.get('busqueda', '')
+    # Get filter parameters
+    busqueda = request.args.get('busqueda', '').strip()
+    categoria = request.args.get('categoria', '').strip()
+    orden = request.args.get('orden', 'destacado')  # Default to destacado
     
-    # Query base con joins
-    query = select(TemasForos, Clientes)\
-        .join(Clientes, TemasForos.id_cliente_creador == Clientes.id_cliente)\
-        .where(TemasForos.activo == 1)
+    # Base query
+    query = db.session.query(TemasForos, Clientes).join(
+        Clientes, TemasForos.id_cliente_creador == Clientes.id_cliente
+    ).filter(TemasForos.activo == 1)
     
-    # Aplicar filtro de categoría
-    if categoria:
-        query = query.where(TemasForos.categoria_foro == categoria)
-    
-    # Aplicar búsqueda
+    # Apply search filter
     if busqueda:
-        query = query.where(
-            TemasForos.titulo.contains(busqueda) | 
-            TemasForos.descripcion.contains(busqueda)
+        query = query.filter(
+            db.or_(
+                TemasForos.titulo.ilike(f'%{busqueda}%'),
+                TemasForos.descripcion.ilike(f'%{busqueda}%')
+            )
         )
     
-    # Aplicar orden
-    if orden == 'reciente':
-        query = query.order_by(desc(TemasForos.fecha_creacion))
+    # Apply category filter
+    if categoria:
+        query = query.filter(TemasForos.categoria_foro == categoria)
+    
+    # Apply ordering
+    if orden == 'destacado':
+        # Destacados first, then by date
+        query = query.order_by(
+            TemasForos.destacado.desc(),
+            TemasForos.fecha_creacion.desc()
+        )
     elif orden == 'popular':
-        query = query.order_by(desc(TemasForos.vistas))
-    elif orden == 'destacado':
-        query = query.order_by(desc(TemasForos.destacado), desc(TemasForos.fecha_creacion))
+        # Most viewed first
+        query = query.order_by(
+            TemasForos.vistas.desc(),
+            TemasForos.fecha_creacion.desc()
+        )
+    else:  # reciente
+        query = query.order_by(TemasForos.fecha_creacion.desc())
     
-    temas = db.session.execute(query).all()
+    temas = query.all()
     
-    # Obtener conteo de mensajes por tema
+    # Count VISIBLE messages per tema
     mensajes_count = {}
     for tema, _ in temas:
         count = db.session.execute(
             select(func.count(MensajesForos.id_mensaje))
-            .where(MensajesForos.id_tema == tema.id_tema)
-        ).scalar()
+            .where(
+                MensajesForos.id_tema == tema.id_tema,
+                MensajesForos.visible == True  # Only count visible messages
+            )
+        ).scalar() or 0
         mensajes_count[tema.id_tema] = count
     
-    return render_template('temas_foros/listar.html', 
+    # Get all categories for sidebar
+    categorias = db.session.query(TemasForos.categoria_foro).distinct().order_by(
+        TemasForos.categoria_foro
+    ).all()
+    categorias = [cat[0] for cat in categorias if cat[0]]
+    
+    return render_template('temas_foros/listar.html',
                          temas=temas,
                          mensajes_count=mensajes_count,
-                         categorias=CATEGORIAS_FOROS,
+                         categorias=categorias,
+                         busqueda_actual=busqueda,
                          categoria_actual=categoria,
-                         orden_actual=orden,
-                         busqueda_actual=busqueda)
+                         orden_actual=orden)
 
 @bp.route('/nuevo', methods=['GET', 'POST'])
 @login_required
@@ -154,6 +174,9 @@ def nuevo():
                 return render_template('temas_foros/form.html', 
                                      categorias=CATEGORIAS_FOROS)
             
+            # Limpiar título (múltiples espacios → un espacio)
+            titulo = limpiar_titulo(titulo)
+            
             # Validar categoría
             if categoria not in CATEGORIAS_FOROS:
                 flash('Categoría inválida', 'error')
@@ -166,6 +189,13 @@ def nuevo():
                 flash(error, 'error')
                 return render_template('temas_foros/form.html', 
                                      categorias=CATEGORIAS_FOROS)
+            
+            # Limpiar descripción (preservar saltos de línea)
+            descripcion = limpiar_descripcion(descripcion)
+            
+            # Solo admin puede destacar
+            if destacado and current_user.tipo_usuario != 'admin':
+                destacado = False
             
             # Crear tema
             nuevo_tema = TemasForos(
@@ -213,16 +243,24 @@ def ver(id):
     
     tema, creador = resultado
     
+    # Verificar que el tema esté activo (o que sea el creador/admin)
+    if not tema.activo:
+        if tema.id_cliente_creador != current_user.id_cliente and current_user.tipo_usuario != 'admin':
+            flash('Este tema no está disponible', 'error')
+            return redirect(url_for('temas_foros.listar'))
+    
     # Incrementar contador de vistas
     incrementar_vistas(id)
     
-    # Obtener mensajes visibles del tema
+    # Obtener mensajes VISIBLES del tema ordenados por fecha
     mensajes = db.session.execute(
         select(MensajesForos, Clientes)
         .join(Clientes, MensajesForos.id_cliente == Clientes.id_cliente)
-        .where(MensajesForos.id_tema == id)
-        .where(MensajesForos.visible == True)  # ← AGREGAR ESTO
-        .order_by(MensajesForos.fecha_publicacion)  # ← CAMBIAR ESTO
+        .where(
+            MensajesForos.id_tema == id,
+            MensajesForos.visible == True  # Only visible messages
+        )
+        .order_by(MensajesForos.fecha_publicacion.asc())  # Oldest first
     ).all()
     
     return render_template('temas_foros/ver.html', 
@@ -260,6 +298,9 @@ def editar(id):
                                      tema=tema,
                                      categorias=CATEGORIAS_FOROS)
             
+            # Limpiar título
+            titulo = limpiar_titulo(titulo)
+            
             # Validar categoría
             if categoria not in CATEGORIAS_FOROS:
                 flash('Categoría inválida', 'error')
@@ -275,11 +316,19 @@ def editar(id):
                                      tema=tema,
                                      categorias=CATEGORIAS_FOROS)
             
+            # Limpiar descripción
+            descripcion = limpiar_descripcion(descripcion)
+            
+            # Solo admin puede destacar
+            if destacado and current_user.tipo_usuario != 'admin':
+                destacado = tema.destacado  # Keep original value
+            
             # Actualizar tema
             tema.titulo = titulo
             tema.categoria_foro = categoria
             tema.descripcion = descripcion
-            tema.destacado = 1 if destacado else 0
+            if current_user.tipo_usuario == 'admin':
+                tema.destacado = 1 if destacado else 0
             
             db.session.commit()
             
@@ -321,7 +370,7 @@ def eliminar(id):
         db.session.rollback()
         flash(f'Error al eliminar tema: {str(e)}', 'error')
     
-    return redirect(url_for('temas_foros.listar'))
+    return redirect(url_for('temas_foros.mis_temas'))
 
 @bp.route('/destacar/<int:id>', methods=['POST'])
 @login_required
@@ -365,13 +414,16 @@ def mis_temas():
         .order_by(desc(TemasForos.fecha_creacion))
     ).scalars().all()
     
-    # Obtener conteo de mensajes
+    # Obtener conteo de mensajes VISIBLES
     mensajes_count = {}
     for tema in temas:
         count = db.session.execute(
             select(func.count(MensajesForos.id_mensaje))
-            .where(MensajesForos.id_tema == tema.id_tema)
-        ).scalar()
+            .where(
+                MensajesForos.id_tema == tema.id_tema,
+                MensajesForos.visible == True  # Only count visible messages
+            )
+        ).scalar() or 0
         mensajes_count[tema.id_tema] = count
     
     return render_template('temas_foros/mis_temas.html', 

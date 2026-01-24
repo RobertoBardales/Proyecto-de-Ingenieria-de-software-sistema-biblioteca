@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Tickets{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+    <!-- Header Section -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 0.75rem;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                Mis Tickets
+            </h1>
+            <p style="margin: 0.5rem 0 0 0; color: #64748b; font-size: 0.95rem;">Gestiona tus solicitudes y problemas</p>
+        </div>
+        <div>
+            {% if not current_user.id_empleado %}
+            <a href="{{ url_for('tickets.crear_ticket') }}" style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.75rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-decoration: none; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); font-size: 0.95rem;"
+                onmouseover="this.style.boxShadow='0 6px 20px rgba(99, 102, 241, 0.4)'; this.style.transform='translateY(-2px)'"
+                onmouseout="this.style.boxShadow='0 4px 12px rgba(99, 102, 241, 0.3)'; this.style.transform='translateY(0)'"
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nuevo Ticket
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div style="background: white; border-radius: 14px; padding: 1.75rem; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <h3 style="margin: 0 0 1.25rem 0; font-size: 1rem; font-weight: 700; color: #1e293b;">Filtros</h3>
+        <form method="get" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+                <label style="display: block; font-weight: 600; color: #475569; margin-bottom: 0.5rem; font-size: 0.9rem;">Estado</label>
+                <select name="estado" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; background: white;"
+                    onchange="this.style.borderColor='#6366f1'"
+                    onblur="this.style.borderColor='#e2e8f0'"
+                >
+                    <option value="">-- Todos --</option>
+                    <option value="Abierto" {% if estado_filtro == 'Abierto' %}selected{% endif %}>Abierto</option>
+                    <option value="En Proceso" {% if estado_filtro == 'En Proceso' %}selected{% endif %}>En Proceso</option>
+                    <option value="En Espera" {% if estado_filtro == 'En Espera' %}selected{% endif %}>En Espera</option>
+                    <option value="Resuelto" {% if estado_filtro == 'Resuelto' %}selected{% endif %}>Resuelto</option>
+                    <option value="Cerrado" {% if estado_filtro == 'Cerrado' %}selected{% endif %}>Cerrado</option>
+                    <option value="Cancelado" {% if estado_filtro == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; color: #475569; margin-bottom: 0.5rem; font-size: 0.9rem;">Prioridad</label>
+                <select name="prioridad" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; background: white;"
+                    onchange="this.style.borderColor='#6366f1'"
+                    onblur="this.style.borderColor='#e2e8f0'"
+                >
+                    <option value="">-- Todos --</option>
+                    <option value="Baja" {% if prioridad_filtro == 'Baja' %}selected{% endif %}>Baja</option>
+                    <option value="Media" {% if prioridad_filtro == 'Media' %}selected{% endif %}>Media</option>
+                    <option value="Alta" {% if prioridad_filtro == 'Alta' %}selected{% endif %}>Alta</option>
+                    <option value="Urgente" {% if prioridad_filtro == 'Urgente' %}selected{% endif %}>Urgente</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; align-items: flex-end;">
+                <button type="submit" style="flex: 1; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                    onmouseover="this.style.background='#2563eb'"
+                    onmouseout="this.style.background='#3b82f6'"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Filtrar
+                </button>
+                <a href="{{ url_for('tickets.listar_tickets') }}" style="padding: 0.75rem 1.25rem; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;"
+                    onmouseover="this.style.background='#e2e8f0'"
+                    onmouseout="this.style.background='#f1f5f9'"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                        <path d="M21 3v5h-5"></path>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                        <path d="M3 21v-5h5"></path>
+                    </svg>
+                    Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de Tickets -->
+    <div style="background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 1.25rem; text-align: left; font-weight: 700; color: #1e293b; font-size: 0.9rem;">#</th>
+                        <th style="padding: 1.25rem; text-align: left; font-weight: 700; color: #1e293b; font-size: 0.9rem;">Asunto</th>
+                        {% if current_user.id_empleado %}
+                        <th style="padding: 1.25rem; text-align: left; font-weight: 700; color: #1e293b; font-size: 0.9rem;">Cliente</th>
+                        {% endif %}
+                        <th style="padding: 1.25rem; text-align: left; font-weight: 700; color: #1e293b; font-size: 0.9rem;">Prioridad</th>
+                        <th style="padding: 1.25rem; text-align: left; font-weight: 700; color: #1e293b; font-size: 0.9rem;">Estado</th>
+                        <th style="padding: 1.25rem; text-align: left; font-weight: 700; color: #1e293b; font-size: 0.9rem;">Creado</th>
+                        <th style="padding: 1.25rem; text-align: center; font-weight: 700; color: #1e293b; font-size: 0.9rem;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if tickets.items %}
+                        {% for ticket in tickets.items %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; transition: all 0.2s;"
+                            onmouseover="this.style.background='#f8fafc'"
+                            onmouseout="this.style.background='transparent'"
+                        >
+                            <td style="padding: 1.25rem; font-weight: 700; color: #6366f1;">#{{ ticket.id_ticket }}</td>
+                            <td style="padding: 1.25rem;">
+                                <a href="{{ url_for('tickets.ver_ticket', id_ticket=ticket.id_ticket) }}" style="color: #334155; text-decoration: none; font-weight: 500; transition: color 0.2s;"
+                                    onmouseover="this.style.color='#6366f1'"
+                                    onmouseout="this.style.color='#334155'"
+                                >
+                                    {{ ticket.asunto[:50] }}{% if ticket.asunto|length > 50 %}...{% endif %}
+                                </a>
+                            </td>
+                            {% if current_user.id_empleado %}
+                            <td style="padding: 1.25rem; color: #64748b; font-size: 0.9rem;">{{ ticket.Clientes_.nombre_cliente }}</td>
+                            {% endif %}
+                            <td style="padding: 1.25rem;">
+                                <span style="display: inline-block; padding: 0.4rem 0.75rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem;
+                                    {% if ticket.prioridad == 'Urgente' %}background: #fecaca; color: #7f1d1d;
+                                    {% elif ticket.prioridad == 'Alta' %}background: #fef08a; color: #713f12;
+                                    {% elif ticket.prioridad == 'Media' %}background: #bfdbfe; color: #1e3a8a;
+                                    {% else %}background: #bbf7d0; color: #065f46;{% endif %}
+                                ">
+                                    {{ ticket.prioridad }}
+                                </span>
+                            </td>
+                            <td style="padding: 1.25rem;">
+                                <span style="display: inline-block; padding: 0.4rem 0.75rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; color: white;
+                                    {% if ticket.estado == 'Abierto' %}background: #3b82f6;
+                                    {% elif ticket.estado == 'En Proceso' %}background: #f59e0b;
+                                    {% elif ticket.estado == 'En Espera' %}background: #6b7280;
+                                    {% elif ticket.estado == 'Resuelto' %}background: #10b981;
+                                    {% elif ticket.estado == 'Cerrado' %}background: #1f2937;
+                                    {% else %}background: #ef4444;{% endif %}
+                                ">
+                                    {{ ticket.estado }}
+                                </span>
+                            </td>
+                            <td style="padding: 1.25rem; color: #64748b; font-size: 0.85rem;">{{ ticket.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td style="padding: 1.25rem; text-align: center;">
+                                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                    <a href="{{ url_for('tickets.ver_ticket', id_ticket=ticket.id_ticket) }}" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #dbeafe; color: #1e40af; text-decoration: none; border-radius: 8px; transition: all 0.2s; cursor: pointer;"
+                                        title="Ver detalles"
+                                        onmouseover="this.style.background='#bfdbfe'; this.style.transform='scale(1.05)'"
+                                        onmouseout="this.style.background='#dbeafe'; this.style.transform='scale(1)'"
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </a>
+                                    {% if current_user.id_empleado or (current_user.id_cliente and ticket.estado in ['Abierto', 'En Espera']) %}
+                                    <a href="{{ url_for('tickets.editar_ticket', id_ticket=ticket.id_ticket) }}" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #fef3c7; color: #92400e; text-decoration: none; border-radius: 8px; transition: all 0.2s; cursor: pointer;"
+                                        title="Editar"
+                                        onmouseover="this.style.background='#fde68a'; this.style.transform='scale(1.05)'"
+                                        onmouseout="this.style.background='#fef3c7'; this.style.transform='scale(1)'"
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="padding: 3rem; text-align: center;">
+                            <div style="color: #94a3b8;">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 1rem; opacity: 0.5;">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                <p style="margin: 0; font-size: 1.1rem; font-weight: 600; color: #64748b;">No hay tickets para mostrar</p>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #94a3b8;">Crea uno nuevo para comenzar</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Paginación -->
+    {% if tickets.pages > 1 %}
+    <nav style="margin-top: 2rem; display: flex; justify-content: center;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+            {% if tickets.has_prev %}
+            <a href="{{ url_for('tickets.listar_tickets', page=1, estado=estado_filtro, prioridad=prioridad_filtro) }}" style="padding: 0.625rem 1rem; background: white; color: #6366f1; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 0.9rem;"
+                onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#6366f1'"
+                onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'"
+            >Primera</a>
+            <a href="{{ url_for('tickets.listar_tickets', page=tickets.prev_num, estado=estado_filtro, prioridad=prioridad_filtro) }}" style="padding: 0.625rem 1rem; background: white; color: #6366f1; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 0.9rem;"
+                onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#6366f1'"
+                onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'"
+            >Anterior</a>
+            {% endif %}
+
+            {% for page_num in tickets.iter_pages(left_edge=1, right_edge=1, left_margin=1, right_margin=1) %}
+                {% if page_num %}
+                    {% if page_num == tickets.page %}
+                    <span style="padding: 0.625rem 1rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">{{ page_num }}</span>
+                    {% else %}
+                    <a href="{{ url_for('tickets.listar_tickets', page=page_num, estado=estado_filtro, prioridad=prioridad_filtro) }}" style="padding: 0.625rem 1rem; background: white; color: #6366f1; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 0.9rem;"
+                        onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#6366f1'"
+                        onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'"
+                    >{{ page_num }}</a>
+                    {% endif %}
+                {% else %}
+                <span style="padding: 0.625rem 1rem; color: #94a3b8; font-size: 0.9rem;">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if tickets.has_next %}
+            <a href="{{ url_for('tickets.listar_tickets', page=tickets.next_num, estado=estado_filtro, prioridad=prioridad_filtro) }}" style="padding: 0.625rem 1rem; background: white; color: #6366f1; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 0.9rem;"
+                onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#6366f1'"
+                onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'"
+            >Siguiente</a>
+            <a href="{{ url_for('tickets.listar_tickets', page=tickets.pages, estado=estado_filtro, prioridad=prioridad_filtro) }}" style="padding: 0.625rem 1rem; background: white; color: #6366f1; border: 2px solid #e2e8f0; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s; cursor: pointer; font-size: 0.9rem;"
+                onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#6366f1'"
+                onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'"
+            >Última</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

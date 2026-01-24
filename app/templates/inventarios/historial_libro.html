@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Inventario - {{ libro.titulo }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <a href="{{ url_for('libros.ver', id=libro.id_libro) }}" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver al Libro
+            </a>
+            <div>
+                <h1>Historial de Inventario</h1>
+                <p class="subtitle">{{ libro.titulo }}</p>
+            </div>
+        </div>
+        <a href="{{ url_for('inventarios.nuevo', libro_id=libro.id_libro) }}" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Movimiento
+        </a>
+    </div>
+
+    <div class="content-grid">
+        <!-- Book Info Card -->
+        <div class="book-card">
+            <div class="book-content">
+                <div class="book-cover">
+                    {% if libro.portada %}
+                        <img src="{{ libro.portada }}" alt="{{ libro.titulo }}">
+                    {% else %}
+                        <div class="book-placeholder">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="book-details">
+                    <h3>{{ libro.titulo }}</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">ISBN:</span>
+                        <span class="detail-value">{{ libro.isbn }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Formato:</span>
+                        <span class="detail-value">{{ libro.formato }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Precio Venta:</span>
+                        <span class="detail-value">L. {{ "%.2f"|format(libro.precio_venta) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Precio Préstamo:</span>
+                        <span class="detail-value">L. {{ "%.2f"|format(libro.precio_prestamo) }}</span>
+                    </div>
+                    <div class="stock-badges">
+                        <span class="badge badge-primary">Físico: {{ libro.stock_fisico }}</span>
+                        <span class="badge badge-info">Digital: {{ libro.stock_digital }}</span>
+                        <span class="badge badge-success">Total: {{ libro.stock_fisico + libro.stock_digital }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="stats-card">
+            <div class="stats-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span>Estadísticas</span>
+            </div>
+            <div class="stats-body">
+                <div class="stat-group">
+                    <div class="stat-group-title">Físico</div>
+                    <div class="stat-items">
+                        <div class="stat-item stat-success">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                            <span>Entradas: {{ estadisticas.entradas_fisico }}</span>
+                        </div>
+                        <div class="stat-item stat-danger">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <span>Salidas: {{ estadisticas.salidas_fisico }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-group">
+                    <div class="stat-group-title">Digital</div>
+                    <div class="stat-items">
+                        <div class="stat-item stat-success">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                            <span>Entradas: {{ estadisticas.entradas_digital }}</span>
+                        </div>
+                        <div class="stat-item stat-danger">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <span>Salidas: {{ estadisticas.salidas_digital }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    {% if movimientos %}
+        <div class="timeline-card">
+            <div class="timeline-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>Movimientos ({{ movimientos|length }})</span>
+            </div>
+            <div class="timeline-body">
+                {% for mov in movimientos %}
+                <div class="timeline-item">
+                    <div class="timeline-date">
+                        <div class="date-main">{{ mov.fecha_movimiento.strftime('%d/%m/%Y') }}</div>
+                        <div class="date-time">{{ mov.fecha_movimiento.strftime('%H:%M') }}</div>
+                    </div>
+                    
+                    <div class="timeline-marker">
+                        {% if mov.tipo_movimiento == 'Entrada' %}
+                            <div class="marker-icon marker-success">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                </svg>
+                            </div>
+                        {% elif mov.tipo_movimiento == 'Salida' %}
+                            <div class="marker-icon marker-danger">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
+                        {% elif mov.tipo_movimiento == 'Ajuste' %}
+                            <div class="marker-icon marker-warning">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+                                </svg>
+                            </div>
+                        {% elif mov.tipo_movimiento == 'Devolución' %}
+                            <div class="marker-icon marker-info">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 14 4 9 9 4"></polyline>
+                                    <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                                </svg>
+                            </div>
+                        {% else %}
+                            <div class="marker-icon marker-secondary">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="17 11 12 6 7 11"></polyline>
+                                    <polyline points="17 18 12 13 7 18"></polyline>
+                                </svg>
+                            </div>
+                        {% endif %}
+                        <div class="marker-line"></div>
+                    </div>
+                    
+                    <div class="timeline-content">
+                        <div class="content-header">
+                            <div class="header-badges">
+                                {% if mov.tipo_movimiento == 'Entrada' %}
+                                    <span class="badge badge-success">{{ mov.tipo_movimiento }}</span>
+                                {% elif mov.tipo_movimiento == 'Salida' %}
+                                    <span class="badge badge-danger">{{ mov.tipo_movimiento }}</span>
+                                {% elif mov.tipo_movimiento == 'Ajuste' %}
+                                    <span class="badge badge-warning">{{ mov.tipo_movimiento }}</span>
+                                {% elif mov.tipo_movimiento == 'Devolución' %}
+                                    <span class="badge badge-info">{{ mov.tipo_movimiento }}</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ mov.tipo_movimiento }}</span>
+                                {% endif %}
+                                <span class="badge badge-format">{{ mov.formato }}</span>
+                                <span class="badge badge-id">#{{ mov.id_inventario }}</span>
+                            </div>
+                            <div class="quantity-badge">
+                                {% if mov.tipo_movimiento in ['Entrada', 'Devolución'] %}
+                                    <span class="qty-positive">+{{ mov.cantidad }}</span>
+                                {% elif mov.tipo_movimiento in ['Salida', 'Transferencia'] %}
+                                    <span class="qty-negative">-{{ mov.cantidad }}</span>
+                                {% else %}
+                                    <span class="qty-neutral">{{ mov.cantidad }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="content-details">
+                            <div class="detail-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                </svg>
+                                <span class="detail-label">Stock:</span>
+                                <span class="stock-change">
+                                    <span class="stock-old">{{ mov.stock_anterior }}</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                    <span class="stock-new">{{ mov.stock_nuevo }}</span>
+                                </span>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                                <span class="detail-label">Sucursal:</span>
+                                <span>{{ mov.Sucursales_.nombre }}</span>
+                            </div>
+                            
+                            {% if mov.referencia %}
+                            <div class="detail-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                </svg>
+                                <span class="detail-label">Referencia:</span>
+                                <span class="badge badge-ref">{{ mov.referencia }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="detail-item detail-full">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                </svg>
+                                <span class="detail-label">Motivo:</span>
+                                <span class="detail-text">{{ mov.motivo }}</span>
+                            </div>
+                            
+                            {% if mov.observaciones %}
+                            <div class="detail-item detail-full">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                <span class="detail-label">Observaciones:</span>
+                                <span class="detail-text">{{ mov.observaciones }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="content-actions">
+                            <a href="{{ url_for('inventarios.ver', id=mov.id_inventario) }}" class="btn btn-secondary btn-sm">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                Ver Detalles
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="no-results show">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <p>No hay movimientos de inventario registrados para este libro</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+
+/* Header */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-left { display: flex; gap: 1.5rem; align-items: center; }
+.back-btn { display: flex; align-items: center; gap: 0.5rem; color: #667eea; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s; }
+.back-btn:hover { background: #f0f4ff; }
+.page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #1a202c; }
+.subtitle { color: #718096; font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Content Grid */
+.content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+
+/* Book Card */
+.book-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.book-content { display: flex; gap: 1.5rem; }
+.book-cover { flex-shrink: 0; width: 120px; }
+.book-cover img { width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.book-placeholder { width: 120px; height: 180px; background: linear-gradient(135deg, #f7fafc, #e2e8f0); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a0aec0; }
+.book-details { flex: 1; }
+.book-details h3 { margin: 0 0 1rem 0; color: #1a202c; font-size: 1.25rem; font-weight: 700; }
+.detail-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.detail-label { color: #718096; font-weight: 600; min-width: 130px; }
+.detail-value { color: #1a202c; }
+.stock-badges { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* Statistics Card */
+.stats-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.stats-header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+.stats-body { padding: 1.5rem; }
+.stat-group { margin-bottom: 1rem; }
+.stat-group:last-child { margin-bottom: 0; }
+.stat-group-title { font-weight: 700; color: #1a202c; margin-bottom: 0.75rem; font-size: 0.95rem; }
+.stat-items { display: flex; flex-direction: column; gap: 0.5rem; }
+.stat-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f7fafc; border-radius: 6px; font-size: 0.85rem; }
+.stat-success { color: #059669; }
+.stat-danger { color: #dc2626; }
+.stat-item svg { flex-shrink: 0; }
+.stat-divider { height: 1px; background: #e2e8f0; margin: 1rem 0; }
+
+/* Timeline Card */
+.timeline-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.timeline-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #1a202c; }
+.timeline-body { padding: 2rem 1.5rem; }
+
+/* Timeline Items */
+.timeline-item { display: grid; grid-template-columns: 120px 60px 1fr; gap: 1.5rem; margin-bottom: 2rem; position: relative; }
+.timeline-item:last-child { margin-bottom: 0; }
+.timeline-item:last-child .marker-line { display: none; }
+
+.timeline-date { text-align: right; }
+.date-main { font-weight: 700; color: #1a202c; font-size: 0.95rem; }
+.date-time { color: #a0aec0; font-size: 0.85rem; margin-top: 0.25rem; }
+
+.timeline-marker { position: relative; display: flex; flex-direction: column; align-items: center; }
+.marker-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.marker-success { background: linear-gradient(135deg, #10b981, #059669); }
+.marker-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.marker-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.marker-info { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.marker-secondary { background: linear-gradient(135deg, #6b7280, #4b5563); }
+.marker-line { position: absolute; top: 44px; left: 50%; width: 2px; height: calc(100% + 2rem); background: #e2e8f0; transform: translateX(-50%); }
+
+.timeline-content { background: #f7fafc; border-radius: 12px; padding: 1.25rem; }
+.content-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+.header-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.quantity-badge { font-size: 1.75rem; font-weight: 700; }
+.qty-positive { color: #059669; }
+.qty-negative { color: #dc2626; }
+.qty-neutral { color: #667eea; }
+
+.content-details { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+.detail-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.detail-item svg { color: #a0aec0; flex-shrink: 0; }
+.detail-item .detail-label { color: #718096; font-weight: 600; }
+.detail-full { flex-direction: column; align-items: flex-start; background: white; padding: 0.75rem; border-radius: 6px; }
+.detail-text { color: #4a5568; line-height: 1.5; }
+.stock-change { display: flex; align-items: center; gap: 0.5rem; }
+.stock-old { color: #9ca3af; }
+.stock-new { color: #1a202c; font-weight: 700; }
+
+.content-actions { display: flex; gap: 0.5rem; }
+
+/* Badges */
+.badge { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+.badge-primary { background: #e0f2fe; color: #0284c7; }
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+.badge-secondary { background: #f3f4f6; color: #4b5563; }
+.badge-format { background: #f3f4f6; color: #1f2937; }
+.badge-id { background: #f3e8ff; color: #7c3aed; font-family: monospace; font-size: 0.8rem; }
+.badge-ref { background: #f3e8ff; color: #7c3aed; font-family: monospace; font-size: 0.8rem; }
+
+/* Buttons */
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+.btn-secondary { background: #e2e8f0; color: #4a5568; }
+.btn-secondary:hover { background: #cbd5e0; }
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+
+/* No Results */
+.no-results { display: none; text-align: center; padding: 3rem; color: #a0aec0; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.no-results.show { display: block; }
+.no-results svg { margin: 0 auto 1rem; opacity: 0.3; }
+.no-results p { color: #718096; margin: 0; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .timeline-item { grid-template-columns: 100px 50px 1fr; gap: 1rem; }
+}
+
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .header-left { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .book-content { flex-direction: column; }
+    .book-cover { width: 100%; max-width: 200px; margin: 0 auto; }
+    .timeline-item { grid-template-columns: 1fr; gap: 1rem; }
+    .timeline-date { text-align: left; }
+    .timeline-marker { display: none; }
+    .quantity-badge { font-size: 1.5rem; }
+}
+</style>
+{% endblock %}

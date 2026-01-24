@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+
+{% block title %}Préstamos{% endblock %}
+
+{% block content %}
+<div class="prestamos-container">
+    <!-- Header -->
+    <div class="prestamos-header">
+        <div class="header-content">
+            <h1>📚 Gestión de Préstamos</h1>
+            <p>{{ prestamos_data|length }} préstamo{{ 's' if prestamos_data|length != 1 else '' }} registrado{{ 's' if prestamos_data|length != 1 else '' }}</p>
+        </div>
+        {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+        <a href="{{ url_for('prestamos.nuevo') }}" class="btn-create">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Préstamo
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="prestamos-layout">
+        <!-- Filters Sidebar -->
+        <aside class="filters-sidebar">
+            <div class="filters-card">
+                <h3>🔍 Filtros</h3>
+
+                <form method="GET" id="filterForm">
+                    <!-- Estado -->
+                    <div class="filter-group">
+                        <label>Estado</label>
+                        <select name="estado" class="filter-select" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for est in estados_disponibles %}
+                            <option value="{{ est }}" {{ 'selected' if estado_actual == est else '' }}>
+                                {{ est }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Cliente (solo admin) -->
+                    {% if current_user.tipo_usuario == 'admin' %}
+                    <div class="filter-group">
+                        <label>Cliente</label>
+                        <select name="cliente" class="filter-select" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.id_cliente }}" {{ 'selected' if cliente_actual == cliente.id_cliente|string else '' }}>
+                                {{ cliente.nombres }} {{ cliente.apellidos }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    {% if estado_actual or cliente_actual %}
+                    <a href="{{ url_for('prestamos.listar') }}" class="btn-clear">Limpiar Filtros</a>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="stats-card">
+                <h3>📊 Estadísticas</h3>
+                
+                {% set activos = prestamos_data | selectattr('prestamo.estado', 'equalto', 'Activo') | list | length %}
+                {% set atrasados = prestamos_data | selectattr('prestamo.estado', 'equalto', 'Atrasado') | list | length %}
+                {% set devueltos = prestamos_data | selectattr('prestamo.estado', 'equalto', 'Devuelto') | list | length %}
+                
+                <div class="stat-item">
+                    <span class="stat-label">Activos</span>
+                    <span class="stat-value active">{{ activos }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Atrasados</span>
+                    <span class="stat-value overdue">{{ atrasados }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Devueltos</span>
+                    <span class="stat-value returned">{{ devueltos }}</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Préstamos List -->
+        <main class="prestamos-main">
+            {% if prestamos_data %}
+            <div class="prestamos-list">
+                {% for item in prestamos_data %}
+                <article class="prestamo-card">
+                    <div class="prestamo-header">
+                        <div class="prestamo-id-section">
+                            <span class="prestamo-id">#{{ item.prestamo.id_prestamo }}</span>
+                            <span class="prestamo-badge {{ item.prestamo.estado|lower }}">
+                                {% if item.prestamo.estado == 'Activo' %}✓{% endif %}
+                                {% if item.prestamo.estado == 'Atrasado' %}⚠️{% endif %}
+                                {% if item.prestamo.estado == 'Devuelto' %}✅{% endif %}
+                                {% if item.prestamo.estado == 'Cancelado' %}✕{% endif %}
+                                {{ item.prestamo.estado }}
+                            </span>
+                        </div>
+                        
+                        <div class="prestamo-dates">
+                            <span class="date-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {{ item.prestamo.fecha_prestamo.strftime('%d/%m/%Y') }}
+                            </span>
+                            <span class="date-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                Devolver: {{ item.prestamo.fecha_devolucion_estimada.strftime('%d/%m/%Y') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="prestamo-body">
+                        <div class="prestamo-info">
+                            <div class="info-group">
+                                <span class="info-label">👤 Cliente</span>
+                                <span class="info-value">{{ item.cliente.nombres }} {{ item.cliente.apellidos }}</span>
+                            </div>
+                            
+                            <div class="info-group">
+                                <span class="info-label">📚 Libros</span>
+                                <span class="info-value">{{ item.libros_count }} libro{{ 's' if item.libros_count != 1 else '' }}</span>
+                            </div>
+
+                            {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+                            <div class="info-group">
+                                <span class="info-label">👨‍💼 Procesado por</span>
+                                <span class="info-value">{{ item.empleado.nombres }} {{ item.empleado.apellidos }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if item.multa_total > 0 %}
+                            <div class="info-group">
+                                <span class="info-label">💰 Multa</span>
+                                <span class="info-value multa">L {{ "%.2f"|format(item.multa_total) }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="prestamo-books">
+                            {% for detalle, libro in item.detalles[:3] %}
+                            <div class="book-mini">
+                                <span class="book-title">{{ libro.titulo }}</span>
+                                <span class="book-status {{ detalle.estado|lower }}">{{ detalle.estado }}</span>
+                            </div>
+                            {% endfor %}
+                            {% if item.libros_count > 3 %}
+                            <span class="more-books">+ {{ item.libros_count - 3 }} más</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="prestamo-footer">
+                        <a href="{{ url_for('prestamos.ver', id=item.prestamo.id_prestamo) }}" class="btn-view">
+                            Ver Detalles
+                        </a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <h3>No hay préstamos registrados</h3>
+                <p>{{ 'Intenta ajustar los filtros de búsqueda' if estado_actual or cliente_actual else 'Aún no se han registrado préstamos' }}</p>
+                {% if current_user.tipo_usuario in ['admin', 'empleado'] %}
+                <a href="{{ url_for('prestamos.nuevo') }}" class="btn-primary">
+                    Crear Primer Préstamo
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<style>
+.prestamos-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.prestamos-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.header-content h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.header-content p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.05rem;
+}
+
+.btn-create {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    background: white;
+    color: var(--primary);
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.prestamos-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+}
+
+/* Filters */
+.filters-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.filters-card,
+.stats-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.filters-card h3,
+.stats-card h3 {
+    margin: 0 0 1.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.filter-group {
+    margin-bottom: 1.25rem;
+}
+
+.filter-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.btn-clear {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--light);
+    color: var(--text);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.btn-clear:hover {
+    background: var(--border);
+}
+
+/* Stats */
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.stat-value.active {
+    color: var(--success);
+}
+
+.stat-value.overdue {
+    color: var(--danger);
+}
+
+.stat-value.returned {
+    color: var(--text-light);
+}
+
+/* Préstamos List */
+.prestamos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.prestamo-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.prestamo-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(102,126,234,0.15);
+    transform: translateY(-2px);
+}
+
+.prestamo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.prestamo-id-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.prestamo-id {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.prestamo-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.prestamo-badge.activo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+}
+
+.prestamo-badge.atrasado {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+}
+
+.prestamo-badge.devuelto {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+}
+
+.prestamo-badge.cancelado {
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+}
+
+.prestamo-dates {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.date-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.prestamo-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.prestamo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.info-value.multa {
+    color: var(--danger);
+    font-size: 1.1rem;
+}
+
+.prestamo-books {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.book-mini {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--light);
+    border-radius: 8px;
+}
+
+.book-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.book-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.book-status.prestado {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1e3a8a;
+}
+
+.book-status.devuelto {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+}
+
+.book-status.atrasado {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+}
+
+.more-books {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 600;
+    text-align: center;
+}
+
+.prestamo-footer {
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--border);
+}
+
+.btn-view {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+}
+
+.btn-view:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.3);
+}
+
+/* Empty State */
+.empty-state {
+    background: white;
+    border-radius: 16px;
+    padding: 5rem 2rem;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.empty-state svg {
+    color: var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    color: var(--dark);
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.empty-state p {
+    color: var(--text-light);
+    font-size: 1.05rem;
+    margin-bottom: 2rem;
+}
+
+.btn-primary {
+    display: inline-block;
+    padding: 0.875rem 1.75rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102,126,234,0.3);
+}
+
+@media (max-width: 1024px) {
+    .prestamos-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .prestamo-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .prestamos-header {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+    
+    .prestamo-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .prestamo-dates {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
